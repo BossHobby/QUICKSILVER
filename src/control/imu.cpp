@@ -35,6 +35,7 @@
 #define GPS_MAX_HEADING_ACCURACY 15.0f // degrees, reject course at or above this uncertainty
 #define GPS_HEADING_STALE_MS 500U
 #define CONFIDENCE_TIME_CONSTANT 2.0f // seconds of consistent forward motion
+#define GRAVITY_MSS 9.80665f
 
 #ifdef VEHICLE_WING
 #define GPS_HEADING_ROLL_LIMIT 25.0f // degrees
@@ -272,6 +273,33 @@ void imu_init() {
   imu_reset_attitude();
 }
 
+// The accelerometer measures gravity plus motion. During RTH, drag deceleration
+// otherwise reads as tilt and the level command holds a real attitude offset.
+// Remove the horizontal acceleration RTH publishes while it trusts heading.
+static vec3_t imu_gravity_reference(vec3_t accel) {
+  const float north = state.rth_accel_north;
+  const float east = state.rth_accel_east;
+  if (north == 0.0f && east == 0.0f)
+    return accel;
+  const float heading = state.heading * DEGTORAD;
+  const float cos_heading = fastcos(heading);
+  const float sin_heading = fastsin(heading);
+  const float forward = (north * cos_heading + east * sin_heading) * (ACC_1G / GRAVITY_MSS);
+  const float left = (north * sin_heading - east * cos_heading) * (ACC_1G / GRAVITY_MSS);
+
+  // Legacy body axes are {left, back, up}. Project the nose onto the plane
+  // normal to the gravity estimate to find the level forward and left axes.
+  const vec3_t up = vec3_mul(state.GEstG, 1.0f / ACC_1G);
+  const vec3_t nose = {{0.0f, -1.0f, 0.0f}};
+  const vec3_t level_forward = vec3_sub(nose, vec3_mul(up, vec3_dot(nose, up)));
+  const float level_forward_length = vec3_magnitude(level_forward);
+  if (level_forward_length < 0.1f)
+    return accel;
+  const vec3_t forward_axis = vec3_mul(level_forward, 1.0f / level_forward_length);
+  const vec3_t left_axis = vec3_cross(up, forward_axis);
+  return vec3_sub(accel, vec3_add(vec3_mul(forward_axis, forward), vec3_mul(left_axis, left)));
+}
+
 void imu_calc() {
   // Predict gravity from the gyro delta, then correct it with filtered acceleration.
   const vec3_t rot = {{
@@ -286,17 +314,23 @@ void imu_calc() {
     state.accel.axis[axis] = filter_lp_pt1_step(&accel_filter, &accel_filter_state[1][axis], first_pass);
   }
 
+  const vec3_t gravity_reference = imu_gravity_reference(state.accel);
+
   const float accmag_squared = vec3_dot(state.accel, state.accel);
   if (accmag_squared > (ACC_MIN * ACC_1G) * (ACC_MIN * ACC_1G) && accmag_squared < (ACC_MAX * ACC_1G) * (ACC_MAX * ACC_1G)) {
     const float accel_scale = ACC_1G / sqrtf(accmag_squared);
     state.accel = vec3_mul(state.accel, accel_scale);
+  }
 
+  const float refmag_squared = vec3_dot(gravity_reference, gravity_reference);
+  if (refmag_squared > (ACC_MIN * ACC_1G) * (ACC_MIN * ACC_1G) && refmag_squared < (ACC_MAX * ACC_1G) * (ACC_MAX * ACC_1G)) {
+    const vec3_t reference = vec3_mul(gravity_reference, ACC_1G / sqrtf(refmag_squared));
     const float filter_time = flags.on_ground ? GRAVITY_GROUND_FILTER_TIME : GRAVITY_FLIGHT_FILTER_TIME;
     // Filter times are time constants; lpfcalc() takes 1 / cutoff frequency.
     const float filtcoeff = constrain(1.0f - state.looptime / filter_time, 0.0f, 1.0f);
-    lpf(&state.GEstG.roll, state.accel.roll, filtcoeff);
-    lpf(&state.GEstG.pitch, state.accel.pitch, filtcoeff);
-    lpf(&state.GEstG.yaw, state.accel.yaw, filtcoeff);
+    lpf(&state.GEstG.roll, reference.roll, filtcoeff);
+    lpf(&state.GEstG.pitch, reference.pitch, filtcoeff);
+    lpf(&state.GEstG.yaw, reference.yaw, filtcoeff);
   }
 
   // Normalize once for both control consumers and attitude correction.
