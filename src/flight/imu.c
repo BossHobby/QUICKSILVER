@@ -38,6 +38,12 @@ static filter_state_t filter_pass1[3];
 static filter_state_t filter_pass2[3];
 #endif
 
+// Filter times are time constants; lpfcalc() takes 1 / cutoff frequency
+// instead, which would make the correction about six times faster.
+static float imu_filter_coeff(float filter_time) {
+  return constrain(1.0f - state.looptime / filter_time, 0.0f, 1.0f);
+}
+
 void imu_init() {
   // init the gravity vector with accel values
   for (int xx = 0; xx < 100; xx++) {
@@ -73,7 +79,7 @@ void imu_calc() {
         state.accel_raw.axis[axis] = state.accel_raw.axis[axis] * (ACC_1G / accmag);
       }
 
-      float filtcoeff = lpfcalc(state.looptime, FASTFILTER);
+      float filtcoeff = imu_filter_coeff(FASTFILTER);
       for (int x = 0; x < 3; x++) {
         lpf(&state.GEstG.axis[x], state.accel_raw.axis[x], filtcoeff);
       }
@@ -82,7 +88,7 @@ void imu_calc() {
     // lateshift bartender - quad is IN AIR and things are getting wild
     //  hit state.accel_raw.axis[3] with a sledgehammer
 #ifdef PREFILTER
-    float filtcoeff = lpfcalc(state.looptime, PREFILTER);
+    float filtcoeff = imu_filter_coeff(PREFILTER);
     for (int x = 0; x < 3; x++) {
       lpf(&state.accel.axis[x], state.accel_raw.axis[x], filtcoeff);
     }
@@ -100,7 +106,7 @@ void imu_calc() {
         state.accel.axis[axis] = state.accel.axis[axis] * (ACC_1G / accmag);
       }
       // filter accel on to GEstG
-      float filtcoeff = lpfcalc(state.looptime, FILTERTIME);
+      float filtcoeff = imu_filter_coeff(FILTERTIME);
       for (int x = 0; x < 3; x++) {
         lpf(&state.GEstG.axis[x], state.accel.axis[x], filtcoeff);
       }
@@ -146,13 +152,13 @@ void imu_calc() {
 
     if (flags.on_ground) {
       // happyhour bartender - quad is ON GROUND and disarmed
-      const float filtcoeff = lpfcalc(state.looptime, (float)FASTFILTER);
+      const float filtcoeff = imu_filter_coeff(FASTFILTER);
       lpf(&state.GEstG.roll, state.accel.roll, filtcoeff);
       lpf(&state.GEstG.pitch, state.accel.pitch, filtcoeff);
       lpf(&state.GEstG.yaw, state.accel.yaw, filtcoeff);
     } else {
       // lateshift bartender - quad is IN AIR and things are getting wild
-      const float filtcoeff = lpfcalc(state.looptime, (float)FILTERTIME);
+      const float filtcoeff = imu_filter_coeff(FILTERTIME);
       lpf(&state.GEstG.roll, state.accel.roll, filtcoeff);
       lpf(&state.GEstG.pitch, state.accel.pitch, filtcoeff);
       lpf(&state.GEstG.yaw, state.accel.yaw, filtcoeff);
