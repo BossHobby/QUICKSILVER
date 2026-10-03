@@ -6,7 +6,7 @@
 
 #define BKP_INDEX ERTC_DT4
 #define BOOTLOADER_OFFSET 0x1FFF0000
-#define SRAM_CONFIG FLASH_EOPB0_SRAM_384K
+#define SRAM_CONFIG FLASH_EOPB0_SRAM_256K
 
 static void backup_register_write(uint32_t val) {
   crm_periph_clock_enable(CRM_PWC_PERIPH_CLOCK, TRUE);
