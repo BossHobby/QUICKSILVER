@@ -4,7 +4,7 @@
 **  File        : AT32F435xG_FLASH.ld
 **
 **  Abstract    : Linker script for AT32F435xG Device with
-**                1024KByte FLASH, 384KByte RAM
+**                1024KByte FLASH, 256KByte RAM
 **
 **                Set heap size, stack size and stack location according
 **                to application requirements.
@@ -31,9 +31,12 @@ _Min_Stack_Size = 0x4000; /* required amount of stack */
 /* Specify the memory areas */
 MEMORY
 {
-FLASH (rx)        : ORIGIN = 0x08000000, LENGTH = 960K
+/* EOPB0 (SRAM_CONFIG in reset.cpp) trades SRAM for zero-wait flash. Only that
+   area executes at full speed; everything except SLOW_FLASH code stays in it. */
+FLASH (rx)        : ORIGIN = 0x08000000, LENGTH = 384K
+SLOW_FLASH (rx)   : ORIGIN = 0x08060000, LENGTH = 576K
 FLASH_CONFIG (r)  : ORIGIN = 0x080F0000, LENGTH = 64K
-RAM (xrw)         : ORIGIN = 0x20000000, LENGTH = 384K
+RAM (xrw)         : ORIGIN = 0x20000000, LENGTH = 256K
 }
 
 /* Define output sections */
@@ -70,6 +73,15 @@ SECTIONS
     . = ALIGN(4);
     _etext = .;        /* define a global symbols at end of code */
   } >FLASH
+
+  /* Code that never runs per Flight loop, marked SLOW_FLASH */
+  .slow_flash :
+  {
+    . = ALIGN(4);
+    *(.slow_flash)
+    *(.slow_flash*)
+    . = ALIGN(4);
+  } >SLOW_FLASH
 
   /* Constant data goes into FLASH */
   .rodata :
