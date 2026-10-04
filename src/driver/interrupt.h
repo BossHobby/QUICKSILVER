@@ -13,6 +13,7 @@
 #define I2C_PRIORITY 0x4
 #define TIMER_PRIORITY 0x5
 #define USB_PRIORITY 0x6
+#define ADC_PRIORITY 0x7
 
 static inline void __basepri_restore(uint8_t *val) {
 #ifndef SIMULATOR

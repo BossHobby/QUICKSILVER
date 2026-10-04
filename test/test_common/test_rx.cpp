@@ -13,8 +13,7 @@
 #include "rx/crsf.h"
 #include "rx/rx.h"
 
-extern uint8_t adc_active_channels;
-extern void adc_set_raw_value(adc_chan_t chan, uint16_t value);
+extern uint16_t adc_set_raw_value(adc_chan_t chan, uint16_t value);
 
 extern void simulator_rx_test_frame(const uint16_t *channels);
 
@@ -108,6 +107,8 @@ static void io_test_flight(void *) {
   state.looptime_autodetect = 1000;
   rx_init();
   adc_init();
+  // The tick hook converts; let it complete the first window.
+  vTaskDelay(2);
   vbat_init();
   profile_mutex_init();
   if (xSemaphoreTake(profile_mutex, 0) != pdTRUE) _exit(1);
@@ -173,8 +174,8 @@ static void io_cadence_test_flight(void *) {
   state.looptime_autodetect = 1000;
   rx_init();
   adc_init();
-  adc_active_channels = 4;
   adc_set_raw_value(ADC_CHAN_IBAT, 1000);
+  vTaskDelay(2);
   vbat_init();
   profile_mutex_init();
   xSemaphoreTake(profile_mutex, 0);
