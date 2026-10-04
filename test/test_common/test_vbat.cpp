@@ -1,5 +1,8 @@
 #include <unity.h>
 
+#include <algorithm>
+#include <math.h>
+
 #include "control/control.h"
 #include "core/profile.h"
 #include "driver/adc.h"
@@ -146,4 +149,180 @@ void test_vbat_integrates_current_over_elapsed_time() {
   flags = saved_flags;
   profile = saved_profile;
   target = saved_target;
+}
+
+// Native VREF reads its calibration value, so full scale is 3300 mV.
+static constexpr float ADC_TEST_MV_PER_COUNT = 3300.0f / 4095.0f;
+
+static void vbat_test_set_battery(float volts, float amps) {
+  const float volts_per_count = ADC_TEST_MV_PER_COUNT * profile.voltage.vbat_scale / 10000.0f;
+  const float amps_per_count = ADC_TEST_MV_PER_COUNT * 10.0f / profile.voltage.ibat_scale;
+  adc_set_raw_value(ADC_CHAN_VBAT, (uint16_t)(volts / volts_per_count + 0.5f));
+  adc_set_raw_value(ADC_CHAN_IBAT, (uint16_t)(amps / amps_per_count + 0.5f));
+}
+
+static void vbat_test_run_ms(unsigned ms) {
+  for (unsigned i = 0; i < ms / 5; i++) {
+    vbat_test_advance_ms(5);
+    vbat_calc();
+  }
+}
+
+struct vbat_test_saved_t {
+  control_state_t state = ::state;
+  control_flags_t flags = ::flags;
+  profile_t profile = ::profile;
+  target_t target = ::target;
+  uint16_t vbat = adc_set_raw_value(ADC_CHAN_VBAT, 0);
+  uint16_t ibat = adc_set_raw_value(ADC_CHAN_IBAT, 0);
+
+  ~vbat_test_saved_t() {
+    adc_set_raw_value(ADC_CHAN_VBAT, vbat);
+    adc_set_raw_value(ADC_CHAN_IBAT, ibat);
+    ::state = state;
+    ::flags = flags;
+    ::profile = profile;
+    ::target = target;
+  }
+};
+
+static void vbat_test_start(bool current_sensor, float volts, uint8_t cells) {
+  state = {};
+  flags = {};
+  profile.voltage.lipo_cell_count = cells;
+  profile.voltage.vbat_scale = 110;
+  profile.voltage.ibat_scale = current_sensor ? 1000 : 0;
+  profile.voltage.actual_battery_voltage = 4.2f;
+  profile.voltage.reported_telemetry_voltage = 4.2f;
+  profile.voltage.vbattlow = 3.3f;
+  profile.voltage.use_filtered_voltage_for_warnings = 0;
+  target.vbat = PIN_A1;
+  target.ibat = current_sensor ? PIN_A2 : PIN_NONE;
+  time_test_set_us(0);
+  vbat_test_set_battery(volts, 0);
+  adc_init();
+  adc_native_scan();
+  vbat_init();
+}
+
+void test_vbat_sag_compensation_learns_current_resistance() {
+  const vbat_test_saved_t saved;
+  constexpr float OPEN_VOLTAGE = 16.0f;
+  constexpr float RESISTANCE = 0.05f;
+  vbat_test_start(true, OPEN_VOLTAGE, 4);
+  flags.in_air = 1;
+
+  float max_error = 0;
+  for (unsigned step = 0; step < 60; step++) {
+    const float amps = step % 2 ? 25.0f : 5.0f;
+    vbat_test_set_battery(OPEN_VOLTAGE - RESISTANCE * amps, amps);
+    for (unsigned ms = 0; ms < 500; ms += 5) {
+      vbat_test_run_ms(5);
+      // Voltage and current share one filter, so a learned R holds the
+      // compensated voltage through the load steps, not only between them.
+      if (step >= 50)
+        max_error = std::max(max_error, fabsf(state.vbat_compensated - OPEN_VOLTAGE));
+    }
+  }
+  TEST_ASSERT_LESS_THAN_FLOAT(OPEN_VOLTAGE - 0.5f, state.vbat_sag_filtered);
+  TEST_ASSERT_FLOAT_WITHIN(0.05f, 0.0f, max_error);
+}
+
+void test_vbat_sag_compensation_uses_throttle_without_current_sensor() {
+  const vbat_test_saved_t saved;
+  constexpr float OPEN_VOLTAGE = 16.0f;
+  constexpr float VOLTS_PER_THROTTLE = 2.0f;
+  vbat_test_start(false, OPEN_VOLTAGE, 4);
+  flags.in_air = 1;
+
+  float max_error = 0;
+  for (unsigned step = 0; step < 60; step++) {
+    state.thrsum = step % 2 ? 0.7f : 0.3f;
+    vbat_test_set_battery(OPEN_VOLTAGE - VOLTS_PER_THROTTLE * state.thrsum, 0);
+    for (unsigned ms = 0; ms < 500; ms += 5) {
+      vbat_test_run_ms(5);
+      if (step >= 50)
+        max_error = std::max(max_error, fabsf(state.vbat_compensated - OPEN_VOLTAGE));
+    }
+  }
+  TEST_ASSERT_FLOAT_WITHIN(0.05f, 0.0f, max_error);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, OPEN_VOLTAGE / 4, state.vbat_compensated_cell_avg);
+}
+
+void test_vbat_sag_compensation_ignores_discharge() {
+  const vbat_test_saved_t saved;
+  constexpr float RESISTANCE = 0.05f;
+  vbat_test_start(true, 16.0f, 4);
+  flags.in_air = 1;
+
+  // Discharge under a constant load is not mistaken for sag: with no sag,
+  // the falling voltage stays uncompensated.
+  for (unsigned ms = 0; ms < 20000; ms += 5) {
+    vbat_test_set_battery(16.0f - 0.5f * ms / 20000.0f, 10.0f);
+    vbat_test_run_ms(5);
+  }
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, state.vbat_sag_filtered, state.vbat_compensated);
+
+  // Load steps during the same discharge recover only the resistance.
+  float max_error = 0;
+  for (unsigned step = 0; step < 60; step++) {
+    const float amps = step % 2 ? 25.0f : 5.0f;
+    for (unsigned ms = 0; ms < 500; ms += 5) {
+      const float open_voltage = 15.5f - 0.5f * (step * 500 + ms) / 30000.0f;
+      vbat_test_set_battery(open_voltage - RESISTANCE * amps, amps);
+      vbat_test_run_ms(5);
+      if (step >= 50)
+        max_error = std::max(max_error, fabsf(state.vbat_compensated - open_voltage));
+    }
+  }
+  TEST_ASSERT_FLOAT_WITHIN(0.05f, 0.0f, max_error);
+}
+
+void test_vbat_sag_compensation_learns_only_in_air() {
+  const vbat_test_saved_t saved;
+  vbat_test_start(true, 16.0f, 4);
+  flags.in_air = 0;
+  for (unsigned step = 0; step < 20; step++) {
+    const float amps = step % 2 ? 25.0f : 5.0f;
+    vbat_test_set_battery(16.0f - 0.05f * amps, amps);
+    vbat_test_run_ms(500);
+    TEST_ASSERT_EQUAL_FLOAT(state.vbat_sag_filtered, state.vbat_compensated);
+  }
+}
+
+void test_vbat_filtered_warning_has_hysteresis() {
+  const vbat_test_saved_t saved;
+  vbat_test_start(false, 3.6f, 1);
+  profile.voltage.use_filtered_voltage_for_warnings = 1;
+
+  const struct {
+    float volts;
+    bool lowbatt;
+  } steps[] = {{3.35f, false}, {3.25f, true}, {3.35f, true}, {3.38f, true}, {3.45f, false}, {3.35f, false}};
+  for (const auto &step : steps) {
+    vbat_test_set_battery(step.volts, 0);
+    vbat_test_run_ms(2000);
+    TEST_ASSERT_EQUAL(step.lowbatt, flags.lowbatt);
+  }
+}
+
+void test_vbat_detects_cell_count_across_charge() {
+  const vbat_test_saved_t saved;
+  const struct {
+    float volts;
+    uint8_t cells;
+  } packs[] = {
+      {4.35f, 1},  // full HV 1S
+      {3.4f, 1},   // depleted 1S
+      {8.0f, 2},   // 2S storage
+      {13.4f, 4},  // depleted 4S
+      {16.8f, 4},  // full 4S
+      {17.4f, 4},  // full HV 4S
+      {21.0f, 5},  // full 5S
+      {25.2f, 6},  // full 6S
+  };
+  for (const auto &pack : packs) {
+    vbat_test_start(false, pack.volts, 0);
+    TEST_ASSERT_EQUAL_UINT8(pack.cells, state.lipo_cell_count);
+  }
 }
