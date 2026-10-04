@@ -326,3 +326,31 @@ void test_vbat_detects_cell_count_across_charge() {
     TEST_ASSERT_EQUAL_UINT8(pack.cells, state.lipo_cell_count);
   }
 }
+
+void test_vbat_redetects_cells_when_battery_connects() {
+  const vbat_test_saved_t saved;
+  // Booted on USB power without a battery.
+  vbat_test_start(false, 0.5f, 0);
+  TEST_ASSERT_EQUAL_UINT8(1, state.lipo_cell_count);
+
+  vbat_test_set_battery(16.4f, 0);
+  vbat_test_run_ms(2000);
+  TEST_ASSERT_EQUAL_UINT8(4, state.lipo_cell_count);
+
+  // A pack resting below the detection boundary keeps its cell.
+  vbat_test_set_battery(13.0f, 0);
+  vbat_test_run_ms(2000);
+  TEST_ASSERT_EQUAL_UINT8(4, state.lipo_cell_count);
+
+  // Detection never changes the count while armed.
+  flags.arm_state = 1;
+  vbat_test_set_battery(25.0f, 0);
+  vbat_test_run_ms(2000);
+  TEST_ASSERT_EQUAL_UINT8(4, state.lipo_cell_count);
+
+  // A configured count applies without a reboot.
+  flags.arm_state = 0;
+  profile.voltage.lipo_cell_count = 3;
+  vbat_test_run_ms(5);
+  TEST_ASSERT_EQUAL_UINT8(3, state.lipo_cell_count);
+}
