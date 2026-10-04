@@ -82,6 +82,7 @@ static void adc_init_dev() {
 
     adc_resolution_set(adc_devs[i], ADC_RESOLUTION_12B);
     adc_oversample_ratio_shift_set(adc_devs[i], ADC_OVERSAMPLE_RATIO_64, ADC_OVERSAMPLE_SHIFT_6);
+    adc_ordinary_oversample_enable(adc_devs[i], TRUE);
 
     adc_enable(adc_devs[i], TRUE);
     while (adc_flag_get(adc_devs[i], ADC_RDY_FLAG) == RESET)
