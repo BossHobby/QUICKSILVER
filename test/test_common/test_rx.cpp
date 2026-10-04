@@ -10,12 +10,29 @@
 #include "driver/adc.h"
 #include "driver/time.h"
 #include "io/vbat.h"
+#include "rx/crsf.h"
 #include "rx/rx.h"
 
 extern uint8_t adc_active_channels;
 extern void adc_set_raw_value(adc_chan_t chan, uint16_t value);
 
 extern void simulator_rx_test_frame(const uint16_t *channels);
+
+void test_crsf_battery_current_units() {
+  const auto saved_state = state;
+  uint8_t frame[CRSF_FRAME_SIZE_MAX] = {};
+  const struct {
+    float current_ma;
+    uint16_t encoded_current;
+  } cases[] = {{0, 0}, {12500, 125}, {100000, 1000}, {-100, 0}, {7000000, 65535}};
+  for (const auto &test : cases) {
+    state.ibat_filtered = test.current_ma;
+    crsf_tlm_frame_battery_sensor(frame);
+    TEST_ASSERT_EQUAL_HEX8(CRSF_FRAMETYPE_BATTERY_SENSOR, frame[2]);
+    TEST_ASSERT_EQUAL_UINT16(test.encoded_current, (frame[5] << 8) | frame[6]);
+  }
+  state = saved_state;
+}
 
 void test_rx_transport_leaves_conditioning_to_flight() {
   const auto saved_state = state;
