@@ -101,7 +101,7 @@ typedef enum {
   AUX_MOTOR_TEST,
 #endif
   AUX_RSSI,
-  AUX_FPV_SWITCH,
+  AUX_VTX_PIT_MODE,
   AUX_BLACKBOX,
   AUX_PREARM,
   AUX_OSD_PROFILE,
@@ -115,6 +115,10 @@ typedef enum {
   AUX_AUTOLAUNCH,
 #endif
 
+  AUX_PINIO_1,
+  AUX_PINIO_2,
+  AUX_PINIO_3,
+  AUX_PINIO_4,
   AUX_FUNCTION_MAX
 } __attribute__((__packed__)) aux_function_t;
 
