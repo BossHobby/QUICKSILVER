@@ -287,6 +287,19 @@ static void osd_menu_select_aux_adjust(int8_t x, int8_t y, const char *text, uin
   }
 }
 
+static void osd_menu_aux_outputs() {
+  osd_menu_select_aux_adjust(4, OSD_AUTO, "VTX PIT MODE", 17, 22, &profile.receiver.aux[AUX_VTX_PIT_MODE]);
+  for (uint8_t i = 0; i < PINIO_MAX; i++) {
+    if (target.pinio[i].pin == PIN_NONE)
+      continue;
+    char label[13] = "PINIO 1";
+    label[6] += i;
+    if (target.pinio[i].label[0] != '\0')
+      memcpy(label, target.pinio[i].label, sizeof(label) - 1);
+    osd_menu_select_aux_adjust(4, OSD_AUTO, label, 17, 22, &profile.receiver.aux[AUX_PINIO_1 + i]);
+  }
+}
+
 void osd_display_reset() {
 #ifdef USE_VTX
   osd_vtx_stage_reset();
@@ -1017,6 +1030,7 @@ TickType_t osd_display() {
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BUZZER", 17, 22, &profile.receiver.aux[AUX_BUZZER_ENABLE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
+      osd_menu_aux_outputs();
 #else
       // PAGE 1
       osd_menu_select_screen(7, OSD_AUTO, "VTX", OSD_SCREEN_VTX);
@@ -1280,11 +1294,11 @@ TickType_t osd_display() {
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BUZZER", 17, 22, &profile.receiver.aux[AUX_BUZZER_ENABLE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "TURTLE", 17, 22, &profile.receiver.aux[AUX_TURTLE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "MOTOR TEST", 17, 22, &profile.receiver.aux[AUX_MOTOR_TEST]);
-      osd_menu_select_aux_adjust(4, OSD_AUTO, "FPV SWITCH", 17, 22, &profile.receiver.aux[AUX_FPV_SWITCH]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "PREARM", 17, 22, &profile.receiver.aux[AUX_PREARM]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
 #endif
+      osd_menu_aux_outputs();
     }
     osd_menu_scroll_finish(4);
 

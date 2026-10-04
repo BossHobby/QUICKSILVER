@@ -515,8 +515,8 @@ const profile_t default_profile = {
 #endif
 #endif
             RSSI, // AUX_RSSI
-#ifdef FPV_SWITCH
-            FPV_SWITCH, // AUX_FPV_SWITCH
+#ifdef VTX_PIT_MODE
+            VTX_PIT_MODE, // AUX_VTX_PIT_MODE
 #else
             {RX_CHANNEL_OFF, 0, 0},
 #endif
@@ -532,6 +532,10 @@ const profile_t default_profile = {
             AUTOTRIM,   // AUX_AUTOTRIM
             AUTOLAUNCH, // AUX_AUTOLAUNCH
 #endif
+            {RX_CHANNEL_OFF, 0, 0}, // AUX_PINIO_1
+            {RX_CHANNEL_OFF, 0, 0}, // AUX_PINIO_2
+            {RX_CHANNEL_OFF, 0, 0}, // AUX_PINIO_3
+            {RX_CHANNEL_OFF, 0, 0}, // AUX_PINIO_4
         },
         .role_map = {
 #ifdef VEHICLE_ROVER
