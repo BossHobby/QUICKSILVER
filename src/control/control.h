@@ -148,9 +148,9 @@ typedef struct {
   float vbat_compensated;          // battery compensated for sag
   float vbat_compensated_cell_avg; // battery compensated for sag divided by cell count
 
-  float ibat;              // battery current in amps
-  float ibat_filtered;     // filtered current in amps (slow for display)
-  float ibat_sag_filtered; // filtered current in amps (fast for mAh tracking)
+  float ibat;              // battery current in milliamps
+  float ibat_filtered;     // filtered current in milliamps (slow for display)
+  float ibat_sag_filtered; // filtered current in milliamps (fast for mAh tracking)
   float ibat_drawn;        // total mAh consumed
 
   vec4_t rx;                            // Flight-owned calibrated, deadbanded roles; rover steering uses yaw
