@@ -1,6 +1,7 @@
 #include "io/vbat.h"
 
 #include "control/control.h"
+#include "core/failloop.h"
 #include "core/flash.h"
 #include "core/profile.h"
 #include "driver/adc.h"
@@ -14,51 +15,53 @@
 // the lowest vbatt is ever allowed to go
 #define VBATTLOW_ABS 2.7f
 
-#define IBAT_SCALE (60.f * 60.f * 1000000.f)
-#define VBAT_PERIOD_US 1000
 #define THRSUM_FILTER_HZ 60
 
-extern profile_t profile;
+// Each pass publishes the ADC average since the previous one. The period is
+// longer than the slowest full scan (~4 ms on G4), so windows are complete.
+static constexpr uint32_t VBAT_PERIOD_US = 5000;
+static constexpr float US_PER_HOUR = 60.0f * 60.0f * 1000000.0f;
+static constexpr float DISPLAY_FILTER_HZ = 2.0f;
+static constexpr float SAG_FILTER_HZ = 5.0f;
+static constexpr uint32_t ADC_STARTUP_TIMEOUT_US = 100000;
 
-static filter_lp_pt2 display_filter;      // Slow filter for OSD display
-static filter_lp_pt1 sag_filter;          // Faster filter for warnings/compensation
-static filter_lp_pt1 thrsum_filter;       // Separate filter for throttle
-static filter_state_t vbat_display_filter_state;
-static filter_state_t vbat_sag_filter_state;
-static filter_state_t ibat_display_filter_state;
-static filter_state_t ibat_sag_filter_state;
-static filter_state_t thrsum_filter_state;
+struct battery_filter_state_t {
+  filter_state_t display;
+  filter_state_t sag;
+};
 
-static float vbat_filtered_decay = 0;     // Li-ion voltage decay model (local to vbat.c)
-static uint32_t last_ibat_update_us;
-static uint32_t last_thrsum_update_us;
-static uint32_t last_calc_us;
+static struct {
+  // Both measurements arrive in one ADC window and share filter coefficients.
+  filter_lp_pt2 display_filter;
+  filter_lp_pt1 sag_filter;
+  battery_filter_state_t voltage;
+  battery_filter_state_t current;
+  filter_lp_pt1 throttle_filter;
+  filter_state_t throttle_state;
+  float voltage_decay;
+  uint32_t last_update_us;
+  uint32_t next_update_us;
+} battery;
 
 void vbat_init() {
-  // Calculate actual ADC update period based on active channels
-  const uint32_t adc_period_us = VBAT_PERIOD_US * adc_get_active_channels();
+  battery = {};
+  filter_lp_pt2_coeff(&battery.display_filter, DISPLAY_FILTER_HZ, VBAT_PERIOD_US);
+  filter_lp_pt1_coeff(&battery.sag_filter, SAG_FILTER_HZ, VBAT_PERIOD_US);
+  filter_lp_pt1_coeff(&battery.throttle_filter, THRSUM_FILTER_HZ, VBAT_PERIOD_US);
 
-  // Configure filters for actual ADC update rate per channel
-  // Display filter: Low cutoff (2Hz) for smooth OSD display with reasonable response
-  filter_lp_pt2_coeff(&display_filter, 2.0, adc_period_us);
-
-  // Sag filter: Faster response (5Hz) for warnings and compensation
-  filter_lp_pt1_coeff(&sag_filter, 5.0, adc_period_us);
-  
-  // Throttle filter tracks the actual service interval, which varies with the
-  // IO worker's deadline-driven wake, instead of assuming a fixed 1 kHz call rate.
-  filter_lp_pt1_coeff(&thrsum_filter, THRSUM_FILTER_HZ, VBAT_PERIOD_US);
-  
-  filter_init_state(&vbat_display_filter_state, 1);
-  filter_init_state(&vbat_sag_filter_state, 1);
-  filter_init_state(&ibat_display_filter_state, 1);
-  filter_init_state(&ibat_sag_filter_state, 1);
-  filter_init_state(&thrsum_filter_state, 1);
-
+  // Boot runs with interrupts enabled, before IO owns acquisition. Cell count
+  // detection needs a complete first window, including its reference voltage.
+  // Conversions that never complete leave the ADC interrupt unserviced.
+  const uint32_t start_us = time_micros();
+  while (!adc_update()) {
+    if (time_micros() - start_us > ADC_STARTUP_TIMEOUT_US)
+      failloop(FAILLOOP_FAULT);
+    time_delay_us(100);
+  }
+  state.vbat = adc_read(ADC_CHAN_VBAT);
   for (size_t i = 0; i < 5000; i++) {
-    adc_read(ADC_CHAN_VBAT, &state.vbat);
-    state.vbat_filtered = filter_lp_pt2_step(&display_filter, &vbat_display_filter_state, state.vbat);
-    state.vbat_sag_filtered = filter_lp_pt1_step(&sag_filter, &vbat_sag_filter_state, state.vbat);
+    state.vbat_filtered = filter_lp_pt2_step(&battery.display_filter, &battery.voltage.display, state.vbat);
+    state.vbat_sag_filtered = filter_lp_pt1_step(&battery.sag_filter, &battery.voltage.sag, state.vbat);
   }
 
   if (profile.voltage.lipo_cell_count == 0) {
@@ -73,10 +76,9 @@ void vbat_init() {
     state.lipo_cell_count = profile.voltage.lipo_cell_count;
   }
 
-  vbat_filtered_decay = state.vbat_sag_filtered;
-  last_ibat_update_us = time_micros();
-  last_thrsum_update_us = last_ibat_update_us;
-  last_calc_us = 0; // first pass after init runs immediately
+  battery.voltage_decay = state.vbat_sag_filtered;
+  battery.last_update_us = time_micros();
+  battery.next_update_us = battery.last_update_us + VBAT_PERIOD_US;
 }
 
 static float vbat_auto_vdrop(float thrfilt, float tempvolt) {
@@ -93,12 +95,12 @@ static float vbat_auto_vdrop(float thrfilt, float tempvolt) {
   //  y(n) = x(n) - x(n-1) + R * y(n-1)
   //  out = in - lastin + coeff*lastout
   const float vcomp = tempvolt + (float)z * 0.1f * thrfilt;
-  const float ans = vcomp - lastin[z] + lpfcalc(1000 * 12, 6000e3) * lastout[z];
+  const float ans = vcomp - lastin[z] + lpfcalc(VBAT_PERIOD_US * 12, 6000e3) * lastout[z];
   lastin[z] = vcomp;
   lastout[z] = ans;
 
   static float score[12];
-  lpf(&score[z], ans * ans, lpfcalc(1000 * 12, 60e6));
+  lpf(&score[z], ans * ans, lpfcalc(VBAT_PERIOD_US * 12, 60e6));
   z++;
 
   if (z >= 12) {
@@ -118,42 +120,40 @@ static float vbat_auto_vdrop(float thrfilt, float tempvolt) {
 
 TickType_t vbat_calc() {
   const uint32_t now = time_micros();
-  if (now - last_calc_us < VBAT_PERIOD_US) {
-    return pdMS_TO_TICKS((VBAT_PERIOD_US - (now - last_calc_us)) / 1000);
+  const int32_t wait_us = (int32_t)(battery.next_update_us - now);
+  if (wait_us > 0) {
+    return pdMS_TO_TICKS((wait_us + 999) / 1000);
   }
-  last_calc_us = now;
-  const uint32_t elapsed_us = now - last_ibat_update_us;
-  last_ibat_update_us = now;
-  adc_read(ADC_CHAN_TEMP, &state.cpu_temp);
+  // Keep the schedule's phase so tick rounding does not stretch the period;
+  // after a long worker delay, restart it from now instead of catching up.
+  battery.next_update_us += VBAT_PERIOD_US;
+  if ((int32_t)(battery.next_update_us - now) <= 0)
+    battery.next_update_us = now + VBAT_PERIOD_US;
 
-  // read acd and scale based on processor voltage
-  if (adc_read(ADC_CHAN_IBAT, &state.ibat)) {
-    state.ibat_filtered = filter_lp_pt2_step(&display_filter, &ibat_display_filter_state, state.ibat);
-    state.ibat_sag_filtered = filter_lp_pt1_step(&sag_filter, &ibat_sag_filter_state, state.ibat);
+  const uint32_t elapsed_us = now - battery.last_update_us;
+  battery.last_update_us = now;
+  // Account for the elapsed interval with the previously held current, before
+  // a fresh sample changes the filter output (especially after worker delays).
+  state.ibat_drawn += state.ibat_sag_filtered * elapsed_us / US_PER_HOUR;
+  if (adc_update()) {
+    state.cpu_temp = adc_read(ADC_CHAN_TEMP);
+    state.ibat = adc_read(ADC_CHAN_IBAT);
+    state.ibat_filtered = filter_lp_pt2_step(&battery.display_filter, &battery.current.display, state.ibat);
+    state.ibat_sag_filtered = filter_lp_pt1_step(&battery.sag_filter, &battery.current.sag, state.ibat);
+    state.vbat = adc_read(ADC_CHAN_VBAT);
+    state.vbat_filtered = filter_lp_pt2_step(&battery.display_filter, &battery.voltage.display, state.vbat);
+    state.vbat_sag_filtered = filter_lp_pt1_step(&battery.sag_filter, &battery.voltage.sag, state.vbat);
+    // Li-ion compensation model: 18-second voltage decay.
+    lpf(&battery.voltage_decay, state.vbat_sag_filtered, lpfcalc(VBAT_PERIOD_US * 1e-6f, 18));
   }
-  // Integrate over elapsed time, including delays in worker service.
-  state.ibat_drawn += state.ibat_sag_filtered * elapsed_us / IBAT_SCALE;
 
-  // li-ion battery model compensation time decay ( 18 seconds )
-  if (adc_read(ADC_CHAN_VBAT, &state.vbat)) {
-    state.vbat_filtered = filter_lp_pt2_step(&display_filter, &vbat_display_filter_state, state.vbat);
-    state.vbat_sag_filtered = filter_lp_pt1_step(&sag_filter, &vbat_sag_filter_state, state.vbat);
-    // Use sag filtered value for decay (faster response for compensation)
-    lpf(&vbat_filtered_decay, state.vbat_sag_filtered, lpfcalc(0.001, 18));
-  }
-  
   state.vbat_cell_avg = state.vbat_filtered / (float)state.lipo_cell_count;
 
   // average of all motors
   // filter motorpwm so it has the same delay as the filtered voltage
-  // step from the measured service interval so the filter stays a true 60 Hz
-  // regardless of how often the IO worker runs
-  const uint32_t thrsum_elapsed_us = now - last_thrsum_update_us;
-  last_thrsum_update_us = now;
-  filter_lp_pt1_coeff(&thrsum_filter, THRSUM_FILTER_HZ, thrsum_elapsed_us);
-  const float thrfilt = filter_lp_pt1_step(&thrsum_filter, &thrsum_filter_state, state.thrsum);
+  const float thrfilt = filter_lp_pt1_step(&battery.throttle_filter, &battery.throttle_state, state.thrsum);
   // Use sag filtered value for compensation calculations
-  const float tempvolt = state.vbat_sag_filtered * (1.00f + CF1) - vbat_filtered_decay * (CF1);
+  const float tempvolt = state.vbat_sag_filtered * (1.00f + CF1) - battery.voltage_decay * (CF1);
   const float hyst = flags.lowbatt ? HYST : 0.0f;
   const float vdrop_factor = vbat_auto_vdrop(thrfilt, tempvolt);
   state.vbat_compensated = tempvolt + vdrop_factor * thrfilt;
@@ -171,5 +171,5 @@ TickType_t vbat_calc() {
       flags.lowbatt = 0;
   }
 
-  return pdMS_TO_TICKS(VBAT_PERIOD_US / 1000);
+  return pdMS_TO_TICKS(((battery.next_update_us - now) + 999) / 1000);
 }

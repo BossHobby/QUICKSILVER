@@ -63,6 +63,7 @@ extern "C" void vApplicationTickHook() {
     }
   }
   flight_timer_irq_handler();
+  adc_native_scan();
   // Task notifications mark a pending yield; the POSIX tick ISR switches tasks
   // after xTaskIncrementTick() returns. Do not switch inside the tick hook.
 }
