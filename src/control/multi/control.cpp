@@ -300,8 +300,9 @@ void control() {
   }
 
 #ifdef MOTOR_BEEPS
-  if ((flags.usb_active == 0 && flags.rx_ready && flags.failsafe && (time_millis() - state.failsafe_time_ms) > MOTOR_BEEPS_TIMEOUT) ||
-      (flags.on_ground && rx_aux_on(AUX_BUZZER_ENABLE))) {
+  // Airborne failsafe RTH still needs motor updates past the beeper timeout.
+  if (flags.on_ground &&
+      ((flags.usb_active == 0 && flags.rx_ready && flags.failsafe && (time_millis() - state.failsafe_time_ms) > MOTOR_BEEPS_TIMEOUT) || rx_aux_on(AUX_BUZZER_ENABLE))) {
     motor_beep();
   } else
 #endif
