@@ -1,6 +1,11 @@
 #include "driver/gpio.h"
 
+#include <atomic>
+
 #include "core/project.h"
+
+// Unwritten native inputs retain the previous pulled-high behavior.
+static std::atomic<bool> pin_low[PINS_MAX];
 
 // Define virtual GPIO port constants for native
 static uint32_t GPIO_PORT_A = 0;
@@ -32,6 +37,22 @@ static uint32_t GPIO_PORT_D = 3;
 #define GPIO_PINS_15 (1 << 15)
 
 void gpio_ports_init() {
+}
+
+void gpio_pin_set(uint32_t pin) {
+  pin_low[pin] = false;
+}
+
+void gpio_pin_reset(uint32_t pin) {
+  pin_low[pin] = true;
+}
+
+void gpio_pin_toggle(uint32_t pin) {
+  pin_low[pin] = !pin_low[pin];
+}
+
+bool gpio_pin_read(uint32_t pin) {
+  return !pin_low[pin];
 }
 
 void gpio_pin_init(gpio_pins_t pin, gpio_config_t config) {

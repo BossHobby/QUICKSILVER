@@ -138,12 +138,17 @@ static float rx_apply_deadband(float val) {
 #endif
 }
 
-static void rx_update_aux_active() {
-  uint32_t active = 0;
+static void rx_update_aux_active(bool update_channels) {
+  uint32_t active = state.aux_active;
 
   for (uint32_t i = 0; i < AUX_FUNCTION_MAX; i++) {
     const aux_function_map_t *map = &profile.receiver.aux[i];
 
+    // Hold receiver-controlled functions between frames; constants remain live.
+    if (!update_channels && map->channel < RX_CHANNEL_MAX)
+      continue;
+
+    active &= ~(1U << i);
     if (map->channel == RX_CHANNEL_ON) {
       active |= 1U << i;
       continue;
@@ -169,7 +174,7 @@ static void rx_init_state() {
     state.rx_channels[i] = 0;
   }
   state.aux_active = 0;
-  rx_update_aux_active();
+  rx_update_aux_active(true);
 
   filter_lp_pt2_init(&rx_filter, rx_filter_state, 4, state.rx_filter_hz, state.looptime_autodetect);
 }
@@ -413,15 +418,17 @@ void rx_process() {
   rx_mailbox.pending = false;
   taskEXIT_CRITICAL();
 
-  if (frame_pending && !flags.failsafe_signal_lost) {
+  const bool valid_frame = frame_pending && !flags.failsafe_signal_lost;
+  if (valid_frame) {
     rx_apply_stick_scale();
     rx_update_roles();
-    rx_update_aux_active();
 
     state.rx.roll = rx_apply_deadband(state.rx.roll);
     state.rx.pitch = rx_apply_deadband(state.rx.pitch);
     state.rx.yaw = rx_apply_deadband(state.rx.yaw);
   }
+
+  rx_update_aux_active(valid_frame);
 
   const uint32_t rx_filter_delta = (time_millis() - rx_filter_start);
   if (rx_filter_delta > RX_FITER_SAMPLE_TIME) {
