@@ -1,21 +1,16 @@
 #include "io/vbat.h"
 
+#include <algorithm>
+
 #include "control/control.h"
 #include "core/failloop.h"
-#include "core/flash.h"
 #include "core/profile.h"
 #include "driver/adc.h"
 #include "driver/time.h"
 #include "util/util.h"
 
-// compensation factor for li-ion internal model
-// zero to bypass
-#define CF1 0.25f
-
 // the lowest vbatt is ever allowed to go
 #define VBATTLOW_ABS 2.7f
-
-#define THRSUM_FILTER_HZ 60
 
 // Each pass publishes the ADC average since the previous one. The period is
 // longer than the slowest full scan (~4 ms on G4), so windows are complete.
@@ -25,29 +20,63 @@ static constexpr float DISPLAY_FILTER_HZ = 2.0f;
 static constexpr float SAG_FILTER_HZ = 5.0f;
 static constexpr uint32_t ADC_STARTUP_TIMEOUT_US = 100000;
 
+// Above a fully charged HV cell, so a full pack never counts an extra cell.
+static constexpr float CELL_MAX_VOLTAGE = 4.4f;
+static constexpr uint8_t CELL_COUNT_MAX = 8;
+
+// Sag model: V = V_open - R * load. Load is the measured current in amps with a
+// current sensor, otherwise the average motor output. R is the least-squares
+// slope of high-passed voltage against high-passed load: the high-pass removes
+// discharge, and the averages remember several seconds of in-flight load steps.
+static constexpr float SAG_HIGHPASS_HZ = 0.5f;
+static constexpr float SAG_AVERAGE_HZ = 0.02f;
+// Load variation (RMS, relative to the mean load) needed to update R.
+static constexpr float SAG_MIN_RELATIVE_EXCITATION = 0.1f;
+
 struct battery_filter_state_t {
   filter_state_t display;
   filter_state_t sag;
 };
 
 static struct {
-  // Both measurements arrive in one ADC window and share filter coefficients.
+  // Voltage, current and throttle share the sag filter, so compensation does
+  // not lead or lag the voltage it corrects.
   filter_lp_pt2 display_filter;
   filter_lp_pt1 sag_filter;
   battery_filter_state_t voltage;
   battery_filter_state_t current;
-  filter_lp_pt1 throttle_filter;
-  filter_state_t throttle_state;
-  float voltage_decay;
+  filter_state_t throttle;
+
+  filter_lp_pt1 trend_filter;
+  filter_lp_pt1 average_filter;
+  filter_state_t voltage_trend;
+  filter_state_t load_trend;
+  filter_state_t covariance;
+  filter_state_t variance;
+  bool current_load;
+  float resistance;
+
   uint32_t last_update_us;
   uint32_t next_update_us;
 } battery;
+
+static void vbat_reset_sag_estimate() {
+  filter_init_state(&battery.load_trend, 1);
+  filter_init_state(&battery.covariance, 1);
+  filter_init_state(&battery.variance, 1);
+  battery.resistance = 0;
+}
+
+static uint8_t vbat_detect_cell_count(float voltage) {
+  return std::min<uint8_t>(voltage / CELL_MAX_VOLTAGE + 1, CELL_COUNT_MAX);
+}
 
 void vbat_init() {
   battery = {};
   filter_lp_pt2_coeff(&battery.display_filter, DISPLAY_FILTER_HZ, VBAT_PERIOD_US);
   filter_lp_pt1_coeff(&battery.sag_filter, SAG_FILTER_HZ, VBAT_PERIOD_US);
-  filter_lp_pt1_coeff(&battery.throttle_filter, THRSUM_FILTER_HZ, VBAT_PERIOD_US);
+  filter_lp_pt1_coeff(&battery.trend_filter, SAG_HIGHPASS_HZ, VBAT_PERIOD_US);
+  filter_lp_pt1_coeff(&battery.average_filter, SAG_AVERAGE_HZ, VBAT_PERIOD_US);
 
   // Boot runs with interrupts enabled, before IO owns acquisition. Cell count
   // detection needs a complete first window, including its reference voltage.
@@ -62,60 +91,48 @@ void vbat_init() {
   for (size_t i = 0; i < 5000; i++) {
     state.vbat_filtered = filter_lp_pt2_step(&battery.display_filter, &battery.voltage.display, state.vbat);
     state.vbat_sag_filtered = filter_lp_pt1_step(&battery.sag_filter, &battery.voltage.sag, state.vbat);
+    filter_lp_pt1_step(&battery.trend_filter, &battery.voltage_trend, state.vbat);
   }
 
   if (profile.voltage.lipo_cell_count == 0) {
-    // Lipo count not specified, trigger auto detect
-    for (uint32_t i = 8; i > 0; i--) {
-      if (state.vbat_filtered / (float)(i) > 3.7f) {
-        state.lipo_cell_count = i;
-        break;
-      }
-    }
+    state.lipo_cell_count = vbat_detect_cell_count(state.vbat_filtered);
   } else {
     state.lipo_cell_count = profile.voltage.lipo_cell_count;
   }
+  state.vbat_cell_avg = state.vbat_filtered / (float)state.lipo_cell_count;
+  state.vbat_compensated = state.vbat_sag_filtered;
+  state.vbat_compensated_cell_avg = state.vbat_compensated / (float)state.lipo_cell_count;
 
-  battery.voltage_decay = state.vbat_sag_filtered;
   battery.last_update_us = time_micros();
   battery.next_update_us = battery.last_update_us + VBAT_PERIOD_US;
 }
 
-static float vbat_auto_vdrop(float thrfilt, float tempvolt) {
-  static int minindex = 0;
+static void vbat_update_compensation() {
+  const float throttle = filter_lp_pt1_step(&battery.sag_filter, &battery.throttle, state.thrsum);
+  // Ground configuration can enable or disable the current sensor; R from the
+  // other load unit does not apply.
+  const bool current_load = target.ibat != PIN_NONE && profile.voltage.ibat_scale != 0;
+  if (current_load != battery.current_load) {
+    battery.current_load = current_load;
+    vbat_reset_sag_estimate();
+  }
+  const float load = current_load ? state.ibat_sag_filtered * 0.001f : throttle;
 
-  if (thrfilt <= 0.1f) {
-    return minindex * 0.1f;
+  const float voltage_step = state.vbat_sag_filtered - filter_lp_pt1_step(&battery.trend_filter, &battery.voltage_trend, state.vbat_sag_filtered);
+  const float load_mean = filter_lp_pt1_step(&battery.trend_filter, &battery.load_trend, load);
+  const float load_step = load - load_mean;
+
+  // Only motor load changes in flight reveal the pack's resistance.
+  if (flags.in_air) {
+    const float covariance = filter_lp_pt1_step(&battery.average_filter, &battery.covariance, voltage_step * load_step);
+    const float variance = filter_lp_pt1_step(&battery.average_filter, &battery.variance, load_step * load_step);
+    const float min_variance = SAG_MIN_RELATIVE_EXCITATION * SAG_MIN_RELATIVE_EXCITATION * load_mean * load_mean;
+    if (variance > 0.0f && variance >= min_variance)
+      battery.resistance = std::max(0.0f, -covariance / variance);
   }
 
-  static int z = 0;
-  static float lastin[12];
-  static float lastout[12];
-
-  //  y(n) = x(n) - x(n-1) + R * y(n-1)
-  //  out = in - lastin + coeff*lastout
-  const float vcomp = tempvolt + (float)z * 0.1f * thrfilt;
-  const float ans = vcomp - lastin[z] + lpfcalc(VBAT_PERIOD_US * 12, 6000e3) * lastout[z];
-  lastin[z] = vcomp;
-  lastout[z] = ans;
-
-  static float score[12];
-  lpf(&score[z], ans * ans, lpfcalc(VBAT_PERIOD_US * 12, 60e6));
-  z++;
-
-  if (z >= 12) {
-    z = 0;
-    float min = score[0];
-    for (int i = 0; i < 12; i++) {
-      if ((score[i]) < min) {
-        min = (score[i]);
-        // add an offset because it seems to be usually early
-        minindex = i + 1;
-      }
-    }
-  }
-
-  return minindex * 0.1f;
+  state.vbat_compensated = state.vbat_sag_filtered + battery.resistance * load;
+  state.vbat_compensated_cell_avg = state.vbat_compensated / (float)state.lipo_cell_count;
 }
 
 TickType_t vbat_calc() {
@@ -143,32 +160,18 @@ TickType_t vbat_calc() {
     state.vbat = adc_read(ADC_CHAN_VBAT);
     state.vbat_filtered = filter_lp_pt2_step(&battery.display_filter, &battery.voltage.display, state.vbat);
     state.vbat_sag_filtered = filter_lp_pt1_step(&battery.sag_filter, &battery.voltage.sag, state.vbat);
-    // Li-ion compensation model: 18-second voltage decay.
-    lpf(&battery.voltage_decay, state.vbat_sag_filtered, lpfcalc(VBAT_PERIOD_US * 1e-6f, 18));
+    vbat_update_compensation();
   }
 
   state.vbat_cell_avg = state.vbat_filtered / (float)state.lipo_cell_count;
 
-  // average of all motors
-  // filter motorpwm so it has the same delay as the filtered voltage
-  const float thrfilt = filter_lp_pt1_step(&battery.throttle_filter, &battery.throttle_state, state.thrsum);
-  // Use sag filtered value for compensation calculations
-  const float tempvolt = state.vbat_sag_filtered * (1.00f + CF1) - battery.voltage_decay * (CF1);
+  // Keep a warning until the voltage recovers past the threshold plus HYST.
   const float hyst = flags.lowbatt ? HYST : 0.0f;
-  const float vdrop_factor = vbat_auto_vdrop(thrfilt, tempvolt);
-  state.vbat_compensated = tempvolt + vdrop_factor * thrfilt;
-  state.vbat_compensated_cell_avg = state.vbat_compensated / (float)state.lipo_cell_count;
-
-  // Use sag filtered (faster) voltage for warnings
-  const float vbat_sag_cell_avg = state.vbat_sag_filtered / (float)state.lipo_cell_count;
-  
+  const float threshold = profile.voltage.vbattlow + hyst;
   if (profile.voltage.use_filtered_voltage_for_warnings) {
-    flags.lowbatt = vbat_sag_cell_avg < profile.voltage.vbattlow ? 1 : 0;
+    flags.lowbatt = state.vbat_sag_filtered / (float)state.lipo_cell_count < threshold;
   } else {
-    if ((state.vbat_compensated_cell_avg < profile.voltage.vbattlow + hyst) || (state.vbat_cell_avg < VBATTLOW_ABS))
-      flags.lowbatt = 1;
-    else
-      flags.lowbatt = 0;
+    flags.lowbatt = state.vbat_compensated_cell_avg < threshold || state.vbat_cell_avg < VBATTLOW_ABS;
   }
 
   return pdMS_TO_TICKS(((battery.next_update_us - now) + 999) / 1000);
