@@ -37,6 +37,7 @@
 #include "io/buzzer.h"
 #include "io/gps.h"
 #include "io/led.h"
+#include "io/pinio.h"
 #include "io/simulator.h"
 #include "io/usb_configurator.h"
 #include "io/vbat.h"
@@ -289,6 +290,7 @@ void flight_thread(void *) {
   buzzer_init();
   usb_init();
   target_init();
+  pinio_init();
   simulator_init();
 
   rgb_led_init();

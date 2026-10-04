@@ -7,6 +7,9 @@
 #include "rx/rx.h"
 
 #define LED_MAX 4
+static constexpr uint8_t PINIO_MAX = 4;
+static constexpr uint8_t PINIO_LABEL_LEN = 32;
+static constexpr uint8_t PINIO_DESCRIPTION_LEN = 96;
 #define SDIO_PORT_MAX 3 // Index zero is unused; H743 supports SDMMC1 and SDMMC2.
 
 #define GPIO_AF(pin, af, tag)
@@ -162,6 +165,21 @@ typedef struct {
   gpio_pins_t pin;
   bool invert;
 } target_invert_pin_t;
+
+typedef struct {
+  gpio_pins_t pin;
+  bool invert;
+  uint8_t label[PINIO_LABEL_LEN];
+  uint8_t description[PINIO_DESCRIPTION_LEN];
+} target_pinio_t;
+
+#define TARGET_PINIO_MEMBERS                     \
+  START_STRUCT(target_pinio_t)                   \
+  MEMBER(pin, gpio_pins_t)                        \
+  MEMBER(invert, bool)                           \
+  TSTR_MEMBER(label, PINIO_LABEL_LEN)             \
+  TSTR_MEMBER(description, PINIO_DESCRIPTION_LEN) \
+  END_STRUCT()
 
 #define TARGET_BUZZER_MEMBERS       \
   START_STRUCT(target_invert_pin_t) \
@@ -379,7 +397,7 @@ typedef struct {
   target_i2c_device_t baro;
 
   gpio_pins_t usb_detect;
-  gpio_pins_t fpv;
+  target_pinio_t pinio[PINIO_MAX];
   gpio_pins_t vbat;
   gpio_pins_t ibat;
   gpio_pins_t rgb_led;
@@ -415,7 +433,7 @@ typedef struct {
   MEMBER(rx_spi, target_rx_spi_device_t)                                         \
   MEMBER(baro, target_i2c_device_t)                                              \
   MEMBER(usb_detect, gpio_pins_t)                                                \
-  MEMBER(fpv, gpio_pins_t)                                                       \
+  ARRAY_MEMBER(pinio, PINIO_MAX, target_pinio_t)                                \
   MEMBER(vbat, gpio_pins_t)                                                      \
   MEMBER(ibat, gpio_pins_t)                                                      \
   MEMBER(rgb_led, gpio_pins_t)                                                   \

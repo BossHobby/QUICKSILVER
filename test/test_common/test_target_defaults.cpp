@@ -216,7 +216,12 @@ void test_target_defaults_storage_capacity() {
   full.rx_spi = {.port = SPI_PORT1, .nss = PIN_A4, .exti = PIN_A1, .ant_sel = PIN_A2, .lna_en = PIN_A3, .tx_en = PIN_A5, .busy = PIN_A6, .busy_exti = true, .reset = PIN_A7};
   full.baro = {.port = I2C_PORT1};
   full.usb_detect = PIN_C13;
-  full.fpv = PIN_C14;
+  for (auto &output : full.pinio) {
+    output.pin = PIN_C14;
+    output.invert = true;
+    memset(output.label, 'L', sizeof(output.label));
+    memset(output.description, 'D', sizeof(output.description));
+  }
   full.vbat = PIN_C15;
   full.ibat = PIN_C0;
   full.rgb_led = PIN_C1;
