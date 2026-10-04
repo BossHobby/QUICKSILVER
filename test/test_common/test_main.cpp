@@ -5,6 +5,7 @@
 
 // Test declarations
 extern void test_vbat_integrates_current_over_elapsed_time();
+extern void test_crsf_battery_current_units();
 extern void test_rx_transport_leaves_conditioning_to_flight();
 extern void test_rx_mailbox_coalesces_complete_frames();
 extern void test_io_worker_publishes_rx_without_configuration_wait();
@@ -278,6 +279,7 @@ int main(int argc, char **argv) {
   UNITY_BEGIN();
   RUN_TEST(test_rx_transport_leaves_conditioning_to_flight);
   RUN_TEST(test_vbat_integrates_current_over_elapsed_time);
+  RUN_TEST(test_crsf_battery_current_units);
   RUN_TEST(test_rx_mailbox_coalesces_complete_frames);
   RUN_TEST(test_io_worker_publishes_rx_without_configuration_wait);
   RUN_TEST(test_io_worker_services_cadence_without_notification);

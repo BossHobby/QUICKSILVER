@@ -138,8 +138,8 @@ CRC:            (uint8_t), crc of <Type> and <Payload>
 /*
 0x08 Battery sensor (CRSF_FRAMETYPE_BATTERY_SENSOR)
 Payload:
-uint16_t    Voltage ( mV * 100 )
-uint16_t    Current ( mA * 100 )
+uint16_t    Voltage (0.1 V)
+uint16_t    Current (0.1 A)
 uint24_t    Fuel ( drawn mAh )
 uint8_t     Battery remaining ( percent )
 */
@@ -148,7 +148,7 @@ uint32_t crsf_tlm_frame_battery_sensor(uint8_t *buf) {
   frame->header.type = CRSF_FRAMETYPE_BATTERY_SENSOR;
 
   frame->payload.voltage = __builtin_bswap16((uint16_t)(state.vbat_cell_avg * 10));
-  frame->payload.current = __builtin_bswap16((uint16_t)(state.ibat_filtered * 10));
+  frame->payload.current = __builtin_bswap16((uint16_t)constrain(state.ibat_filtered / 100.0f, 0, 0xFFFF));
   frame->payload.capacity_used = __builtin_bswap32((uint32_t)state.ibat_drawn) >> 8;
   frame->payload.remaining = 100;
   return crsf_tlm_frame_finalize(buf, CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE);
