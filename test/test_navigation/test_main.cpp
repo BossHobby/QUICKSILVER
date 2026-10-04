@@ -1348,6 +1348,13 @@ void test_navigation_delayed_gps_cruise_and_arrival() {
   }
 }
 
+extern void test_navigation_motor_loop_nominal();
+extern void test_navigation_plant_specific_force_and_motor_signs();
+extern void test_navigation_motor_loop_delayed_gps_and_wind();
+extern void test_navigation_motor_loop_wrong_hover();
+extern void test_navigation_motor_loop_sensor_outages();
+extern void test_navigation_motor_loop_rc_loss_and_handback();
+
 int main() {
   UNITY_BEGIN();
   RUN_TEST(test_navigation_target_north_commands_forward_pitch);
@@ -1404,5 +1411,11 @@ int main() {
   RUN_TEST(test_navigation_turn_wraps_heading_and_respects_rate);
   RUN_TEST(test_navigation_stalled_turn_aborts);
   RUN_TEST(test_navigation_heading_loss_stops_horizontal_commands);
+  RUN_TEST(test_navigation_plant_specific_force_and_motor_signs);
+  RUN_TEST(test_navigation_motor_loop_nominal);
+  RUN_TEST(test_navigation_motor_loop_delayed_gps_and_wind);
+  RUN_TEST(test_navigation_motor_loop_wrong_hover);
+  RUN_TEST(test_navigation_motor_loop_sensor_outages);
+  RUN_TEST(test_navigation_motor_loop_rc_loss_and_handback);
   return UNITY_END();
 }
