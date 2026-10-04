@@ -13,6 +13,7 @@
 #include "io/buzzer.h"
 #include "io/gps.h"
 #include "io/led.h"
+#include "io/pinio.h"
 #include "io/rgb_led.h"
 #include "io/usb_configurator.h"
 #include "io/vbat.h"
@@ -119,6 +120,8 @@ void io_thread(void *) {
       remaining[IO_RGB] = rgb_led_update();
     if (pending & IO_WORK_BUZZER)
       remaining[IO_BUZZER] = buzzer_update();
+    if (pending & IO_WORK_PINIO)
+      remaining[IO_PINIO] = pinio_update();
     if (pending & IO_WORK_BARO)
       remaining[IO_BARO] = baro_update();
     if (pending & IO_WORK_VTX)

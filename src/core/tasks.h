@@ -29,7 +29,16 @@ enum thread_id_t {
 };
 
 enum io_task_t {
-  IO_RX, IO_BARO, IO_VTX, IO_GPS, IO_VBAT, IO_LED, IO_RGB, IO_BUZZER, IO_TASK_COUNT,
+  IO_RX,
+  IO_BARO,
+  IO_VTX,
+  IO_GPS,
+  IO_VBAT,
+  IO_LED,
+  IO_RGB,
+  IO_BUZZER,
+  IO_PINIO,
+  IO_TASK_COUNT,
 };
 
 enum io_work_t : uint32_t {
@@ -41,6 +50,7 @@ enum io_work_t : uint32_t {
   IO_WORK_LED = 1u << IO_LED,
   IO_WORK_RGB = 1u << IO_RGB,
   IO_WORK_BUZZER = 1u << IO_BUZZER,
+  IO_WORK_PINIO = 1u << IO_PINIO,
 };
 
 struct thread_t {

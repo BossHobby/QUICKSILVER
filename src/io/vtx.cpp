@@ -7,7 +7,6 @@
 #include "core/debug.h"
 #include "core/profile.h"
 #include "core/project.h"
-#include "driver/gpio.h"
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "rx/rx.h"
@@ -79,25 +78,6 @@ void vtx_init() {
 
   vtx_actual.pit_mode = VTX_PIT_MODE_MAX;
   vtx_actual.power_level = VTX_POWER_LEVEL_MAX;
-}
-
-static void vtx_update_fpv_pin() {
-  if (target.fpv != PIN_NONE) {
-    static bool fpv_init = false;
-    if (rx_aux_on(AUX_FPV_SWITCH)) {
-      // fpv switch on
-      if (!fpv_init && flags.rx_mode == RXMODE_NORMAL && flags.on_ground == 1) {
-        fpv_init = gpio_init_fpv(flags.rx_mode);
-        vtx_delay_ms = 100;
-      }
-      if (fpv_init) {
-        gpio_pin_set(target.fpv);
-      }
-    } else if (fpv_init && flags.on_ground == 1 && !flags.failsafe) {
-      // fpv switch off
-      gpio_pin_reset(target.fpv);
-    }
-  }
 }
 
 static vtx_protocol_t vtx_desired_protocol() {
@@ -196,8 +176,6 @@ TickType_t vtx_update() {
   if (flags.arm_state || flags.in_air)
     return pdMS_TO_TICKS(100);
 
-  vtx_update_fpv_pin();
-
   if (profile.serial.smart_audio == SERIAL_PORT_INVALID &&
       serial_displayport.config.port == SERIAL_PORT_INVALID)
     return portMAX_DELAY;
@@ -243,8 +221,9 @@ TickType_t vtx_update() {
     return pdMS_TO_TICKS(100);
 
   vtx_pit_mode_t pit_mode = profile.vtx.pit_mode;
-  if (profile.receiver.aux[AUX_FPV_SWITCH].channel <= RX_CHANNEL_16 && pit_mode != VTX_PIT_MODE_NO_SUPPORT)
-    pit_mode = rx_aux_on(AUX_FPV_SWITCH) ? VTX_PIT_MODE_OFF : VTX_PIT_MODE_ON;
+  const auto pit_channel = profile.receiver.aux[AUX_VTX_PIT_MODE].channel;
+  if ((pit_channel <= RX_CHANNEL_16 || pit_channel == RX_CHANNEL_ON) && pit_mode != VTX_PIT_MODE_NO_SUPPORT)
+    pit_mode = rx_aux_on(AUX_VTX_PIT_MODE) ? VTX_PIT_MODE_ON : VTX_PIT_MODE_OFF;
 
   if (!vtx_update_pitmode(pit_mode) || !vtx_update_frequency() || !vtx_update_powerlevel())
     return vtx_deadline();

@@ -22,6 +22,53 @@ extern uint8_t simulator_osd_test_char(uint8_t x, uint8_t y);
 static uint8_t msp_reply_direction;
 static uint16_t msp_reply_size;
 
+void test_osd_aux_output_menu_is_reachable() {
+  const auto saved_target = target;
+  const auto saved_profile = profile;
+  const auto saved_flags = flags;
+  flags = {};
+  target = {};
+  target.pinio[0] = {.pin = PIN_B0, .label = "VTX POWER"};
+  target.pinio[1] = {.pin = PIN_B1, .label = "CAMERA"};
+  profile_set_defaults(&profile);
+  osd_device_init();
+  osd_display_reset();
+  simulator_osd_test_reset(false);
+  for (unsigned i = 0; i < 64; i++) {
+    time_test_advance_us(1000);
+    osd_display();
+  }
+#ifdef VEHICLE_WING
+  osd_push_screen(OSD_SCREEN_MAIN_MENU);
+#else
+  osd_push_screen(OSD_SCREEN_FLIGHT_MODES);
+#endif
+  for (unsigned i = 0; i < 64; i++) osd_display();
+
+  bool pit_mode = false, power = false, camera = false;
+  for (uint8_t cursor = 1; cursor <= osd_state.cursor_max; cursor++) {
+    osd_state.cursor = cursor;
+    osd_state.screen_phase = OSD_PHASE_CLEAR;
+    for (unsigned i = 0; i < 64; i++) osd_display();
+    for (uint8_t y = 0; y < DISPLAYPORT_ROWS; y++) {
+      char row[DISPLAYPORT_COLS + 1] = {};
+      for (uint8_t x = 0; x < DISPLAYPORT_COLS; x++)
+        row[x] = simulator_osd_test_char(x, y);
+      pit_mode |= strstr(row, "VTX PIT MODE") != nullptr;
+      power |= strstr(row, "VTX POWER") != nullptr;
+      camera |= strstr(row, "CAMERA") != nullptr;
+    }
+  }
+  TEST_ASSERT_TRUE(pit_mode);
+  TEST_ASSERT_TRUE(power);
+  TEST_ASSERT_TRUE(camera);
+  osd_clear();
+  osd_display_reset();
+  target = saved_target;
+  profile = saved_profile;
+  flags = saved_flags;
+}
+
 void test_osd_merges_short_gaps_and_retries() {
   osd_device_init();
   osd_clear();

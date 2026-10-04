@@ -18,6 +18,7 @@
 //        gps: add persisted constellation selection.
 //        navigation: expose return height, speed, failsafe and throttle limits only.
 //        pid: add per-axis wing rate feedforward to each PID profile.
+//        pinio: replace FPV GPIO switching with four AUX outputs and separate VTX pit mode.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
 // 0.2.5 (c9dec9f1): add osd profiles.
