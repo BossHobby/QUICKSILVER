@@ -7,6 +7,12 @@
 extern void test_vbat_integrates_current_over_elapsed_time();
 extern void test_vbat_runs_on_fixed_period();
 extern void test_vbat_current_filter_step_response();
+extern void test_vbat_sag_compensation_learns_current_resistance();
+extern void test_vbat_sag_compensation_uses_throttle_without_current_sensor();
+extern void test_vbat_sag_compensation_ignores_discharge();
+extern void test_vbat_sag_compensation_learns_only_in_air();
+extern void test_vbat_filtered_warning_has_hysteresis();
+extern void test_vbat_detects_cell_count_across_charge();
 extern void test_crsf_battery_current_units();
 extern void test_rx_transport_leaves_conditioning_to_flight();
 extern void test_rx_mailbox_coalesces_complete_frames();
@@ -287,6 +293,12 @@ int main(int argc, char **argv) {
   RUN_TEST(test_vbat_integrates_current_over_elapsed_time);
   RUN_TEST(test_vbat_runs_on_fixed_period);
   RUN_TEST(test_vbat_current_filter_step_response);
+  RUN_TEST(test_vbat_sag_compensation_learns_current_resistance);
+  RUN_TEST(test_vbat_sag_compensation_uses_throttle_without_current_sensor);
+  RUN_TEST(test_vbat_sag_compensation_ignores_discharge);
+  RUN_TEST(test_vbat_sag_compensation_learns_only_in_air);
+  RUN_TEST(test_vbat_filtered_warning_has_hysteresis);
+  RUN_TEST(test_vbat_detects_cell_count_across_charge);
   RUN_TEST(test_crsf_battery_current_units);
   RUN_TEST(test_rx_mailbox_coalesces_complete_frames);
   RUN_TEST(test_io_worker_publishes_rx_without_configuration_wait);
