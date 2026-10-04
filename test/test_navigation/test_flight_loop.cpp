@@ -234,6 +234,8 @@ struct flight_t {
     state.looptime_inverse = 1 / DT;
     state.looptime_autodetect = DT * 1e6;
     state.rx_filter_hz = 50;
+    state.lipo_cell_count = 1;
+    state.vbat_sag_filtered = 4.0f;
     state.vbat_cell_avg = 4.0f;
     filter_global_init();
     motor_init();
