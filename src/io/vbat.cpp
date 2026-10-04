@@ -71,6 +71,17 @@ static uint8_t vbat_detect_cell_count(float voltage) {
   return std::min<uint8_t>(voltage / CELL_MAX_VOLTAGE + 1, CELL_COUNT_MAX);
 }
 
+static void vbat_update_cell_count() {
+  if (profile.voltage.lipo_cell_count != 0) {
+    state.lipo_cell_count = profile.voltage.lipo_cell_count;
+    return;
+  }
+  // A battery connected after booting on USB raises the count while disarmed.
+  // The count never falls, so a pack resting low cannot lose a cell.
+  if (!flags.arm_state)
+    state.lipo_cell_count = std::max(state.lipo_cell_count, vbat_detect_cell_count(state.vbat_filtered));
+}
+
 void vbat_init() {
   battery = {};
   filter_lp_pt2_coeff(&battery.display_filter, DISPLAY_FILTER_HZ, VBAT_PERIOD_US);
@@ -94,11 +105,8 @@ void vbat_init() {
     filter_lp_pt1_step(&battery.trend_filter, &battery.voltage_trend, state.vbat);
   }
 
-  if (profile.voltage.lipo_cell_count == 0) {
-    state.lipo_cell_count = vbat_detect_cell_count(state.vbat_filtered);
-  } else {
-    state.lipo_cell_count = profile.voltage.lipo_cell_count;
-  }
+  state.lipo_cell_count = 1;
+  vbat_update_cell_count();
   state.vbat_cell_avg = state.vbat_filtered / (float)state.lipo_cell_count;
   state.vbat_compensated = state.vbat_sag_filtered;
   state.vbat_compensated_cell_avg = state.vbat_compensated / (float)state.lipo_cell_count;
@@ -160,6 +168,7 @@ TickType_t vbat_calc() {
     state.vbat = adc_read(ADC_CHAN_VBAT);
     state.vbat_filtered = filter_lp_pt2_step(&battery.display_filter, &battery.voltage.display, state.vbat);
     state.vbat_sag_filtered = filter_lp_pt1_step(&battery.sag_filter, &battery.voltage.sag, state.vbat);
+    vbat_update_cell_count();
     vbat_update_compensation();
   }
 
