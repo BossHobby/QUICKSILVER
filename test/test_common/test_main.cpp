@@ -5,6 +5,8 @@
 
 // Test declarations
 extern void test_vbat_integrates_current_over_elapsed_time();
+extern void test_vbat_runs_on_fixed_period();
+extern void test_vbat_current_filter_step_response();
 extern void test_crsf_battery_current_units();
 extern void test_rx_transport_leaves_conditioning_to_flight();
 extern void test_rx_mailbox_coalesces_complete_frames();
@@ -164,6 +166,10 @@ extern void test_adc_init(void);
 extern void test_adc_read_temperature(void);
 extern void test_adc_read_vbat(void);
 extern void test_adc_read_ibat(void);
+extern void test_adc_current_preserves_fractional_millivolts();
+extern void test_adc_window_averages_every_scan();
+extern void test_adc_incomplete_window_keeps_accumulating();
+extern void test_adc_window_skips_absent_external_channels();
 
 // Serial tests
 extern void test_serial_init(void);
@@ -279,6 +285,8 @@ int main(int argc, char **argv) {
   UNITY_BEGIN();
   RUN_TEST(test_rx_transport_leaves_conditioning_to_flight);
   RUN_TEST(test_vbat_integrates_current_over_elapsed_time);
+  RUN_TEST(test_vbat_runs_on_fixed_period);
+  RUN_TEST(test_vbat_current_filter_step_response);
   RUN_TEST(test_crsf_battery_current_units);
   RUN_TEST(test_rx_mailbox_coalesces_complete_frames);
   RUN_TEST(test_io_worker_publishes_rx_without_configuration_wait);
@@ -416,6 +424,10 @@ int main(int argc, char **argv) {
   RUN_TEST(test_adc_read_temperature);
   RUN_TEST(test_adc_read_vbat);
   RUN_TEST(test_adc_read_ibat);
+  RUN_TEST(test_adc_current_preserves_fractional_millivolts);
+  RUN_TEST(test_adc_window_averages_every_scan);
+  RUN_TEST(test_adc_incomplete_window_keeps_accumulating);
+  RUN_TEST(test_adc_window_skips_absent_external_channels);
 
   // Serial tests
   RUN_TEST(test_serial_init);

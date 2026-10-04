@@ -31,7 +31,17 @@ typedef struct {
   uint32_t channel;
 } adc_channel_t;
 
+extern adc_channel_t adc_pins[ADC_CHAN_MAX];
+
 void adc_init();
-bool adc_read(adc_chan_t chan, float *val);
-uint8_t adc_get_active_channels();
-bool adc_read_raw(adc_chan_t chan, uint16_t *val);
+// Boot, then IO, owns update/read. Update publishes the averages of a window in
+// which every configured channel converted at least once and starts the next
+// window; otherwise it keeps accumulating. Read scales the last published average.
+bool adc_update();
+float adc_read(adc_chan_t chan);
+
+// Driver hooks: configure the channels and start converting continuously; the
+// completion ISR adds each result to the current window.
+void adc_init_hardware();
+void adc_accumulate(adc_chan_t chan, uint16_t raw);
+float adc_convert_to_temp(float raw);
