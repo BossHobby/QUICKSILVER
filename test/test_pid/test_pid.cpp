@@ -44,8 +44,8 @@ static void pid_setUp(void) {
   // Initialize control state
   state.looptime = 0.000125f; // 8kHz
   state.looptime_inverse = 1.0f / state.looptime; // 8000Hz
-  state.vbat_filtered = 4.0f;
-  state.vbat_compensated = 1.0f;
+  state.vbat_sag_filtered = 4.0f;
+  state.lipo_cell_count = 1;
 
   // Initialize PID
   pid_init();
@@ -376,19 +376,20 @@ void test_pid_voltage_compensation(void) {
   // Enable voltage compensation
   profile.voltage.pid_voltage_compensation = PID_VOLTAGE_COMPENSATION_ACTIVE;
   
-  // Set a lower voltage
-  state.vbat_filtered = 3.5f;
-  state.vbat_compensated = 4.0f / 3.5f; // compensation factor
-  
-  // Setup error
   state.error.roll = 1.0f;
-  
-  // Execute
+  state.lipo_cell_count = 4;
+
+  // A full pack needs no boost.
+  state.vbat_sag_filtered = 16.0f;
   pid_calc();
-  
-  // Output should be scaled by voltage compensation
-  // Exact behavior depends on implementation
-  TEST_ASSERT_NOT_EQUAL(0.0f, state.pidoutput.roll);
+  const float full_p_term = state.pid_p_term.roll;
+  TEST_ASSERT_NOT_EQUAL(0.0f, full_p_term);
+
+  // Sag under load raises P immediately; the slow display voltage is ignored.
+  state.vbat_sag_filtered = 12.0f;
+  state.vbat_cell_avg = 4.0f;
+  pid_calc();
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.2078f, state.pid_p_term.roll / full_p_term);
 }
 
 // Test complete PID loop
