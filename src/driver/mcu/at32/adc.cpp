@@ -1,5 +1,7 @@
 #include "driver/adc.h"
 
+#include "driver/interrupt.h"
+
 #define ADC_VREF (3.3f)
 #define ADC_TEMP_BASE (1.26f)
 #define ADC_TEMP_SLOPE (-0.00423f)
@@ -11,8 +13,9 @@
 
 #define ADC_SAMPLINGTIME ADC_SAMPLING_INTERVAL_5CYCLES
 
-extern uint16_t adc_array[ADC_CHAN_MAX];
-extern adc_channel_t adc_pins[ADC_CHAN_MAX];
+// Hardware-oversampled conversions are long; the ISR chains them through the
+// configured channels.
+static adc_chan_t current_chan;
 
 static adc_type *adc_devs[ADC_DEVICE_MAX] = {
     ADC1,
@@ -21,7 +24,6 @@ static adc_type *adc_devs[ADC_DEVICE_MAX] = {
 };
 
 static void adc_init_pin(adc_chan_t chan, gpio_pins_t pin) {
-  adc_array[chan] = 1;
   adc_pins[chan].pin = PIN_NONE;
   adc_pins[chan].dev = ADC_DEVICE_MAX;
 
@@ -37,6 +39,8 @@ static void adc_init_pin(adc_chan_t chan, gpio_pins_t pin) {
     break;
 
   default:
+    if (pin == PIN_NONE)
+      break;
     for (uint32_t i = 0; i < GPIO_AF_MAX; i++) {
       const gpio_af_t *func = &gpio_pin_afs[i];
       if (func->pin != pin || RESOURCE_TAG_TYPE(func->tag) != RESOURCE_ADC) {
@@ -95,82 +99,47 @@ static void adc_init_dev() {
     adc_calibration_start(adc_devs[i]);
     while (adc_calibration_status_get(adc_devs[i]))
       ;
+    adc_interrupt_enable(adc_devs[i], ADC_OCCE_INT, TRUE);
   }
 }
 
 static void adc_start_conversion(adc_chan_t index) {
   const adc_channel_t *chan = &adc_pins[index];
   adc_type *adc = adc_devs[chan->dev];
-
-  while (adc_flag_get(adc, ADC_RDY_FLAG) == RESET)
-    ;
-
-  adc_enable(adc, FALSE);
+  // Single conversions have finished before the ISR changes the channel.
   adc_ordinary_channel_set(adc, (adc_channel_select_type)chan->channel, 1, ADC_SAMPLETIME_640_5);
-  adc_enable(adc, TRUE);
-
-  while (adc_flag_get(adc, ADC_RDY_FLAG) == RESET)
-    ;
   adc_ordinary_software_trigger_enable(adc, TRUE);
 }
 
-void adc_init() {
+void adc_init_hardware() {
   rcc_enable(RCC_ENCODE(ADC1));
   rcc_enable(RCC_ENCODE(ADC2));
   rcc_enable(RCC_ENCODE(ADC3));
 
   adc_init_pin(ADC_CHAN_VREF, PIN_NONE);
   adc_init_pin(ADC_CHAN_TEMP, PIN_NONE);
-  if (target.vbat != PIN_NONE) {
-    adc_init_pin(ADC_CHAN_VBAT, target.vbat);
-  }
-  if (target.ibat != PIN_NONE) {
-    adc_init_pin(ADC_CHAN_IBAT, target.ibat);
-  }
+  adc_init_pin(ADC_CHAN_VBAT, target.vbat);
+  adc_init_pin(ADC_CHAN_IBAT, target.ibat);
 
   adc_init_dev();
-  adc_start_conversion(ADC_CHAN_VREF);
+  interrupt_enable(ADC1_2_3_IRQn, ADC_PRIORITY);
 
-  // Count active channels
-  extern uint8_t adc_active_channels;
-  adc_active_channels = 0;
-  for (uint32_t i = 0; i < ADC_CHAN_MAX; i++) {
-    if (adc_pins[i].dev != ADC_DEVICE_MAX) {
-      adc_active_channels++;
-    }
-  }
+  current_chan = ADC_CHAN_VREF;
+  adc_start_conversion(current_chan);
 }
 
-bool adc_read_raw(adc_chan_t index, uint16_t *val) {
-  static adc_chan_t current_chan = ADC_CHAN_VREF;
-  static bool updated[ADC_CHAN_MAX] = {false};
-
-  const adc_channel_t *chan = &adc_pins[current_chan];
-  adc_type *adc = adc_devs[chan->dev];
-
-  if (adc_flag_get(adc, ADC_OCCE_FLAG)) {
-    // Store conversion result
-    adc_array[current_chan] = adc_ordinary_conversion_data_get(adc);
-    updated[current_chan] = true;
-
-    // Move to next active channel
-    do {
-      current_chan = (adc_chan_t)((current_chan + 1) % ADC_CHAN_MAX);
-    } while (adc_pins[current_chan].dev == ADC_DEVICE_MAX);
-
-    adc_start_conversion(current_chan);
-  }
-
-  // Return requested channel data
-  if (updated[index]) {
-    if (val)
-      *val = adc_array[index];
-    updated[index] = false;
-    return true;
-  }
-  return false;
+extern "C" void ADC1_2_3_IRQHandler() {
+  adc_type *adc = adc_devs[adc_pins[current_chan].dev];
+  if (!adc_flag_get(adc, ADC_OCCE_FLAG))
+    return;
+  // Reading the data acknowledges completion before the next channel starts.
+  adc_accumulate(current_chan, adc_ordinary_conversion_data_get(adc));
+  do {
+    current_chan = static_cast<adc_chan_t>((current_chan + 1) % ADC_CHAN_MAX);
+  } while (adc_pins[current_chan].dev == ADC_DEVICE_MAX);
+  adc_start_conversion(current_chan);
 }
 
-float adc_convert_to_temp(uint16_t val) {
+float adc_convert_to_temp(float val) {
   return (ADC_TEMP_BASE - val * ADC_VREF / 4096) / ADC_TEMP_SLOPE + 25;
 }
