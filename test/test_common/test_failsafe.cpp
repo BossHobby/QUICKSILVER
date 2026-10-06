@@ -1000,6 +1000,67 @@ void test_crsf_flight_mode_frame_reports_mode_text(void) {
   TEST_ASSERT_EQUAL_STRING(expected_mode, (char *)&frame[3]);
 }
 
+void test_crsf_attitude_frame_units_order_and_crc(void) {
+  const auto saved_attitude = state.attitude;
+  const struct {
+    float pitch;
+    float roll;
+    float yaw;
+    int16_t encoded[3];
+  } cases[] = {
+      {0.0f, 0.0f, 0.0f, {0, 0, 0}},
+      {0.25f, -0.5f, 1.0f, {2500, -5000, 10000}},
+      {-0.25f, 0.5f, -1.0f, {-2500, 5000, -10000}},
+      {0.0f, M_PI_F, -M_PI_F, {0, 31415, -31415}},
+  };
+  for (const auto &test : cases) {
+    state.attitude.pitch = test.pitch;
+    state.attitude.roll = test.roll;
+    state.attitude.yaw = test.yaw;
+    uint8_t frame[CRSF_FRAME_SIZE_MAX] = {};
+    const uint8_t frame_size = crsf_tlm_frame_attitude(frame);
+    TEST_ASSERT_EQUAL_UINT8(10U, frame_size);
+    TEST_ASSERT_EQUAL_UINT8(CRSF_FRAMETYPE_ATTITUDE, frame[2]);
+    crsf_test_assert_frame_crc(frame, frame_size);
+    TEST_ASSERT_EQUAL_INT16(test.encoded[0], crsf_test_read_i16(frame + 3));
+    TEST_ASSERT_EQUAL_INT16(test.encoded[1], crsf_test_read_i16(frame + 5));
+    TEST_ASSERT_EQUAL_INT16(test.encoded[2], crsf_test_read_i16(frame + 7));
+  }
+  state.attitude = saved_attitude;
+}
+
+void test_crsf_serial_telemetry_schedules_attitude(void) {
+  crsf_test_reset(8300000);
+  const auto saved_gps = profile.serial.gps;
+  const auto saved_attitude = state.attitude;
+  state.attitude.pitch = 0.25f;
+  state.attitude.roll = -0.5f;
+  state.attitude.yaw = 1.0f;
+  const serial_ports_t gps_ports[] = {SERIAL_PORT_INVALID, SERIAL_PORT2};
+  for (const auto gps_port : gps_ports) {
+    profile.serial.gps = gps_port;
+    uint8_t attitude_count = 0;
+    for (uint8_t slot = 0; slot < 8; slot++) {
+      ring_buffer_clear(serial_rx.tx_buffer);
+      serial_rx.tx_done = true;
+      time_test_advance_us(2000);
+      rx_serial_process_crsf();
+      uint8_t frame[CRSF_FRAME_SIZE_MAX] = {};
+      const uint8_t frame_size = crsf_test_read_tx_frame(frame);
+      crsf_test_assert_frame_crc(frame, frame_size);
+      if (frame[2] == CRSF_FRAMETYPE_ATTITUDE) {
+        attitude_count++;
+        TEST_ASSERT_EQUAL_INT16(2500, crsf_test_read_i16(frame + 3));
+        TEST_ASSERT_EQUAL_INT16(-5000, crsf_test_read_i16(frame + 5));
+        TEST_ASSERT_EQUAL_INT16(10000, crsf_test_read_i16(frame + 7));
+      }
+    }
+    TEST_ASSERT_EQUAL_UINT8(1U, attitude_count);
+  }
+  profile.serial.gps = saved_gps;
+  state.attitude = saved_attitude;
+}
+
 void test_crsf_msp_request_queues_response_immediately(void) {
   crsf_test_reset(9000000);
 

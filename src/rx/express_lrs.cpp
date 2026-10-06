@@ -115,6 +115,7 @@ static uint8_t tlm_burst_count = 1;
 static uint8_t tlm_burst_max = 1;
 static bool tlm_burst_valid = false;
 static uint8_t tlm_buffer[CRSF_FRAME_SIZE_MAX];
+static uint8_t tlm_telemetry_counter = 0;
 static bool tlm_device_info_pending = false;
 static uint8_t tlm_device_info_destination = CRSF_ADDRESS_RADIO_TRANSMITTER;
 static uint8_t tlm_denom = 1;
@@ -285,7 +286,10 @@ static void elrs_update_telemetry() {
         full_size = crsf_tlm_frame_device_info(tlm_buffer, tlm_device_info_destination);
         tlm_device_info_pending = false;
       } else {
-        full_size = crsf_tlm_frame_battery_sensor(tlm_buffer);
+        if (tlm_telemetry_counter++ % 2 == 0)
+          full_size = crsf_tlm_frame_battery_sensor(tlm_buffer);
+        else
+          full_size = crsf_tlm_frame_attitude(tlm_buffer);
       }
     }
 

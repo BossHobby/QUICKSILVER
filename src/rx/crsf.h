@@ -76,10 +76,10 @@ typedef enum {
   CRSF_FRAMETYPE_DEVICE_PING = 0x28,
   CRSF_FRAMETYPE_DEVICE_INFO = 0x29,
   CRSF_FRAMETYPE_COMMAND = 0x32,
-  CRSF_FRAMETYPE_MSP_REQ = 0x7A,  // response request using msp sequence as command
-  CRSF_FRAMETYPE_MSP_RESP = 0x7B, // reply with 58 byte chunked binary
+  CRSF_FRAMETYPE_MSP_REQ = 0x7A,   // response request using msp sequence as command
+  CRSF_FRAMETYPE_MSP_RESP = 0x7B,  // reply with 58 byte chunked binary
   CRSF_FRAMETYPE_MSP_WRITE = 0x7C, // write with 8 byte chunked binary (OpenTX outbound telemetry buffer limit)
-  CRSF_FRAMETYPE_QUIC = 0x7F,     // QUIC stream chunk, see io/quic_crsf.h
+  CRSF_FRAMETYPE_QUIC = 0x7F,      // QUIC stream chunk, see io/quic_crsf.h
 } crsf_frame_type_t;
 
 typedef enum {
@@ -215,6 +215,12 @@ typedef struct {
 } __attribute__((__packed__)) crsf_flight_mode_payload_t;
 
 typedef struct {
+  int16_t pitch;
+  int16_t roll;
+  int16_t yaw;
+} __attribute__((__packed__)) crsf_attitude_payload_t;
+
+typedef struct {
   crsf_extended_header_t extended;
   uint8_t data[CRSF_MSP_PAYLOAD_SIZE_MAX];
 } __attribute__((__packed__)) crsf_msp_response_payload_t;
@@ -242,6 +248,12 @@ typedef struct {
   crsf_flight_mode_payload_t payload;
   uint8_t crc;
 } __attribute__((__packed__)) crsf_flight_mode_frame_t;
+
+typedef struct {
+  crsf_frame_header_t header;
+  crsf_attitude_payload_t payload;
+  uint8_t crc;
+} __attribute__((__packed__)) crsf_attitude_frame_t;
 
 typedef struct {
   crsf_frame_header_t header;
@@ -347,6 +359,7 @@ uint32_t crsf_tlm_frame_battery_sensor(uint8_t *buf);
 uint32_t crsf_tlm_frame_gps(uint8_t *buf);
 uint32_t crsf_tlm_frame_gps_extended(uint8_t *buf);
 uint32_t crsf_tlm_frame_flight_mode(uint8_t *buf);
+uint32_t crsf_tlm_frame_attitude(uint8_t *buf);
 uint32_t crsf_tlm_frame_device_info(uint8_t *buf, uint8_t destination);
 uint32_t crsf_tlm_frame_msp_resp(uint8_t *buf, uint8_t origin, const uint8_t *payload, uint8_t size);
 uint32_t crsf_frame_quic(uint8_t *buf, uint8_t destination, const uint8_t *payload, uint8_t size);
