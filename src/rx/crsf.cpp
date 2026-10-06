@@ -125,7 +125,7 @@ uint32_t crsf_tlm_frame_device_info(uint8_t *buf, uint8_t destination) {
   return crsf_tlm_frame_finalize(buf, CRSF_FRAME_ORIGIN_DEST_SIZE + name_size + sizeof(*tail));
 }
 
-// Telemetry sending back to receiver (only voltage for now)
+// Telemetry sending back to receiver.
 /*
 CRSF frame has the structure:
 <Device address> <Frame length> <Type> <Payload> <CRC>
@@ -206,6 +206,18 @@ uint32_t crsf_tlm_frame_flight_mode(uint8_t *buf) {
     frame->payload.flight_mode[size++] = flags.arming_disabled_flags == ARMING_DISABLED_NONE ? '*' : '!';
 
   return crsf_tlm_frame_finalize(buf, sizeof(frame->payload));
+}
+
+uint32_t crsf_tlm_frame_attitude(uint8_t *buf) {
+  crsf_attitude_frame_t *frame = (crsf_attitude_frame_t *)buf;
+  frame->header.type = CRSF_FRAMETYPE_ATTITUDE;
+
+  // Match Betaflight's nose-down-positive pitch convention; CRSF uses 100 urad units.
+  frame->payload.pitch = __builtin_bswap16((uint16_t)(int16_t)(state.attitude.pitch * 10000.0f));
+  frame->payload.roll = __builtin_bswap16((uint16_t)(int16_t)(state.attitude.roll * 10000.0f));
+  frame->payload.yaw = __builtin_bswap16((uint16_t)(int16_t)(state.attitude.yaw * 10000.0f));
+
+  return crsf_tlm_frame_finalize(buf, CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE);
 }
 
 uint32_t crsf_tlm_frame_msp_resp(uint8_t *buf, uint8_t origin, const uint8_t *payload, uint8_t size) {
