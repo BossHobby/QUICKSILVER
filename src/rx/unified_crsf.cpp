@@ -525,6 +525,9 @@ static void rx_serial_send_crsf_telemetry() {
   case 4:
     telemetry_size = crsf_tlm_frame_flight_mode(crsf_telemetry_packet);
     break;
+  case 6:
+    telemetry_size = crsf_tlm_frame_attitude(crsf_telemetry_packet);
+    break;
   default:
     telemetry_size = crsf_tlm_frame_battery_sensor(crsf_telemetry_packet);
     break;
