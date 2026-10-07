@@ -2,17 +2,23 @@
 
 import os
 import threading
+from importlib.metadata import PackageNotFoundError, version
 
 import certifi
 import urllib3
+from packaging.version import Version
 
 Import("env")
 
 try:
-    from dulwich import porcelain
-except ImportError:
-    env.Execute("$PYTHONEXE -m pip install dulwich")
-    from dulwich import porcelain
+    # Dulwich 1.2.2 fixes hex SHA lookups in Git multi-pack indexes.
+    if Version(version("dulwich")) < Version("1.2.2"):
+        raise ImportError("Dulwich 1.2.2 or newer is required")
+except (PackageNotFoundError, ImportError):
+    if env.Execute('$PYTHONEXE -m pip install "dulwich>=1.2.2"') != 0:
+        raise RuntimeError("Failed to install Dulwich 1.2.2 or newer")
+
+from dulwich import porcelain
 
 system_flags = [s for s in env.GetProjectOption("system_flags", "").splitlines() if s]
 
