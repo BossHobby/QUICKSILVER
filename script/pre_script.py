@@ -6,13 +6,13 @@ from importlib.metadata import PackageNotFoundError, version
 
 import certifi
 import urllib3
-from packaging.version import Version
 
 Import("env")
 
 try:
     # Dulwich 1.2.2 fixes hex SHA lookups in Git multi-pack indexes.
-    if Version(version("dulwich")) < Version("1.2.2"):
+    dulwich_version = tuple(int(part) for part in version("dulwich").split(".")[:3])
+    if dulwich_version < (1, 2, 2):
         raise ImportError("Dulwich 1.2.2 or newer is required")
 except (PackageNotFoundError, ImportError):
     if env.Execute('$PYTHONEXE -m pip install "dulwich>=1.2.2"') != 0:
