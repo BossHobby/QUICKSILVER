@@ -1020,17 +1020,6 @@ TickType_t osd_display() {
 #ifdef USE_BLACKBOX
       osd_menu_select_screen(7, OSD_AUTO, "BLACKBOX", OSD_SCREEN_BLACKBOX);
 #endif
-#elif defined(VEHICLE_WING)
-      osd_menu_select_aux_adjust(4, OSD_AUTO, "ARMING", 17, 22, &profile.receiver.aux[AUX_ARMING]);
-      osd_menu_select_aux_adjust(4, OSD_AUTO, "PREARM", 17, 22, &profile.receiver.aux[AUX_PREARM]);
-      osd_menu_select_aux_adjust(4, OSD_AUTO, "ACRO", 17, 22, &profile.receiver.aux[AUX_ACROMODE]);
-      osd_menu_select_aux_adjust(4, OSD_AUTO, "LEVEL", 17, 22, &profile.receiver.aux[AUX_LEVELMODE]);
-      osd_menu_select_aux_adjust(4, OSD_AUTO, "AUTOTRIM", 17, 22, &profile.receiver.aux[AUX_AUTOTRIM]);
-      osd_menu_select_aux_adjust(4, OSD_AUTO, "AUTOLAUNCH", 17, 22, &profile.receiver.aux[AUX_AUTOLAUNCH]);
-      osd_menu_select_aux_adjust(4, OSD_AUTO, "BUZZER", 17, 22, &profile.receiver.aux[AUX_BUZZER_ENABLE]);
-      osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
-      osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
-      osd_menu_aux_outputs();
 #else
       // PAGE 1
       osd_menu_select_screen(7, OSD_AUTO, "VTX", OSD_SCREEN_VTX);
@@ -1046,7 +1035,11 @@ TickType_t osd_display() {
       osd_menu_select_screen(7, OSD_AUTO, "LEVEL MODE", OSD_SCREEN_LEVEL_MODE);
       osd_menu_select_screen(7, OSD_AUTO, "MOTOR SETTINGS", OSD_SCREEN_MOTOR_SETTINGS);
       osd_menu_select_screen(7, OSD_AUTO, "THROTTLE SETTINGS", OSD_SCREEN_THROTTLE_SETTINGS);
+#ifdef VEHICLE_WING
+      osd_menu_select_screen(7, OSD_AUTO, "LOW BATTERY", OSD_SCREEN_LOWBAT);
+#else
       osd_menu_select_screen(7, OSD_AUTO, "SPECIAL FEATURES", OSD_SCREEN_SPECIAL_FEATURES);
+#endif
 #ifdef USE_BLACKBOX
       osd_menu_select_screen(7, OSD_AUTO, "BLACKBOX", OSD_SCREEN_BLACKBOX);
 #endif
@@ -1114,6 +1107,14 @@ TickType_t osd_display() {
       rates->kd = osd_menu_adjust_vec3(rates->kd, 1, 0.0, 120.0);
       pid_rates_update();
     }
+
+#ifdef VEHICLE_WING
+    osd_menu_select(4, 9, "FF");
+    if (osd_menu_select_vec3(8, 9, rates->kff, 6, 0)) {
+      rates->kff = osd_menu_adjust_vec3(rates->kff, 1, 0.0, 400.0);
+      pid_rates_update();
+    }
+#endif
 
     osd_menu_select_save_and_exit(7);
     osd_menu_finish();
@@ -1571,10 +1572,12 @@ TickType_t osd_display() {
       profile.motor.digital_idle = osd_menu_adjust_float(profile.motor.digital_idle, 0.1, 0, 25.0);
     }
 
+#ifndef VEHICLE_WING
     osd_menu_select(4, 7, "TURTLE THROTTLE %");
     if (osd_menu_select_float(22, 7, profile.motor.turtle_throttle_percent, 4, 0)) {
       profile.motor.turtle_throttle_percent = osd_menu_adjust_float(profile.motor.turtle_throttle_percent, 1, 0, 100);
     }
+#endif
 
     osd_menu_select(4, 8, "MOTOR LIMIT %");
     if (osd_menu_select_float(22, 8, profile.motor.motor_limit, 4, 0)) {

@@ -38,12 +38,18 @@ void test_osd_aux_output_menu_is_reachable() {
     time_test_advance_us(1000);
     osd_display();
   }
-#ifdef VEHICLE_WING
   osd_push_screen(OSD_SCREEN_MAIN_MENU);
-#else
-  osd_push_screen(OSD_SCREEN_FLIGHT_MODES);
-#endif
   for (unsigned i = 0; i < 64; i++) osd_display();
+#ifdef VEHICLE_ROVER
+  const uint8_t flight_modes_cursor = 4;
+#else
+  const uint8_t flight_modes_cursor = 5;
+#endif
+  for (uint8_t cursor = 1; cursor < flight_modes_cursor; cursor++)
+    osd_handle_input(OSD_INPUT_DOWN);
+  osd_handle_input(OSD_INPUT_RIGHT);
+  for (unsigned i = 0; i < 64; i++) osd_display();
+  TEST_ASSERT_EQUAL(OSD_SCREEN_FLIGHT_MODES, osd_state.screen);
 
   bool pit_mode = false, power = false, camera = false;
   for (uint8_t cursor = 1; cursor <= osd_state.cursor_max; cursor++) {
