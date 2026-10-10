@@ -273,12 +273,13 @@ void imu_init() {
   imu_reset_attitude();
 }
 
-// The accelerometer measures gravity plus motion. During RTH, drag deceleration
-// otherwise reads as tilt and the level command holds a real attitude offset.
-// Remove the horizontal acceleration RTH publishes while it trusts heading.
+// The accelerometer measures gravity plus motion. Multirotor RTH drag
+// deceleration and sustained wing turns otherwise read as tilt, so the level
+// command holds a real attitude offset. Remove the horizontal acceleration
+// navigation publishes while it trusts heading.
 static vec3_t imu_gravity_reference(vec3_t accel) {
-  const float north = state.rth_accel_north;
-  const float east = state.rth_accel_east;
+  const float north = state.nav_accel_north;
+  const float east = state.nav_accel_east;
   if (north == 0.0f && east == 0.0f)
     return accel;
   const float heading = state.heading * DEGTORAD;

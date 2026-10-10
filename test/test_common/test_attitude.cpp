@@ -680,7 +680,7 @@ void test_attitude_imu_pipeline_drag_deceleration_stays_level(void) {
     time_test_advance_us(1000);
     if ((i % 100) == 0)
       state.gps_last_update_ms = time_millis();
-    state.rth_accel_east = braking ? -0.5f * 9.80665f : 0.0f;
+    state.nav_accel_east = braking ? -0.5f * 9.80665f : 0.0f;
     state.accel_raw = (vec3_t){{0, braking ? 0.5f : 0.0f, 1}};
     imu_calc();
     TEST_ASSERT_FLOAT_WITHIN(sinf(1.0f * DEGTORAD), 0, state.GEstG.pitch);

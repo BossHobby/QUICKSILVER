@@ -229,6 +229,14 @@ void nav_update_wing(bool gps_valid, bool home_valid) {
   const float dt = constrain((now - nav.updated_us) * 1e-6f, 0.0f, 0.1f);
   nav.updated_us = now;
 
+  // A sustained turn's centripetal acceleration reads as level, so the gravity
+  // estimate drifts in bank and pitch in every flight mode. The IMU rotates
+  // this acceleration by heading, so publish only while heading is trusted.
+  if (flags.arm_state && flags.in_air && gps_valid && state.heading_confidence >= RTH_MIN_HEADING_CONFIDENCE)
+    nav_update_gps_accel();
+  else
+    nav_reset_gps_accel();
+
   const nav_request_t request = nav_request();
   // Loiter and return latch their own altitude targets. A manual RTH that
   // continues as failsafe RTH keeps its target.

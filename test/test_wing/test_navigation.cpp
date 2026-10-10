@@ -12,6 +12,8 @@
 #include "io/gps.h"
 #include "util/util.h"
 
+extern void imu_test_attitude_init();
+
 // Script GPS fixes and run Flight's control/navigation order. This checks
 // guidance direction and transitions, not airframe dynamics.
 static constexpr gps_coord_t ORIGIN = {.lon = 1142000000, .lat = 223000000};
@@ -129,6 +131,53 @@ static void test_loiter_banks_without_gps_and_recenters_on_recovery() {
   TEST_ASSERT_EQUAL(WING_NAV_LOITER, state.wing_nav_state);
   const float expected = atanf(15.0f * 15.0f / (9.80665f * profile.navigation.loiter_radius)) * RADTODEG;
   TEST_ASSERT_FLOAT_WITHIN(0.5f, expected, roll_command_deg());
+}
+
+// Fly a 20 s coordinated right turn at 35 degrees bank and 20 m/s through the
+// IMU and navigation. Returns the angle between the gravity estimate level
+// control uses and true gravity at the end, in degrees.
+static float sustained_turn_gravity_error_deg(bool heading_trusted) {
+  const float bank = 35.0f * DEGTORAD;
+  const float speed = 20.0f;
+  const float turn_rate = 9.80665f * tanf(bank) / speed;
+  nav_init();
+  profile.serial.gps = SERIAL_PORT1;
+  set_gps(0.0f, 0.0f, speed, 0.0f);
+  state.gps_heading = 0.0f;
+  state.gps_heading_accuracy = 1.0f;
+  state.looptime_autodetect = 1000;
+  state.accel_raw = {{sinf(bank), 0, cosf(bank)}};
+  imu_init();
+  imu_test_attitude_init();
+  flags.arm_state = 1;
+  flags.in_air = 1;
+  imu_calc();
+  state.heading_confidence = heading_trusted ? 1.0f : 0.0f;
+
+  // Coordinated: the accelerometer reads the whole load along body up.
+  state.accel_raw = {{0, 0, 1.0f / cosf(bank)}};
+  state.gyro = {{0, -turn_rate * sinf(bank), turn_rate * cosf(bank)}};
+  state.gyro_delta_angle = vec3_mul(state.gyro, state.looptime);
+  for (uint32_t ms = 1; ms <= 20000; ms++) {
+    time_test_advance_us(1000);
+    if (ms % 100 == 0) {
+      const float course = turn_rate * ms * 0.001f;
+      set_gps(0.0f, 0.0f, speed * cosf(course), speed * sinf(course));
+      state.gps_heading = normalize_rad(course) * RADTODEG;
+    }
+    imu_calc();
+    nav_update();
+  }
+  const vec3_t gravity = {{sinf(bank), 0, cosf(bank)}};
+  return acosf(constrain(vec3_dot(state.GEstG, gravity), -1.0f, 1.0f)) * RADTODEG;
+}
+
+static void test_turn_acceleration_keeps_imu_attitude() {
+  TEST_ASSERT_TRUE(sustained_turn_gravity_error_deg(true) < 3.0f);
+  // Without a trusted heading nothing is published and the estimate drifts.
+  TEST_ASSERT_TRUE(sustained_turn_gravity_error_deg(false) > 10.0f);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.nav_accel_north);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.nav_accel_east);
 }
 
 static void test_loiter_runs_without_configured_gps() {
@@ -598,6 +647,7 @@ void run_wing_navigation_tests() {
   RUN_TEST(test_loiter_turns_back_when_flying_away);
   RUN_TEST(test_loiter_banks_without_gps_and_recenters_on_recovery);
   RUN_TEST(test_loiter_runs_without_configured_gps);
+  RUN_TEST(test_turn_acceleration_keeps_imu_attitude);
   RUN_TEST(test_loiter_yields_to_failsafe_and_disarm);
   RUN_TEST(test_loiter_waits_for_autolaunch);
   RUN_TEST(test_loiter_holds_entry_altitude);
