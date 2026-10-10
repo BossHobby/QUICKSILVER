@@ -227,11 +227,11 @@ typedef struct {
   bool rth_failsafe_active;
   bool failsafe_hold; // airborne stage 1 failsafe: level and hold altitude instead of idling
   float rth_yaw_rate; // radians/s, independent of pilot rates
-  // Horizontal acceleration from GPS velocity, m/s^2. Published by RTH for IMU
-  // gravity compensation; zero while inactive, without valid GPS or without a
-  // trusted heading.
-  float rth_accel_north;
-  float rth_accel_east;
+  // Horizontal acceleration from GPS velocity, m/s^2. Published by multirotor
+  // RTH and by flying wings for IMU gravity compensation; zero while inactive,
+  // without valid GPS or without a trusted heading.
+  float nav_accel_north;
+  float nav_accel_east;
 
   vec3_t setpoint; // Requested body rates (rad/s), from sticks or attitude control.
   vec3_t error;    // setpoint - gyro = error in angular velocity
