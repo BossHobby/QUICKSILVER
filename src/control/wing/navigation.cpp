@@ -16,6 +16,9 @@ static constexpr float L1_PERIOD = 15.0f;                      // seconds, later
 static constexpr float L1_DAMPING = 0.75f;
 static constexpr float LOITER_CENTER_MIN_SPEED = 3.0f;         // m/s, slower GPS course does not orient the circle
 static constexpr float FALLBACK_BANK = 20.0f * DEGTORAD;
+// degrees; a sustained coordinated turn loads 1 / cos(bank). Beyond about 40
+// degrees that exceeds the IMU's 1.3 g gravity-correction limit.
+static constexpr float MAX_BANK_LIMIT = 40.0f;
 static constexpr float BANK_SLEW_RATE = 45.0f * DEGTORAD;      // rad/s
 static constexpr float PITCH_SLEW_RATE = 20.0f * DEGTORAD;     // rad/s
 static constexpr float THROTTLE_SLEW_RATE = 0.5f;              // per second
@@ -252,7 +255,7 @@ void nav_update_wing(bool gps_valid, bool home_valid) {
     return;
   }
 
-  const float max_bank = constrain(profile.navigation.max_bank_angle, 0.0f, 80.0f) * DEGTORAD;
+  const float max_bank = constrain(profile.navigation.max_bank_angle, 0.0f, MAX_BANK_LIMIT) * DEGTORAD;
   const wing_nav_state_t previous = (wing_nav_state_t)state.wing_nav_state;
   if (previous == WING_NAV_INACTIVE) {
     // Take over from the current attitude and throttle; the slew limits
