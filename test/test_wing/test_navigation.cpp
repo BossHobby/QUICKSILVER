@@ -118,6 +118,18 @@ static void test_loiter_turns_back_when_flying_away() {
   TEST_ASSERT_FLOAT_WITHIN(0.5f, 0.0f, roll_command_deg());
 }
 
+static void test_loiter_caps_configured_bank() {
+  profile.navigation.max_bank_angle = 60.0f;
+  fly(1U << AUX_LOITER);
+  for (int north = 40; north <= 200; north += 40) {
+    set_gps((float)north, 0.0f, 15.0f, 0.0f);
+    step(100);
+  }
+  step(1000);
+  // Steeper sustained turns exceed the IMU's gravity-correction limit.
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, 40.0f, roll_command_deg());
+}
+
 static void test_loiter_banks_without_gps_and_recenters_on_recovery() {
   fly(1U << AUX_LOITER);
   state.gps_lock = false;
@@ -645,6 +657,7 @@ void run_wing_navigation_tests() {
   RUN_TEST(test_loiter_enters_tangentially_on_turn_side);
   RUN_TEST(test_loiter_left_direction_banks_left);
   RUN_TEST(test_loiter_turns_back_when_flying_away);
+  RUN_TEST(test_loiter_caps_configured_bank);
   RUN_TEST(test_loiter_banks_without_gps_and_recenters_on_recovery);
   RUN_TEST(test_loiter_runs_without_configured_gps);
   RUN_TEST(test_turn_acceleration_keeps_imu_attitude);
