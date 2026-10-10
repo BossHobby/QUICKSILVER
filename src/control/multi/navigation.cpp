@@ -87,13 +87,6 @@ static struct {
     gps_coord_t origin;
   } acquisition;
   struct {
-    // Last GPS velocity sample; the derived acceleration is published in state.
-    float velocity_north;
-    float velocity_east;
-    bool sample_valid;
-    uint32_t updated_ms;
-  } acceleration;
-  struct {
     float integral_north;
     float integral_east;
     float desired_velocity_north;
@@ -235,32 +228,6 @@ static void nav_update_altitude_control(float target_alt, float max_rate, float 
   state.rx_override.throttle = constrain(alt.throttle_command, throttle_min, throttle_max);
 }
 
-static void nav_reset_acceleration() {
-  rth.acceleration = {};
-  state.rth_accel_north = state.rth_accel_east = 0.0f;
-}
-
-static void nav_update_acceleration() {
-  // Differentiate measurements at GPS cadence, not at the 100 Hz control rate.
-  if (rth.acceleration.sample_valid && state.gps_last_update_ms == rth.acceleration.updated_ms) {
-    return;
-  }
-
-  const uint32_t elapsed_ms = state.gps_last_update_ms - rth.acceleration.updated_ms;
-  if (rth.acceleration.sample_valid && elapsed_ms > 0 && elapsed_ms <= NAV_GPS_STALE_MS) {
-    const float sample_dt = elapsed_ms * 0.001f;
-    const float gain = sample_dt / (0.2f + sample_dt);
-    state.rth_accel_north += gain * ((state.gps_vel_north - rth.acceleration.velocity_north) / sample_dt - state.rth_accel_north);
-    state.rth_accel_east += gain * ((state.gps_vel_east - rth.acceleration.velocity_east) / sample_dt - state.rth_accel_east);
-  } else {
-    state.rth_accel_north = state.rth_accel_east = 0.0f;
-  }
-  rth.acceleration.velocity_north = state.gps_vel_north;
-  rth.acceleration.velocity_east = state.gps_vel_east;
-  rth.acceleration.updated_ms = state.gps_last_update_ms;
-  rth.acceleration.sample_valid = true;
-}
-
 static float nav_heading_error() {
   float error = state.home_bearing - state.heading;
   while (error > 180.0f) error -= 360.0f;
@@ -341,8 +308,8 @@ static void nav_update_horizontal_control(float dt) {
   }
   const float authority = 0.25f + 0.75f * state.heading_confidence;
   const float max_angle_rad = MAX(profile.rate.level_max_angle, 0.0f) * DEGTORAD * authority;
-  const float north_pd = NAV_VEL_KP * vel_error_north - NAV_VEL_KD * state.rth_accel_north;
-  const float east_pd = NAV_VEL_KP * vel_error_east - NAV_VEL_KD * state.rth_accel_east;
+  const float north_pd = NAV_VEL_KP * vel_error_north - NAV_VEL_KD * state.nav_accel_north;
+  const float east_pd = NAV_VEL_KP * vel_error_east - NAV_VEL_KD * state.nav_accel_east;
   const float north_i = constrain(rth.horizontal.integral_north + NAV_VEL_KI * vel_error_north * safe_dt,
                                  -max_angle_rad * 0.5f, max_angle_rad * 0.5f);
   const float east_i = constrain(rth.horizontal.integral_east + NAV_VEL_KI * vel_error_east * safe_dt,
@@ -431,7 +398,7 @@ static void nav_update_rth_control() {
       rth.pause.altitude = state.altitude;
       nav_reset_horizontal();
       // Restart differentiation from a fresh sample once the pause ends.
-      nav_reset_acceleration();
+      nav_reset_gps_accel();
     }
     if (now_ms - rth.pause.started_ms >= RTH_SENSOR_LOSS_TIMEOUT_MS) {
       nav_rth_abort();
@@ -456,9 +423,9 @@ static void nav_update_rth_control() {
                                state.rth_state != RTH_STATE_ACQUIRE_HEADING &&
                                state.rth_state != RTH_STATE_HEADING_FAILED;
   if (heading_trusted)
-    nav_update_acceleration();
+    nav_update_gps_accel();
   else
-    nav_reset_acceleration();
+    nav_reset_gps_accel();
 
   switch (state.rth_state) {
   case RTH_STATE_ABORTED:
@@ -611,7 +578,7 @@ void nav_rth_stop() {
   state.rth_active = false;
   state.rth_failsafe_active = false;
   state.rth_yaw_rate = 0.0f;
-  state.rth_accel_north = state.rth_accel_east = 0.0f;
+  nav_reset_gps_accel();
 }
 
 static void nav_update_request() {

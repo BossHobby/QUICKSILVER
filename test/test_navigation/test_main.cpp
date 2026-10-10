@@ -318,22 +318,22 @@ void test_navigation_climb_publishes_gps_acceleration(void) {
     rth_step(10000);
   }
   TEST_ASSERT_EQUAL_UINT8(RTH_STATE_CLIMB, state.rth_state);
-  TEST_ASSERT_FLOAT_WITHIN(0.2f, 4.0f, state.rth_accel_north);
-  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, state.rth_accel_east);
+  TEST_ASSERT_FLOAT_WITHIN(0.2f, 4.0f, state.nav_accel_north);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, state.nav_accel_east);
 
   // Without a trusted heading the IMU would rotate it onto the wrong axis.
   state.heading_confidence = 0.5f * RTH_MIN_HEADING_CONFIDENCE;
   rth_step(10000);
-  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.rth_accel_north);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.nav_accel_north);
   state.heading_confidence = 1.0f;
   state.rth_state = RTH_STATE_ACQUIRE_HEADING;
   state.gps_last_update_ms = time_millis();
   rth_step(10000);
-  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.rth_accel_north);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.nav_accel_north);
 
   nav_rth_stop();
-  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.rth_accel_north);
-  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.rth_accel_east);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.nav_accel_north);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.nav_accel_east);
 }
 
 void test_navigation_throttle_bypasses_pilot_curves(void) {

@@ -63,6 +63,14 @@ static struct {
   float accel; // bias-corrected, smoothed earth-vertical acceleration, m/s^2 up
 } vertical;
 
+// Last GPS velocity sample; the derived acceleration is published in state.
+static struct {
+  float velocity_north;
+  float velocity_east;
+  bool sample_valid;
+  uint32_t updated_ms;
+} gps_accel;
+
 static bool nav_value_finite(float value) {
   // Hardware uses -Ofast, which can remove ordinary isfinite() checks.
   const union { float value; uint32_t bits; } sample = {.value = value};
@@ -166,6 +174,32 @@ float nav_vertical_accel() {
   return vertical.accel;
 }
 
+void nav_reset_gps_accel() {
+  gps_accel = {};
+  state.nav_accel_north = state.nav_accel_east = 0.0f;
+}
+
+void nav_update_gps_accel() {
+  // Differentiate measurements at GPS cadence, not at the 100 Hz control rate.
+  if (gps_accel.sample_valid && state.gps_last_update_ms == gps_accel.updated_ms) {
+    return;
+  }
+
+  const uint32_t elapsed_ms = state.gps_last_update_ms - gps_accel.updated_ms;
+  if (gps_accel.sample_valid && elapsed_ms > 0 && elapsed_ms <= NAV_GPS_STALE_MS) {
+    const float sample_dt = elapsed_ms * 0.001f;
+    const float gain = sample_dt / (0.2f + sample_dt);
+    state.nav_accel_north += gain * ((state.gps_vel_north - gps_accel.velocity_north) / sample_dt - state.nav_accel_north);
+    state.nav_accel_east += gain * ((state.gps_vel_east - gps_accel.velocity_east) / sample_dt - state.nav_accel_east);
+  } else {
+    state.nav_accel_north = state.nav_accel_east = 0.0f;
+  }
+  gps_accel.velocity_north = state.gps_vel_north;
+  gps_accel.velocity_east = state.gps_vel_east;
+  gps_accel.updated_ms = state.gps_last_update_ms;
+  gps_accel.sample_valid = true;
+}
+
 void nav_position_delta(gps_coord_t start, gps_coord_t end, float *north, float *east) {
   const float scale = 1.0f / 10000000.0f;
   const float lat_diff = (end.lat - start.lat) * scale;
@@ -265,6 +299,7 @@ void nav_init() {
   baro = {};
   gps = {};
   vertical = {};
+  nav_reset_gps_accel();
   state.altitude = 0;
   state.baro_vertical_speed = 0;
   state.vertical_speed = 0;
