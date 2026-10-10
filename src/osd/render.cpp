@@ -1035,7 +1035,9 @@ TickType_t osd_display() {
       osd_menu_select_screen(7, OSD_AUTO, "LEVEL MODE", OSD_SCREEN_LEVEL_MODE);
       osd_menu_select_screen(7, OSD_AUTO, "MOTOR SETTINGS", OSD_SCREEN_MOTOR_SETTINGS);
       osd_menu_select_screen(7, OSD_AUTO, "THROTTLE SETTINGS", OSD_SCREEN_THROTTLE_SETTINGS);
+      osd_menu_select_screen(7, OSD_AUTO, "NAVIGATION", OSD_SCREEN_NAVIGATION);
 #ifdef VEHICLE_WING
+      osd_menu_select_screen(7, OSD_AUTO, "AUTOLAUNCH", OSD_SCREEN_AUTOLAUNCH);
       osd_menu_select_screen(7, OSD_AUTO, "LOW BATTERY", OSD_SCREEN_LOWBAT);
 #else
       osd_menu_select_screen(7, OSD_AUTO, "SPECIAL FEATURES", OSD_SCREEN_SPECIAL_FEATURES);
@@ -1279,6 +1281,7 @@ TickType_t osd_display() {
       osd_menu_select_aux_adjust(4, OSD_AUTO, "AUTOTRIM", 17, 22, &profile.receiver.aux[AUX_AUTOTRIM]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "AUTOLAUNCH", 17, 22, &profile.receiver.aux[AUX_AUTOLAUNCH]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "LOITER", 17, 22, &profile.receiver.aux[AUX_LOITER]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "RETURN HOME", 17, 22, &profile.receiver.aux[AUX_RETURN_TO_HOME]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BUZZER", 17, 22, &profile.receiver.aux[AUX_BUZZER_ENABLE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
@@ -1297,7 +1300,7 @@ TickType_t osd_display() {
       osd_menu_select_aux_adjust(4, OSD_AUTO, "TURTLE", 17, 22, &profile.receiver.aux[AUX_TURTLE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "MOTOR TEST", 17, 22, &profile.receiver.aux[AUX_MOTOR_TEST]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
-      osd_menu_select_aux_adjust(4, OSD_AUTO, "PREARM", 17, 22, &profile.receiver.aux[AUX_PREARM]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "RETURN HOME", 17, 22, &profile.receiver.aux[AUX_RETURN_TO_HOME]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
 #endif
       osd_menu_aux_outputs();
@@ -1608,6 +1611,168 @@ TickType_t osd_display() {
     osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
+
+  case OSD_SCREEN_NAVIGATION: {
+    osd_menu_start();
+    osd_menu_header("NAVIGATION");
+
+    profile_navigation_t *nav = &profile.navigation;
+
+    osd_menu_select(2, 3, "RTH ON FAILSAFE");
+    if (osd_menu_select_enum(22, 3, nav->rth_on_failsafe, on_off_labels)) {
+      nav->rth_on_failsafe = osd_menu_adjust_int(nav->rth_on_failsafe, 1, 0, 1);
+    }
+
+#ifdef VEHICLE_WING
+    const char *loiter_direction_labels[] = {
+        "RIGHT",
+        " LEFT",
+    };
+
+    osd_menu_select(2, 4, "RTH CLIMB M");
+    if (osd_menu_select_float(21, 4, nav->rth_altitude, 5, 0)) {
+      nav->rth_altitude = osd_menu_adjust_float(nav->rth_altitude, 5, 0, 200);
+    }
+
+    osd_menu_select(2, 5, "CRUISE THROTTLE");
+    if (osd_menu_select_float(21, 5, nav->cruise_throttle, 5, 2)) {
+      nav->cruise_throttle = osd_menu_adjust_float(nav->cruise_throttle, 0.01, 0, 1);
+    }
+
+    osd_menu_select(2, 6, "MAX BANK DEG");
+    if (osd_menu_select_float(21, 6, nav->max_bank_angle, 5, 0)) {
+      nav->max_bank_angle = osd_menu_adjust_float(nav->max_bank_angle, 1, 0, 40);
+    }
+
+    osd_menu_select(2, 7, "LOITER RADIUS M");
+    if (osd_menu_select_float(21, 7, nav->loiter_radius, 5, 0)) {
+      nav->loiter_radius = osd_menu_adjust_float(nav->loiter_radius, 5, 5, 1000);
+    }
+
+    osd_menu_select(2, 8, "LOITER DIRECTION");
+    if (osd_menu_select_enum(21, 8, nav->loiter_direction, loiter_direction_labels)) {
+      nav->loiter_direction = osd_menu_adjust_int(nav->loiter_direction, 1, NAV_LOITER_RIGHT, NAV_LOITER_LEFT);
+    }
+#else
+    osd_menu_select(2, 4, "RTH CLIMB M");
+    if (osd_menu_select_float(21, 4, nav->rth_altitude, 5, 0)) {
+      nav->rth_altitude = osd_menu_adjust_float(nav->rth_altitude, 1, 0, 100);
+    }
+
+    osd_menu_select(2, 5, "RTH SPEED M/S");
+    if (osd_menu_select_float(21, 5, nav->rth_cruise_speed, 5, 1)) {
+      nav->rth_cruise_speed = osd_menu_adjust_float(nav->rth_cruise_speed, 0.5, 0.5, 30);
+    }
+
+    osd_menu_select(2, 6, "THROTTLE MIN");
+    if (osd_menu_select_float(21, 6, nav->rth_throttle_min, 5, 2)) {
+      nav->rth_throttle_min = osd_menu_adjust_float(nav->rth_throttle_min, 0.01, 0, 1);
+    }
+
+    osd_menu_select(2, 7, "THROTTLE HOVER");
+    if (osd_menu_select_float(21, 7, nav->rth_throttle_hover, 5, 2)) {
+      nav->rth_throttle_hover = osd_menu_adjust_float(nav->rth_throttle_hover, 0.01, 0, 1);
+    }
+
+    osd_menu_select(2, 8, "THROTTLE MAX");
+    if (osd_menu_select_float(21, 8, nav->rth_throttle_max, 5, 2)) {
+      nav->rth_throttle_max = osd_menu_adjust_float(nav->rth_throttle_max, 0.01, 0, 1);
+    }
+#endif
+
+    osd_menu_select_save_and_exit(2);
+    osd_menu_finish();
+    break;
+  }
+#endif
+
+#ifdef VEHICLE_WING
+  case OSD_SCREEN_AUTOLAUNCH: {
+    osd_menu_start();
+    osd_menu_header("AUTOLAUNCH");
+
+    profile_wing_autolaunch_t *launch = &profile.wing.autolaunch;
+
+    osd_menu_scroll_start(2, 2, 7);
+    {
+      // PAGE 1
+      osd_menu_select(2, OSD_AUTO, "ACCEL THRESH G");
+      if (osd_menu_select_float(21, OSD_AUTO, launch->accel_threshold, 5, 1)) {
+        launch->accel_threshold = osd_menu_adjust_float(launch->accel_threshold, 0.1, 0, 5);
+      }
+
+      osd_menu_select(2, OSD_AUTO, "SPEED THRESH M/S");
+      if (osd_menu_select_float(21, OSD_AUTO, launch->velocity_threshold, 5, 1)) {
+        launch->velocity_threshold = osd_menu_adjust_float(launch->velocity_threshold, 0.5, 0, 50);
+      }
+
+      osd_menu_select(2, OSD_AUTO, "DETECT TIME MS");
+      if (osd_menu_select_int(21, OSD_AUTO, launch->detect_time_ms, 5)) {
+        launch->detect_time_ms = osd_menu_adjust_int(launch->detect_time_ms, 10, 0, 1000);
+      }
+
+      osd_menu_select(2, OSD_AUTO, "IDLE THROTTLE");
+      if (osd_menu_select_float(21, OSD_AUTO, launch->idle_throttle, 5, 2)) {
+        launch->idle_throttle = osd_menu_adjust_float(launch->idle_throttle, 0.01, 0, 1);
+      }
+
+      osd_menu_select(2, OSD_AUTO, "IDLE DELAY MS");
+      if (osd_menu_select_int(21, OSD_AUTO, launch->idle_delay_ms, 5)) {
+        launch->idle_delay_ms = osd_menu_adjust_int(launch->idle_delay_ms, 50, 0, 10000);
+      }
+
+      osd_menu_select(2, OSD_AUTO, "MOTOR DELAY MS");
+      if (osd_menu_select_int(21, OSD_AUTO, launch->motor_delay_ms, 5)) {
+        launch->motor_delay_ms = osd_menu_adjust_int(launch->motor_delay_ms, 50, 0, 5000);
+      }
+
+      osd_menu_select(2, OSD_AUTO, "SPINUP MS");
+      if (osd_menu_select_int(21, OSD_AUTO, launch->spinup_ms, 5)) {
+        launch->spinup_ms = osd_menu_adjust_int(launch->spinup_ms, 50, 0, 5000);
+      }
+
+      // PAGE 2
+      osd_menu_select(2, OSD_AUTO, "LAUNCH THROTTLE");
+      if (osd_menu_select_float(21, OSD_AUTO, launch->throttle, 5, 2)) {
+        launch->throttle = osd_menu_adjust_float(launch->throttle, 0.01, 0, 1);
+      }
+
+      osd_menu_select(2, OSD_AUTO, "LAUNCH PITCH DEG");
+      if (osd_menu_select_float(21, OSD_AUTO, launch->pitch_angle, 5, 0)) {
+        launch->pitch_angle = osd_menu_adjust_float(launch->pitch_angle, 1, -20, 45);
+      }
+
+      osd_menu_select(2, OSD_AUTO, "MIN TIME MS");
+      if (osd_menu_select_int(21, OSD_AUTO, launch->min_time_ms, 5)) {
+        launch->min_time_ms = osd_menu_adjust_int(launch->min_time_ms, 100, 0, 10000);
+      }
+
+      osd_menu_select(2, OSD_AUTO, "TIMEOUT MS");
+      if (osd_menu_select_int(21, OSD_AUTO, launch->timeout_ms, 5)) {
+        launch->timeout_ms = osd_menu_adjust_int(launch->timeout_ms, 100, 0, 30000);
+      }
+
+      osd_menu_select(2, OSD_AUTO, "MAX ALTITUDE M");
+      if (osd_menu_select_float(21, OSD_AUTO, launch->max_altitude, 5, 0)) {
+        launch->max_altitude = osd_menu_adjust_float(launch->max_altitude, 1, 0, 200);
+      }
+
+      osd_menu_select(2, OSD_AUTO, "STICK DEADBAND");
+      if (osd_menu_select_float(21, OSD_AUTO, launch->stick_deadband, 5, 2)) {
+        launch->stick_deadband = osd_menu_adjust_float(launch->stick_deadband, 0.01, 0, 0.5);
+      }
+
+      osd_menu_select(2, OSD_AUTO, "FINISH RAMP MS");
+      if (osd_menu_select_int(21, OSD_AUTO, launch->finish_ms, 5)) {
+        launch->finish_ms = osd_menu_adjust_int(launch->finish_ms, 50, 0, 10000);
+      }
+    }
+    osd_menu_scroll_finish(2);
+
+    osd_menu_select_save_and_exit(2);
+    osd_menu_finish();
+    break;
+  }
 #endif
 
 #ifdef VEHICLE_ROVER
@@ -1718,6 +1883,13 @@ TickType_t osd_display() {
     if (osd_menu_select_float(19, 5, profile.rate.level_max_angle, 5, 1)) {
       profile.rate.level_max_angle = osd_menu_adjust_float(profile.rate.level_max_angle, 1, 0, 85.0);
     }
+
+#ifdef VEHICLE_WING
+    osd_menu_select(1, 6, "BANKED TURNS");
+    if (osd_menu_select_enum(20, 6, profile.wing.banked_turns, on_off_labels)) {
+      profile.wing.banked_turns = osd_menu_adjust_int(profile.wing.banked_turns, 1, 0, 1);
+    }
+#endif
 
     osd_menu_select_save_and_exit(4);
     osd_menu_finish();
