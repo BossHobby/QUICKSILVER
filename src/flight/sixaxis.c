@@ -306,6 +306,8 @@ void sixaxis_acc_cal() {
     time_delay_us(CAL_INTERVAL);
     last_data = data;
   }
+  // Level Z averages 1 g; store only its bias.
+  flash_storage.accelcal[2] -= 1.0f / ACCEL_RANGE;
 
   for (uint8_t i = 0; i < 3; i++) {
     flash_storage.accelcal[i] = constrain(flash_storage.accelcal[i], -ACCEL_BIAS_LIMIT, ACCEL_BIAS_LIMIT);
