@@ -17,3 +17,8 @@ void nav_update();
 
 // Smoothed earth-vertical acceleration, m/s^2 up.
 float nav_vertical_accel();
+
+// Publish horizontal GPS acceleration for IMU gravity compensation. The IMU
+// rotates it by heading, so vehicles update it only while heading is trusted.
+void nav_update_gps_accel();
+void nav_reset_gps_accel();
