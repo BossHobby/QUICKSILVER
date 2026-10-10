@@ -103,7 +103,7 @@ static void test_loiter_left_direction_banks_left() {
 
 static void test_loiter_turns_back_when_flying_away() {
   fly(1U << AUX_LOITER);
-  // The circle center is 50 m south of the entry point. Fly north away from it.
+  // The circle center is one loiter radius south of the entry point. Fly north away from it.
   for (int north = 40; north <= 200; north += 40) {
     set_gps((float)north, 0.0f, 15.0f, 0.0f);
     step(100);
@@ -433,11 +433,16 @@ static void test_rth_turns_toward_home() {
 
 static void test_rth_circles_home_on_arrival() {
   fly(0);
-  set_gps(40.0f, 0.0f, 0.0f, 15.0f);
-  step(100);
-  set_gps(50.0f, 0.0f, 0.0f, 15.0f); // On the home circle, flying clockwise.
-  step(100);
+  const float radius = profile.navigation.loiter_radius;
+  // Move out in fixes the GPS position-jump check accepts.
+  for (float north = 40.0f; north < radius; north += 40.0f) {
+    set_gps(north, 0.0f, 0.0f, 15.0f);
+    step(100);
+  }
+  // Arrival latches inside the circle, independent of rounding at its edge.
   state.aux_active |= 1U << AUX_RETURN_TO_HOME;
+  step(100);
+  set_gps(radius, 0.0f, 0.0f, 15.0f); // On the home circle, flying clockwise.
   step(1000);
   TEST_ASSERT_EQUAL(WING_NAV_RTH_HOME, state.wing_nav_state);
   const float expected = atanf(15.0f * 15.0f / (9.80665f * profile.navigation.loiter_radius)) * RADTODEG;
