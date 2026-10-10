@@ -697,7 +697,7 @@ const profile_t default_profile = {
         .rth_throttle_max = 0.75f,
         .cruise_throttle = 0.45f,
         .max_bank_angle = 35.0f,
-        .loiter_radius = 50.0f,
+        .loiter_radius = 100.0f,
         .loiter_direction = NAV_LOITER_RIGHT,
     },
 };
