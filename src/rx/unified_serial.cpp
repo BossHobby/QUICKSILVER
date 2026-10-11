@@ -225,7 +225,7 @@ static void rx_serial_find_protocol() {
   }
 
   if (saved_protocol != RX_SERIAL_PROTOCOL_INVALID) {
-    state.rx_status = RX_STATUS_DETECTED + saved_protocol;
+    state.rx_status = static_cast<uint32_t>(RX_STATUS_DETECTED) + static_cast<uint32_t>(saved_protocol);
     serial_rx_init(saved_protocol);
     serial_rx_detected_protcol = saved_protocol;
     return;
