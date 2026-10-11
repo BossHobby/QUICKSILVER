@@ -91,12 +91,15 @@ typedef enum {
 
 typedef enum {
   WING_NAV_INACTIVE,
-  WING_NAV_LOITER,      // GPS circle around a center placed on entry or GPS recovery.
-  WING_NAV_LOITER_BANK, // No valid GPS: constant-bank turn holding altitude.
-  WING_NAV_RTH_RETURN,  // Flying the GPS ground track toward home.
-  WING_NAV_RTH_HOME,    // Circling home at the return altitude.
-  WING_NAV_RTH_HEADING, // GPS lost while returning: home bearing on IMU heading for a limited time.
-  WING_NAV_DESCEND,     // Unpowered failsafe glide, held until receiver recovery.
+  WING_NAV_LOITER,        // GPS circle around a center placed on entry or GPS recovery.
+  WING_NAV_LOITER_BANK,   // No valid GPS: constant-bank turn holding altitude.
+  WING_NAV_RTH_RETURN,    // Flying the GPS ground track toward home.
+  WING_NAV_RTH_HOME,      // Circling home at the return altitude.
+  WING_NAV_RTH_HEADING,   // GPS lost while returning: home bearing on IMU heading for a limited time.
+  WING_NAV_DESCEND,       // Unpowered failsafe glide, held until receiver recovery.
+  WING_NAV_CRUISE_STEER,  // Cruise with the pilot banking; the course locks after centered roll and yaw.
+  WING_NAV_CRUISE,        // Cruise holding the GPS ground track latched at lock.
+  WING_NAV_CRUISE_NO_GPS, // Cruise without valid GPS: the pilot banks and the course cannot lock.
 } wing_nav_state_t;
 
 // THE UN OF STRUCTS

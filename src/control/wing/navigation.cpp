@@ -32,12 +32,16 @@ static constexpr float ALT_MAX_DIVE_ANGLE = 15.0f * DEGTORAD;
 static constexpr uint32_t RTH_HEADING_TIMEOUT_MS = 10000;      // IMU-heading return after GPS loss
 static constexpr float DESCEND_GLIDE_ANGLE = 5.0f * DEGTORAD;  // nose-down during an unpowered failsafe glide
 static constexpr uint32_t DESCEND_LATCH_MS = 2000;             // GPS recovery before this resumes the return
+static constexpr uint32_t CRUISE_LOCK_DELAY_MS = 500;          // centered roll and yaw before the course locks, as in ArduPlane
+static constexpr float CRUISE_STICK_CENTER = 0.05f;            // filtered stick magnitude treated as centered
+static constexpr float CRUISE_LOOKAHEAD = 1000.0f;             // meters along the locked track, as in ArduPlane
 
 typedef enum {
   NAV_REQUEST_NONE,
   NAV_REQUEST_LOITER,
   NAV_REQUEST_RTH,
   NAV_REQUEST_FAILSAFE,
+  NAV_REQUEST_CRUISE,
 } nav_request_t;
 
 wing_nav_command_t wing_nav_command;
@@ -62,6 +66,14 @@ static struct {
   float integral;    // climb angle, radians; also trims the extra lift a bank needs
 } altitude;
 
+static struct {
+  uint32_t steer_ms;  // latest pass the pilot steered or the course could not lock
+  gps_coord_t origin; // GPS position where the course locked
+  float dir_north;    // unit ground track of the locked course
+  float dir_east;
+  bool climbing;      // pitch stick was off center in the previous pass
+} cruise;
+
 static float nav_slew(float current, float target, float step) {
   return constrain(target, current - step, current + step);
 }
@@ -82,10 +94,33 @@ static nav_request_t nav_request() {
     return NAV_REQUEST_RTH;
   if (rx_aux_on(AUX_LOITER))
     return NAV_REQUEST_LOITER;
+  if (rx_aux_on(AUX_CRUISE))
+    return NAV_REQUEST_CRUISE;
   return NAV_REQUEST_NONE;
 }
 
+// Roll or yaw input releases the course, as does losing the GPS track. It
+// locks again once both sticks have stayed centered, as in ArduPlane's CRUISE.
+static wing_nav_state_t cruise_next_state(bool gps_valid, uint32_t now_ms) {
+  const wing_nav_state_t previous = (wing_nav_state_t)state.wing_nav_state;
+  const bool cruising = previous == WING_NAV_CRUISE_STEER || previous == WING_NAV_CRUISE || previous == WING_NAV_CRUISE_NO_GPS;
+  const bool steering = fabsf(state.rx_filtered.roll) > CRUISE_STICK_CENTER || fabsf(state.rx_filtered.yaw) > CRUISE_STICK_CENTER;
+  if (!gps_valid) {
+    cruise.steer_ms = now_ms;
+    return WING_NAV_CRUISE_NO_GPS;
+  }
+  if (!cruising || steering || nav.speed < LOITER_CENTER_MIN_SPEED) {
+    cruise.steer_ms = now_ms;
+    return WING_NAV_CRUISE_STEER;
+  }
+  if (previous == WING_NAV_CRUISE || now_ms - cruise.steer_ms >= CRUISE_LOCK_DELAY_MS)
+    return WING_NAV_CRUISE;
+  return WING_NAV_CRUISE_STEER;
+}
+
 static wing_nav_state_t nav_next_state(nav_request_t request, bool gps_valid, bool home_valid, uint32_t now_ms) {
+  if (request == NAV_REQUEST_CRUISE)
+    return cruise_next_state(gps_valid, now_ms);
   const wing_nav_state_t previous = (wing_nav_state_t)state.wing_nav_state;
   // A brief GPS quality dip cannot have landed the aircraft, so recovery
   // resumes the return. After a longer glide, GPS recovery alone cannot tell
@@ -186,14 +221,48 @@ static float circle_lateral_accel() {
   return circle_accel;
 }
 
+// L1 lateral acceleration for the angle nu from the ground track to the
+// look-ahead point, clamped to +-90 degrees, as in ArduPlane's AP_L1_Control.
+static float l1_lateral_accel(float sin_nu, float speed) {
+  const float l1_distance = MAX(L1_DAMPING * L1_PERIOD * speed / M_PI_F, 1.0f);
+  return 4.0f * L1_DAMPING * L1_DAMPING * speed * speed / l1_distance * sin_nu;
+}
+
 // L1 waypoint guidance toward a bearing, as in ArduPlane's
 // AP_L1_Control::update_waypoint(). Course and bearing in radians.
 static float waypoint_lateral_accel(float bearing, float course, float speed) {
-  const float l1_distance = MAX(L1_DAMPING * L1_PERIOD * speed / M_PI_F, 1.0f);
   // Signed bearing error in -pi..pi; normalize_rad() wraps to 0..2pi.
   const float error = bearing - course;
   const float nu = constrain(atan2f(sinf(error), cosf(error)), -M_PI_F / 2.0f, M_PI_F / 2.0f);
-  return 4.0f * L1_DAMPING * L1_DAMPING * speed * speed / l1_distance * sinf(nu);
+  return l1_lateral_accel(sinf(nu), speed);
+}
+
+static void cruise_lock() {
+  cruise.origin = state.gps_coord;
+  cruise.dir_north = state.gps_vel_north / nav.speed;
+  cruise.dir_east = state.gps_vel_east / nav.speed;
+}
+
+// L1 toward a point CRUISE_LOOKAHEAD ahead of the aircraft along the locked
+// track, as in ArduPlane's CRUISE, so cross-track error is steered out as
+// well as wind drift. Vector form keeps libm trig out of the Flight loop.
+static float cruise_lateral_accel() {
+  float north, east;
+  nav_position_delta(cruise.origin, state.gps_coord, &north, &east);
+  const float ahead = north * cruise.dir_north + east * cruise.dir_east + CRUISE_LOOKAHEAD;
+  const float los_north = ahead * cruise.dir_north - north;
+  const float los_east = ahead * cruise.dir_east - east;
+
+  // Cross and dot products of ground velocity and line of sight scale sin(nu)
+  // and cos(nu) by both lengths; beyond 90 degrees nu clamps to the turn side.
+  const float vel_north = state.gps_vel_north;
+  const float vel_east = state.gps_vel_east;
+  const float cross = vel_north * los_east - vel_east * los_north;
+  const float dot = vel_north * los_north + vel_east * los_east;
+  const float sin_nu = dot > 0.0f ? cross / (nav.speed * hypotf(los_north, los_east)) : copysignf(1.0f, cross);
+
+  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 5, (int16_t)constrain(cruise.dir_north * east - cruise.dir_east * north, -32768.0f, 32767.0f)); // cross-track meters, right positive
+  return l1_lateral_accel(sin_nu, nav.speed);
 }
 
 // Holds the target latched when the barometer first becomes usable for this
@@ -201,7 +270,8 @@ static float waypoint_lateral_accel(float bearing, float course, float speed) {
 static float altitude_climb_angle(float dt, float entry_target) {
   const bool baro_ok = state.baro_valid && time_millis() - state.baro_last_update_ms <= BARO_STALE_MS;
   if (!baro_ok) {
-    if (nav.request == NAV_REQUEST_LOITER)
+    // Loiter and cruise relatch the altitude reached; a return keeps its target.
+    if (nav.request == NAV_REQUEST_LOITER || nav.request == NAV_REQUEST_CRUISE)
       altitude.target_valid = false;
     altitude.integral = 0.0f;
     return 0.0f;
@@ -223,6 +293,28 @@ static float altitude_climb_angle(float dt, float entry_target) {
 
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 6, (int16_t)constrain((altitude.target - state.altitude) * 10.0f, -32768.0f, 32767.0f)); // dm
   return constrain(proportional + altitude.integral, -ALT_MAX_DIVE_ANGLE, ALT_MAX_CLIMB_ANGLE);
+}
+
+// Pitch stick commands a climb rate and releasing it holds the altitude
+// reached, as in ArduPlane's FBWB. Without a barometer it commands the climb
+// angle directly. Returns the climb angle in radians, positive nose-up.
+static float cruise_climb_angle(float dt) {
+  // The pitch stick is positive nose-down, like attitude targets.
+  const float stick = -state.rx_filtered.pitch;
+  const bool climbing = fabsf(stick) > CRUISE_STICK_CENTER;
+  if (altitude.target_valid && climbing) {
+    // Lead the altitude by the error the position loop turns into this rate.
+    const float rate = stick * (stick > 0.0f ? ALT_MAX_CLIMB_RATE : ALT_MAX_SINK_RATE);
+    altitude.target = state.altitude + rate / ALT_POSITION_KP;
+  } else if (altitude.target_valid && cruise.climbing) {
+    altitude.target = state.altitude;
+  }
+  cruise.climbing = climbing;
+
+  const float hold = altitude_climb_angle(dt, state.altitude);
+  if (altitude.target_valid)
+    return hold;
+  return stick * (stick > 0.0f ? ALT_MAX_CLIMB_ANGLE : ALT_MAX_DIVE_ANGLE);
 }
 
 void nav_update_wing(bool gps_valid, bool home_valid) {
@@ -266,9 +358,19 @@ void nav_update_wing(bool gps_valid, bool home_valid) {
     circle_place_home();
   if (next == WING_NAV_DESCEND && previous != WING_NAV_DESCEND)
     nav.descend_ms = now_ms;
+  if (next == WING_NAV_CRUISE && previous != WING_NAV_CRUISE)
+    cruise_lock();
 
   float roll = loiter_direction() * FALLBACK_BANK;
   switch (next) {
+  case WING_NAV_CRUISE_STEER:
+  case WING_NAV_CRUISE_NO_GPS:
+    // Wing control applies the pilot's bank; follow it so the lock takes over smoothly.
+    roll = state.attitude.roll;
+    break;
+  case WING_NAV_CRUISE:
+    roll = atanf(cruise_lateral_accel() / GRAVITY);
+    break;
   case WING_NAV_LOITER:
   case WING_NAV_RTH_HOME:
     roll = atanf(circle_lateral_accel() / GRAVITY);
@@ -289,9 +391,16 @@ void nav_update_wing(bool gps_valid, bool home_valid) {
   const bool returning = request != NAV_REQUEST_LOITER && home_valid;
   const float entry_target = state.altitude + (returning ? MAX(profile.navigation.rth_altitude, 0.0f) : 0.0f);
   const bool descend = next == WING_NAV_DESCEND;
-  // A powered descent cannot detect touchdown with GPS and barometer absent.
-  // Glide with the motor stopped; do not demand a sink rate that needs power.
-  const float climb_angle = descend ? -DESCEND_GLIDE_ANGLE : altitude_climb_angle(dt, entry_target);
+  float climb_angle;
+  if (descend) {
+    // A powered descent cannot detect touchdown with GPS and barometer absent.
+    // Glide with the motor stopped; do not demand a sink rate that needs power.
+    climb_angle = -DESCEND_GLIDE_ANGLE;
+  } else if (request == NAV_REQUEST_CRUISE) {
+    climb_angle = cruise_climb_angle(dt);
+  } else {
+    climb_angle = altitude_climb_angle(dt, entry_target);
+  }
 
   roll = constrain(roll, -max_bank, max_bank);
   wing_nav_command.roll = nav_slew(wing_nav_command.roll, roll, BANK_SLEW_RATE * dt);

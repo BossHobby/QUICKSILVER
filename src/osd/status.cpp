@@ -220,6 +220,8 @@ static const char *osd_wing_nav_message(void) {
     return "RTH: GPS LOST";
   case WING_NAV_DESCEND:
     return "FS: DESCENDING";
+  case WING_NAV_CRUISE_NO_GPS:
+    return "CRUISE: NO GPS";
   default:
     return NULL;
   }
