@@ -18,8 +18,8 @@
 //        navigation: expose return height, speed, failsafe and throttle limits only.
 //        pid: add per-axis wing rate feedforward to each PID profile.
 //        pinio: replace FPV GPIO switching with four AUX outputs and separate VTX pit mode.
-//        wing: add Level banked turns.
-//        navigation: encode for wings; add wing cruise throttle, bank and loiter settings.
+//        wing: add Level turn coordination.
+//        navigation: encode for wings; add wing cruise throttle, GPS-refined cruise speed, bank and loiter settings.
 //        wing: add loiter switch, RTH and failsafe RTH.
 // 0.3.0 (1e5b55c3): feat: add full 16-bit aux channel resolution with range-based function mapping.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
@@ -605,13 +605,13 @@ typedef struct {
 
 typedef struct {
   profile_wing_autolaunch_t autolaunch;
-  uint8_t banked_turns;
+  uint8_t turn_coordination; // Level adds the body rates of a coordinated turn at the current bank
 } profile_wing_t;
 
 #define WING_MEMBERS                            \
   START_STRUCT(profile_wing_t)                  \
   MEMBER(autolaunch, profile_wing_autolaunch_t) \
-  MEMBER(banked_turns, uint8_t)                 \
+  MEMBER(turn_coordination, uint8_t)            \
   END_STRUCT()
 
 #define BLACKBOX_MEMBERS           \
@@ -678,7 +678,8 @@ typedef struct {
   float rth_throttle_hover;
   float rth_throttle_max;
   // Wing navigation parameters
-  float cruise_throttle;    // 0..1 in level flight while navigating
+  float cruise_throttle;    // 0..1 in level flight while navigating; wing PID speed-scaling reference, 0 disables
+  float cruise_speed;       // m/s airspeed at cruise throttle, for wing turn coordination; set by the user, refined from GPS in turns and saved on disarm
   float max_bank_angle;     // degrees
   float loiter_radius;      // meters
   uint8_t loiter_direction; // nav_loiter_direction_t
@@ -693,6 +694,7 @@ typedef struct {
   MEMBER(rth_throttle_hover, float)   \
   MEMBER(rth_throttle_max, float)     \
   MEMBER(cruise_throttle, float)      \
+  MEMBER(cruise_speed, float)         \
   MEMBER(max_bank_angle, float)       \
   MEMBER(loiter_radius, float)        \
   MEMBER(loiter_direction, uint8_t)   \
