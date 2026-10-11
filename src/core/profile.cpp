@@ -686,7 +686,7 @@ const profile_t default_profile = {
             .timeout_ms = 5000,
             .finish_ms = 3000,
         },
-        .banked_turns = 0,
+        .turn_coordination = 1,
     },
     .navigation = {
         .rth_altitude = 10.0f,   // 10m above current position
@@ -696,6 +696,7 @@ const profile_t default_profile = {
         .rth_throttle_hover = 0.5f,
         .rth_throttle_max = 0.75f,
         .cruise_throttle = 0.45f,
+        .cruise_speed = 15.0f,
         .max_bank_angle = 35.0f,
         .loiter_radius = 100.0f,
         .loiter_direction = NAV_LOITER_RIGHT,

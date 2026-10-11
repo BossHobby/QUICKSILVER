@@ -29,7 +29,6 @@ static constexpr float ALT_RATE_KP = 3.0f * DEGTORAD;          // climb angle pe
 static constexpr float ALT_RATE_KI = 1.0f * DEGTORAD;          // climb angle per m of accumulated climb-rate error
 static constexpr float ALT_MAX_CLIMB_ANGLE = 20.0f * DEGTORAD;
 static constexpr float ALT_MAX_DIVE_ANGLE = 15.0f * DEGTORAD;
-static constexpr float ALT_THROTTLE_PER_CLIMB_ANGLE = 0.015f;  // throttle per degree, holds airspeed without a sensor
 static constexpr uint32_t RTH_HEADING_TIMEOUT_MS = 10000;      // IMU-heading return after GPS loss
 static constexpr float DESCEND_GLIDE_ANGLE = 5.0f * DEGTORAD;  // nose-down during an unpowered failsafe glide
 static constexpr uint32_t DESCEND_LATCH_MS = 2000;             // GPS recovery before this resumes the return
@@ -306,7 +305,7 @@ void nav_update_wing(bool gps_valid, bool home_valid) {
   wing_nav_command.roll = nav_slew(wing_nav_command.roll, roll, BANK_SLEW_RATE * dt);
   // Attitude pitch targets are positive nose-down.
   wing_nav_command.pitch = nav_slew(wing_nav_command.pitch, -climb_angle, PITCH_SLEW_RATE * dt);
-  const float throttle = constrain(profile.navigation.cruise_throttle + ALT_THROTTLE_PER_CLIMB_ANGLE * climb_angle * RADTODEG, 0.0f, 1.0f);
+  const float throttle = constrain(profile.navigation.cruise_throttle + WING_THROTTLE_PER_CLIMB_DEG * climb_angle * RADTODEG, 0.0f, 1.0f);
   wing_nav_command.throttle = descend ? 0.0f : nav_slew(wing_nav_command.throttle, throttle, THROTTLE_SLEW_RATE * dt);
 
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 4, state.wing_nav_state);

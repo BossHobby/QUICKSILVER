@@ -46,6 +46,9 @@ static void pid_setUp(void) {
   state.looptime_inverse = 1.0f / state.looptime; // 8000Hz
   state.vbat_sag_filtered = 4.0f;
   state.lipo_cell_count = 1;
+#ifdef VEHICLE_WING
+  state.wing_speed_scale = 1.0f; // cruise airspeed; wing control publishes it before each pass
+#endif
 
   // Initialize PID
   pid_init();

@@ -211,9 +211,18 @@ void pid_calc() {
 
   const vec3_t setpoint_delta = vec3_sub(state.setpoint, lastsetpoint);
   const vec3_t gyro_delta = vec3_sub(state.gyro, lastrate);
-  const vec3_t current_kp = vec3_mul(scaled_rates.kp, v_compensation);
-  const vec3_t current_ki = vec3_mul(scaled_rates.ki, state.looptime);
-  const vec3_t current_kd = vec3_mul(scaled_rates.kd, state.looptime_inverse);
+#ifdef VEHICLE_WING
+  // Surface moment follows dynamic pressure (V^2); the body rate a steady
+  // deflection holds follows V. Gains are tuned at cruise.
+  const float speed_scale = state.wing_speed_scale;
+  const float pid_speed_compensation = speed_scale * speed_scale;
+  const vec3_t current_kff = vec3_mul(scaled_rates.kff, speed_scale);
+#else
+  const float pid_speed_compensation = 1.0f;
+#endif
+  const vec3_t current_kp = vec3_mul(scaled_rates.kp, v_compensation * pid_speed_compensation);
+  const vec3_t current_ki = vec3_mul(scaled_rates.ki, state.looptime * pid_speed_compensation);
+  const vec3_t current_kd = vec3_mul(scaled_rates.kd, state.looptime_inverse * pid_speed_compensation);
   const vec3_t iterm_enable = pid_should_enable_iterm_vec();
   const vec3_t iterm_windup = pid_compute_iterm_windup_vec(&pid_output);
   const bool rx_filter_enabled = state.rx_filter_hz > 0.1f;
@@ -251,7 +260,7 @@ void pid_calc() {
 #ifdef VEHICLE_WING
     // Feed the requested body rate, including level/autolaunch corrections.
     // This remains active while disarmed; the output layer gates motors.
-    pid_output.axis[x] += state.setpoint.axis[x] * scaled_rates.kff.axis[x];
+    pid_output.axis[x] += state.setpoint.axis[x] * current_kff.axis[x];
 #endif
     state.pidoutput.axis[x] = constrain(pid_output.axis[x], -out_limit.axis[x], out_limit.axis[x]);
   }
