@@ -227,6 +227,29 @@ static void test_wing_launch_delay_ramp_and_timed_handoff() {
   TEST_ASSERT_FALSE(state.wing_launch_available);
 }
 
+static void test_wing_launch_keeps_cruise_gains_until_done() {
+  prepare_launch();
+  // Held at idle in the hand, the throttle model would read a very slow wing.
+  tick(3000);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_WAIT, state.wing_launch_state);
+  TEST_ASSERT_EQUAL_FLOAT(1.0f, state.wing_speed_scale);
+  state.accel_raw.pitch = FORWARD_THROW;
+  tick(profile.wing.autolaunch.detect_time_ms + 2);
+  state.accel_raw.pitch = 0;
+  tick(profile.wing.autolaunch.motor_delay_ms + profile.wing.autolaunch.spinup_ms + 2);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_ACTIVE, state.wing_launch_state);
+  TEST_ASSERT_EQUAL_FLOAT(1.0f, state.wing_speed_scale);
+  tick(profile.wing.autolaunch.timeout_ms);
+  tick(profile.wing.autolaunch.finish_ms);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_DONE, state.wing_launch_state);
+
+  // Estimation resumes from cruise, not from the hand-held reading.
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 1.0f, state.wing_speed_scale);
+  tick(20000);
+  const float level_throttle = (0.5f - 0.05f) * 1.0526316f;
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, sqrtf(profile.navigation.cruise_throttle / level_throttle), state.wing_speed_scale);
+}
+
 static void test_wing_launch_failsafe_stops_motor_and_disarms() {
   launch_to_active();
   profile.navigation.rth_on_failsafe = false;
@@ -440,6 +463,7 @@ void run_wing_safety_tests() {
   RUN_TEST(test_wing_launch_rejects_short_acceleration_pulse);
   RUN_TEST(test_wing_launch_ignores_backward_jerk);
   RUN_TEST(test_wing_launch_delay_ramp_and_timed_handoff);
+  RUN_TEST(test_wing_launch_keeps_cruise_gains_until_done);
   RUN_TEST(test_wing_launch_failsafe_stops_motor_and_disarms);
   RUN_TEST(test_wing_launch_abort_returns_surfaces_to_manual);
   RUN_TEST(test_wing_launch_stage1_recovery_requires_disarm_before_relaunch);

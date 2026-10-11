@@ -9,9 +9,10 @@ void test_cbor_profile_servo_rate_roundtrip(void) {
   profile_t source = default_profile;
   source.servo.pwm_rate_hz = 333;
 #ifdef VEHICLE_WING
-  source.wing.banked_turns = 1;
+  source.wing.turn_coordination = 0;
 #endif
   source.navigation.loiter_radius = 80.0f;
+  source.navigation.cruise_speed = 18.0f;
   source.navigation.loiter_direction = NAV_LOITER_LEFT;
   source.pid.pid_rates[0].kff = (vec3_t){{44, 30, 10}};
   source.pid.pid_rates[1].kff = (vec3_t){{20, 15, 0}};
@@ -25,9 +26,10 @@ void test_cbor_profile_servo_rate_roundtrip(void) {
   TEST_ASSERT_TRUE(cbor_decode_profile_t(&codec, &decoded) >= CBOR_OK);
   TEST_ASSERT_EQUAL_UINT16(333, decoded.servo.pwm_rate_hz);
 #ifdef VEHICLE_WING
-  TEST_ASSERT_EQUAL_UINT8(1, decoded.wing.banked_turns);
+  TEST_ASSERT_EQUAL_UINT8(0, decoded.wing.turn_coordination);
 #endif
   TEST_ASSERT_EQUAL_FLOAT(80.0f, decoded.navigation.loiter_radius);
+  TEST_ASSERT_EQUAL_FLOAT(18.0f, decoded.navigation.cruise_speed);
   TEST_ASSERT_EQUAL_UINT8(NAV_LOITER_LEFT, decoded.navigation.loiter_direction);
   TEST_ASSERT_EQUAL(source.outputs[0].protocol, decoded.outputs[0].protocol);
 #ifndef VEHICLE_ROVER
