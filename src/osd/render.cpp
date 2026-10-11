@@ -32,6 +32,7 @@
 #define ICON_VOLT 0x6
 #define ICON_MAH 0x7
 #define ICON_AMP 0x9a
+#define ICON_UP 0x75
 #define ICON_DOWN 0x76
 #define ICON_GAUGE 0x70
 #define ICON_CROSSHAIR_1 0x72
@@ -822,6 +823,28 @@ static void osd_display_regular() {
         osd_write_float(state.home_distance, 4, 1);
         osd_write_char(ICON_METERS);
       }
+      break;
+    }
+
+    case OSD_VARIO: {
+      // m/s; the arrow carries the direction.
+      osd_start_el(el);
+      osd_write_char(state.vertical_speed < 0.0f ? ICON_DOWN : ICON_UP);
+      osd_write_float(fabsf(state.vertical_speed), 4, 1);
+      break;
+    }
+
+    case OSD_WING_AIRSPEED: {
+#ifdef VEHICLE_WING
+      // Throttle-model estimate; meaningless on the ground, so it shows zero.
+      const float airspeed = flags.in_air ? profile.navigation.cruise_speed / state.wing_speed_scale : 0.0f;
+      // Betaflight marks pitot airspeed as its speed glyph followed by A.
+      osd_start_el(el);
+      osd_write_char(ICON_GAUGE);
+      osd_write_char('A');
+      osd_write_int((uint32_t)(airspeed * 3.6f), 3);
+      osd_write_char(ICON_KPH);
+#endif
       break;
     }
     }

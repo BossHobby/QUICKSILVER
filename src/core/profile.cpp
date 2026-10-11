@@ -355,6 +355,8 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(0, 0, 19, 1, 37, 0),    // OSD_CRSF_TX_POWER
                     ENCODE_OSD_ELEMENT(0, 0, 24, 2, 44, 1),    // OSD_ALTITUDE
                     ENCODE_OSD_ELEMENT(0, 0, 12, 2, 22, 1),    // OSD_GPS_HOME
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 3, 44, 2),    // OSD_VARIO
+                    ENCODE_OSD_ELEMENT(0, 0, 8, 11, 10, 14),   // OSD_WING_AIRSPEED
                 },
             },
             [OSD_PROFILE_2] = {
@@ -381,6 +383,8 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(0, 0, 19, 1, 37, 0),    // OSD_CRSF_TX_POWER
                     ENCODE_OSD_ELEMENT(0, 0, 24, 2, 44, 1),    // OSD_ALTITUDE
                     ENCODE_OSD_ELEMENT(0, 0, 12, 2, 22, 1),    // OSD_GPS_HOME
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 3, 44, 2),    // OSD_VARIO
+                    ENCODE_OSD_ELEMENT(0, 0, 8, 11, 10, 14),   // OSD_WING_AIRSPEED
                 },
             },
         },
