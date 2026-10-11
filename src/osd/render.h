@@ -92,6 +92,8 @@ typedef enum {
   OSD_CRSF_TX_POWER,
   OSD_ALTITUDE,
   OSD_GPS_HOME,
+  OSD_VARIO,
+  OSD_WING_AIRSPEED,
 
   OSD_ELEMENT_MAX
 } osd_elements_t;
