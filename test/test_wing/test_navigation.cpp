@@ -654,6 +654,129 @@ static void test_failsafe_brief_gps_dip_resumes_return() {
   TEST_ASSERT_FLOAT_WITHIN(0.001f, profile.navigation.cruise_throttle, state.throttle);
 }
 
+// Cruise latches the eastbound ground track from fly() once the sticks have
+// stayed centered for the lock delay.
+static void cruise_locked() {
+  fly(1U << AUX_CRUISE);
+  step(600);
+  TEST_ASSERT_EQUAL(WING_NAV_CRUISE, state.wing_nav_state);
+}
+
+static void test_cruise_locks_course_after_centered_sticks() {
+  fly(1U << AUX_CRUISE);
+  TEST_ASSERT_EQUAL(WING_NAV_CRUISE_STEER, state.wing_nav_state);
+  TEST_ASSERT_EQUAL_STRING("CRUISE", control_flight_mode_name());
+  step(400);
+  TEST_ASSERT_EQUAL(WING_NAV_CRUISE_STEER, state.wing_nav_state);
+  step(200);
+  TEST_ASSERT_EQUAL(WING_NAV_CRUISE, state.wing_nav_state);
+  TEST_ASSERT_EQUAL_STRING("CRUISE", control_flight_mode_name());
+
+  // On the track: wings level, and navigation owns the throttle.
+  set_gps(0.0f, 30.0f, 0.0f, 15.0f);
+  step(2000);
+  TEST_ASSERT_FLOAT_WITHIN(0.5f, 0.0f, roll_command_deg());
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, profile.navigation.cruise_throttle, state.throttle);
+}
+
+static void test_cruise_steers_back_onto_track() {
+  cruise_locked();
+  // Displaced north, left of the eastbound track, still flying east.
+  set_gps(40.0f, 30.0f, 0.0f, 15.0f);
+  step(1000);
+  TEST_ASSERT_TRUE(roll_command_deg() > 1.0f);
+  TEST_ASSERT_TRUE(state.setpoint.roll > 0.0f);
+}
+
+static void test_cruise_roll_input_steers_and_relocks() {
+  cruise_locked();
+  state.rx_filtered.roll = 0.5f;
+  // Control applies the release on the pass after navigation sees it.
+  step(20);
+  TEST_ASSERT_EQUAL(WING_NAV_CRUISE_STEER, state.wing_nav_state);
+  // The pilot's bank, as in Level.
+  TEST_ASSERT_TRUE(state.setpoint.roll > 0.0f);
+
+  // Release on a northbound track; it locks after the delay.
+  state.rx_filtered.roll = 0.0f;
+  set_gps(0.0f, 30.0f, 15.0f, 0.0f);
+  step(400);
+  TEST_ASSERT_EQUAL(WING_NAV_CRUISE_STEER, state.wing_nav_state);
+  step(200);
+  TEST_ASSERT_EQUAL(WING_NAV_CRUISE, state.wing_nav_state);
+
+  // Right of the new northbound track: turn left back onto it.
+  set_gps(30.0f, 60.0f, 15.0f, 0.0f);
+  step(1000);
+  TEST_ASSERT_TRUE(roll_command_deg() < -1.0f);
+}
+
+static void test_cruise_yaw_input_releases_course() {
+  cruise_locked();
+  state.rx_filtered.yaw = 0.5f;
+  step(20);
+  TEST_ASSERT_EQUAL(WING_NAV_CRUISE_STEER, state.wing_nav_state);
+  TEST_ASSERT_TRUE(state.setpoint.yaw > 0.0f);
+}
+
+static void test_cruise_releases_course_without_gps() {
+  cruise_locked();
+  state.gps_lock = false;
+  state.rx_filtered.roll = 0.5f;
+  step(1000);
+  TEST_ASSERT_EQUAL(WING_NAV_CRUISE_NO_GPS, state.wing_nav_state);
+  TEST_ASSERT_EQUAL_STRING("CRUISE", control_flight_mode_name());
+  // The pilot banks as while steering.
+  TEST_ASSERT_TRUE(state.setpoint.roll > 0.0f);
+  state.rx_filtered.roll = 0.0f;
+
+  set_gps(0.0f, 30.0f, 0.0f, 15.0f);
+  step(600);
+  TEST_ASSERT_EQUAL(WING_NAV_CRUISE, state.wing_nav_state);
+}
+
+static void cruise_with_baro(float altitude) {
+  fly(0);
+  state.baro_valid = true;
+  state.altitude = altitude;
+  state.baro_vertical_speed = 0.0f;
+  state.aux_active |= 1U << AUX_CRUISE;
+  step(1000);
+}
+
+static void test_cruise_pitch_stick_climbs_and_latches_altitude() {
+  cruise_with_baro(50.0f);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, wing_nav_command.pitch);
+
+  // Pulling commands a climb, with throttle added for it.
+  state.rx_filtered.pitch = -1.0f;
+  step(1000);
+  TEST_ASSERT_TRUE(wing_nav_command.pitch < -2.0f * DEGTORAD);
+  TEST_ASSERT_TRUE(wing_nav_command.throttle > profile.navigation.cruise_throttle);
+
+  // Release latches the altitude reached, so higher is now above the target.
+  state.rx_filtered.pitch = 0.0f;
+  step();
+  state.altitude = 55.0f;
+  step(3000);
+  TEST_ASSERT_TRUE(wing_nav_command.pitch > 0.0f);
+}
+
+static void test_cruise_pitch_stick_sets_climb_angle_without_baro() {
+  fly(1U << AUX_CRUISE);
+  state.rx_filtered.pitch = -0.5f;
+  step(1000);
+  TEST_ASSERT_FLOAT_WITHIN(0.5f, -10.0f, wing_nav_command.pitch * RADTODEG);
+  TEST_ASSERT_TRUE(state.throttle > profile.navigation.cruise_throttle);
+}
+
+static void test_cruise_yields_to_loiter() {
+  cruise_locked();
+  state.aux_active |= 1U << AUX_LOITER;
+  step();
+  TEST_ASSERT_EQUAL(WING_NAV_LOITER, state.wing_nav_state);
+}
+
 void run_wing_navigation_tests() {
   RUN_TEST(test_loiter_requires_switch_and_flight);
   RUN_TEST(test_loiter_enters_tangentially_on_turn_side);
@@ -686,4 +809,12 @@ void run_wing_navigation_tests() {
   RUN_TEST(test_failsafe_without_gps_descends_in_circle);
   RUN_TEST(test_failsafe_glide_keeps_motor_off_after_gps_recovery);
   RUN_TEST(test_failsafe_brief_gps_dip_resumes_return);
+  RUN_TEST(test_cruise_locks_course_after_centered_sticks);
+  RUN_TEST(test_cruise_steers_back_onto_track);
+  RUN_TEST(test_cruise_roll_input_steers_and_relocks);
+  RUN_TEST(test_cruise_yaw_input_releases_course);
+  RUN_TEST(test_cruise_releases_course_without_gps);
+  RUN_TEST(test_cruise_pitch_stick_climbs_and_latches_altitude);
+  RUN_TEST(test_cruise_pitch_stick_sets_climb_angle_without_baro);
+  RUN_TEST(test_cruise_yields_to_loiter);
 }

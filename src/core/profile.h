@@ -22,6 +22,7 @@
 //        wing: add Level turn coordination.
 //        navigation: encode for wings; add wing cruise throttle, GPS-refined cruise speed, bank and loiter settings.
 //        wing: add loiter switch, RTH and failsafe RTH.
+//        wing: add Cruise mode.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
 // 0.2.5 (c9dec9f1): add osd profiles.

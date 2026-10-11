@@ -109,6 +109,10 @@ const char *control_flight_mode_name(void) {
   case WING_NAV_RTH_HOME:
   case WING_NAV_RTH_HEADING:
     return "RTH";
+  case WING_NAV_CRUISE_STEER:
+  case WING_NAV_CRUISE:
+  case WING_NAV_CRUISE_NO_GPS:
+    return "CRUISE";
   default:
     break;
   }

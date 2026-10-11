@@ -116,6 +116,7 @@ typedef enum {
   AUX_AUTOTRIM,
   AUX_AUTOLAUNCH,
   AUX_LOITER,
+  AUX_CRUISE,
 #endif
 
   AUX_PINIO_1,

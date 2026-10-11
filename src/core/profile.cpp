@@ -566,6 +566,7 @@ const profile_t default_profile = {
             AUTOTRIM,   // AUX_AUTOTRIM
             AUTOLAUNCH, // AUX_AUTOLAUNCH
             LOITER,     // AUX_LOITER
+            CRUISE,     // AUX_CRUISE
 #endif
             {RX_CHANNEL_OFF, 0, 0}, // AUX_PINIO_1
             {RX_CHANNEL_OFF, 0, 0}, // AUX_PINIO_2
