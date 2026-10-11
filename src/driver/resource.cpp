@@ -92,7 +92,7 @@ cbor_result_t cbor_encode_resource_tag_t(cbor_value_t *enc, const resource_tag_t
     }
     break;
   case RESOURCE_TIM: {
-    uint32_t timer_number = 0;
+    unsigned int timer_number = 0;
     switch (TIMER_TAG_TIM(*d)) {
 #define TIMER(_num)       \
   case TIMER##_num:       \
