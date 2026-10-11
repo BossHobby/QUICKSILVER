@@ -273,10 +273,32 @@ void imu_init() {
   imu_reset_attitude();
 }
 
+#ifdef VEHICLE_WING
+// The accelerometer measures gravity plus motion. A wing flying along its nose
+// at airspeed V and turning at the body rates reads their cross product on top
+// of gravity; in a coordinated turn that keeps the whole load on body up, so
+// the gravity estimate levels. Body rates and the airspeed estimate give this
+// acceleration without a heading, which GPS course biases by the crab angle.
+static vec3_t imu_gravity_reference(vec3_t accel) {
+  // Held for a throw, the wing turns without flying along its nose.
+  const bool in_hand = state.wing_launch_available && state.wing_launch_state < WING_LAUNCH_DETECTED;
+  if (!flags.in_air || in_hand)
+    return accel;
+
+  // Legacy body axes are {left, back, up}; rates are positive right yaw and
+  // nose-down pitch. Turning right adds a rightward acceleration, and pulling
+  // the nose up adds load along body up.
+  const float speed = profile.navigation.cruise_speed / state.wing_speed_scale;
+  const float scale = speed * (ACC_1G / GRAVITY_MSS);
+  accel.roll += scale * state.gyro.yaw;
+  accel.yaw += scale * state.gyro.pitch;
+  return accel;
+}
+#else
 // The accelerometer measures gravity plus motion. Multirotor RTH drag
-// deceleration and sustained wing turns otherwise read as tilt, so the level
-// command holds a real attitude offset. Remove the horizontal acceleration
-// navigation publishes while it trusts heading.
+// deceleration otherwise reads as tilt, so the level command holds a real
+// attitude offset. Remove the horizontal acceleration navigation publishes
+// while it trusts heading.
 static vec3_t imu_gravity_reference(vec3_t accel) {
   const float north = state.nav_accel_north;
   const float east = state.nav_accel_east;
@@ -300,6 +322,7 @@ static vec3_t imu_gravity_reference(vec3_t accel) {
   const vec3_t left_axis = vec3_cross(up, forward_axis);
   return vec3_sub(accel, vec3_add(vec3_mul(forward_axis, forward), vec3_mul(left_axis, left)));
 }
+#endif
 
 void imu_calc() {
   // Predict gravity from the gyro delta, then correct it with filtered acceleration.

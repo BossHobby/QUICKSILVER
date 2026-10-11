@@ -6,6 +6,7 @@
 #include "control/angle_pid.h"
 #include "control/control.h"
 #include "control/imu.h"
+#include "control/navigation.h"
 #include "control/output.h"
 #include "control/pid.h"
 #include "control/rates.h"
@@ -42,6 +43,39 @@ typedef enum {
 #define WING_FLYING_ACCEL_THRESHOLD 0.3f
 #define WING_FLYING_ACCEL_TIME_MS 250
 
+static constexpr float GRAVITY = 9.80665f; // m/s^2
+// Cruise-to-current airspeed ratio limits; the throttle proxy is coarse. Idle
+// glides read slow although they keep near cruise airspeed, so the slow limit
+// stays close.
+static constexpr float SPEED_SCALE_MIN = 0.6f;
+static constexpr float SPEED_SCALE_MAX = 1.25f;
+// Airspeed lags throttle and attitude changes by about this time constant.
+static constexpr float SPEED_THROTTLE_FILTER_TIME = 2.0f; // seconds
+// Turn coordination stops growing at this bank and fades out between the
+// fade angles; it also stops beyond the pitch limit, where bank is undefined.
+static constexpr float TURN_BANK_LIMIT = 60.0f * DEGTORAD;
+static constexpr float TURN_FADE_START = 70.0f * DEGTORAD;
+static constexpr float TURN_FADE_END = 80.0f * DEGTORAD;
+static constexpr float TURN_PITCH_LIMIT = 70.0f * DEGTORAD;
+// Cruise speed learning compares GPS velocity across a turn of at least this
+// much heading change, within this long, while the throttle model's speed
+// stays within this fraction.
+static constexpr float SPEED_LEARN_HEADING_CHANGE = 20.0f * DEGTORAD;
+static constexpr uint32_t SPEED_LEARN_MAX_TURN_MS = 10000;
+static constexpr float SPEED_LEARN_MAX_SCALE_CHANGE = 0.05f;
+// The throttle model only converts measured airspeed to cruise speed near
+// cruise; idle glides pin it at its limit and would bias the result.
+static constexpr float SPEED_LEARN_MAX_SCALE_OFFSET = 0.2f;
+// The value follows the median of the latest turns, so isolated bad turns
+// never reach it, and needs this many turns in a flight before it moves.
+static constexpr uint8_t SPEED_LEARN_SAMPLES = 5;
+static constexpr uint8_t SPEED_LEARN_MIN_SAMPLES = 3;
+static constexpr float SPEED_LEARN_GAIN = 0.2f; // per accepted turn
+// The learned value stays within the range a user can set.
+static constexpr float SPEED_LEARN_MIN = 5.0f;         // m/s, 18 km/h
+static constexpr float SPEED_LEARN_MAX = 50.0f;        // m/s, 180 km/h
+static constexpr float SPEED_LEARN_SAVE_CHANGE = 0.5f; // m/s since the last save
+
 static struct {
   uint32_t state_start_ms;
   uint32_t detect_start_ms;
@@ -66,6 +100,25 @@ static struct {
     float sum;
   } outputs[MOTOR_PIN_MAX];
 } autotrim;
+
+static float speed_throttle; // filtered level-flight throttle equivalent
+
+static struct {
+  // Gyro-integrated earth heading change since the turn start, radians. Kept
+  // relative so float resolution holds for the small per-loop increments.
+  float heading_change;
+  uint32_t last_gps_ms; // latest GPS fix compared, so heading pairs with its velocity
+  bool turn_start_valid;
+  uint32_t turn_start_gps_ms;
+  float turn_start_north; // GPS velocity, m/s
+  float turn_start_east;
+  float turn_start_scale;
+  float samples[SPEED_LEARN_SAMPLES]; // cruise speed per turn this flight, m/s
+  uint8_t sample_count;
+  uint8_t sample_next;
+  float saved_speed; // profile.navigation.cruise_speed in flash
+  bool save_pending;
+} speed_learn;
 
 motor_test_t motor_test = {
     .active = 0,
@@ -117,15 +170,31 @@ static bool wing_launch_in_progress() {
          !flags.failsafe && state.wing_launch_state < WING_LAUNCH_DONE;
 }
 
-static vec3_t wing_level_angle_error(float roll, float pitch) {
-  vec3_t error = input_angle_vector(roll, pitch);
-  if (profile.wing.banked_turns) {
-    error.roll += copysignf(fabsf(state.GEstG.pitch * state.stick_vector.roll), state.stick_vector.roll);
-    error.pitch += copysignf(fabsf(state.GEstG.roll * state.stick_vector.pitch), state.stick_vector.pitch);
-    error.roll = constrain(error.roll, -1.0f, 1.0f);
-    error.pitch = constrain(error.pitch, -1.0f, 1.0f);
-  }
-  return error;
+// Body rates of a coordinated turn at the current bank: the heading turns at
+// g * tan(bank) / V about earth-up. The angle loop only sees attitude, so
+// without these it holds that rotation off, sagging the nose and opposing the
+// rudder through every turn.
+static vec3_t wing_turn_rates() {
+  const float cruise_speed = profile.navigation.cruise_speed;
+  const float roll = state.attitude.roll;
+  const float pitch = state.attitude.pitch;
+  if (!flags.in_air || cruise_speed <= 0.0f || fabsf(pitch) > TURN_PITCH_LIMIT)
+    return (vec3_t){};
+
+  const float fade = constrain((TURN_FADE_END - fabsf(roll)) / (TURN_FADE_END - TURN_FADE_START), 0.0f, 1.0f);
+  const float bank = constrain(roll, -TURN_BANK_LIMIT, TURN_BANK_LIMIT);
+  const float sin_bank = fastsin(bank);
+  const float cos_bank = fastcos(bank);
+  const float speed = cruise_speed / state.wing_speed_scale;
+  const float turn_rate = fade * GRAVITY * sin_bank / (cos_bank * speed);
+
+  // Earth-up rotation in body axes; pitch is positive nose-down.
+  const float cos_pitch = fastcos(pitch);
+  return (vec3_t){{
+      turn_rate * fastsin(pitch),
+      -turn_rate * sin_bank * cos_pitch,
+      turn_rate * cos_bank * cos_pitch,
+  }};
 }
 
 static void wing_calc_stabilized(wing_mode_t mode, bool launch_stabilized) {
@@ -141,20 +210,16 @@ static void wing_calc_stabilized(wing_mode_t mode, bool launch_stabilized) {
 
     // The launch angle is independent of the pilot's level-mode limit.
     state.angle_error = input_angle_vector(0.0f, pitch);
-    state.setpoint.roll = angle_pid(0);
-    state.setpoint.pitch = angle_pid(1);
-    state.setpoint.yaw = 0.0f;
+    state.setpoint = vec3_add((vec3_t){{angle_pid(0), angle_pid(1), 0.0f}}, wing_turn_rates());
   } else if (mode == WING_MODE_LEVEL) {
     const float max_angle = profile.rate.level_max_angle * DEGTORAD;
-    state.angle_error = wing_level_angle_error(state.rx_filtered.roll * max_angle, state.rx_filtered.pitch * max_angle);
-    state.setpoint.roll = angle_pid(0);
-    state.setpoint.pitch = angle_pid(1);
-    state.setpoint.yaw = input_rates_calc().yaw;
+    state.angle_error = input_angle_vector(state.rx_filtered.roll * max_angle, state.rx_filtered.pitch * max_angle);
+    state.setpoint = (vec3_t){{angle_pid(0), angle_pid(1), input_rates_calc().yaw}};
+    if (profile.wing.turn_coordination)
+      state.setpoint = vec3_add(state.setpoint, wing_turn_rates());
   } else if (mode == WING_MODE_NAV) {
-    state.angle_error = wing_level_angle_error(wing_nav_command.roll, wing_nav_command.pitch);
-    state.setpoint.roll = angle_pid(0);
-    state.setpoint.pitch = angle_pid(1);
-    state.setpoint.yaw = 0.0f;
+    state.angle_error = input_angle_vector(wing_nav_command.roll, wing_nav_command.pitch);
+    state.setpoint = vec3_add((vec3_t){{angle_pid(0), angle_pid(1), 0.0f}}, wing_turn_rates());
   } else {
     state.setpoint = input_rates_calc();
   }
@@ -240,6 +305,9 @@ static void wing_update_autotrim(bool armed_at_start) {
       flash_save();
       flight_reset_runtime();
       state.wing_autotrim_state = WING_AUTOTRIM_SAVED;
+      // The profile write includes the learned cruise speed.
+      speed_learn.saved_speed = profile.navigation.cruise_speed;
+      speed_learn.save_pending = false;
     }
     return;
   }
@@ -559,6 +627,124 @@ static void wing_update_throttle() {
   }
 }
 
+// Estimate cruise / current airspeed without a sensor. Steady thrust balances
+// drag (proportional to V^2) plus the climb component, so V^2 follows throttle
+// less the climb share navigation feeds forward. 1 on the ground, while
+// cruise throttle is unset and through autolaunch: in_air latches in the hand,
+// where idle throttle would read as a very slow wing at the throw.
+static void wing_update_speed_scale() {
+  const float cruise_throttle = profile.navigation.cruise_throttle;
+  if (!flags.arm_state || !flags.in_air || cruise_throttle <= 0.0f || wing_launch_in_progress()) {
+    speed_throttle = cruise_throttle;
+    state.wing_speed_scale = 1.0f;
+    return;
+  }
+
+  // Attitude pitch is positive nose-down.
+  const float climb_deg = -state.attitude.pitch * RADTODEG;
+  const float level_throttle = state.throttle - WING_THROTTLE_PER_CLIMB_DEG * climb_deg;
+  lpf(&speed_throttle, level_throttle, constrain(1.0f - state.looptime / SPEED_THROTTLE_FILTER_TIME, 0.0f, 1.0f));
+
+  const float speed_sq_ratio = constrain(speed_throttle / cruise_throttle,
+                                         1.0f / (SPEED_SCALE_MAX * SPEED_SCALE_MAX),
+                                         1.0f / (SPEED_SCALE_MIN * SPEED_SCALE_MIN));
+  state.wing_speed_scale = 1.0f / sqrtf(speed_sq_ratio);
+}
+
+static float wing_speed_learn_median() {
+  float sorted[SPEED_LEARN_SAMPLES];
+  const uint8_t count = speed_learn.sample_count;
+  for (uint8_t i = 0; i < count; i++) {
+    float value = speed_learn.samples[i];
+    uint8_t j = i;
+    for (; j > 0 && sorted[j - 1] > value; j--)
+      sorted[j] = sorted[j - 1];
+    sorted[j] = value;
+  }
+  return count % 2 ? sorted[count / 2] : 0.5f * (sorted[count / 2 - 1] + sorted[count / 2]);
+}
+
+// Learn the airspeed at cruise throttle from GPS. Across a turn a steady wind
+// cancels from the change in ground velocity, which is airspeed times the
+// change in the nose direction. The gyro measures that heading change, so the
+// GPS-course-corrected absolute heading never enters.
+static void wing_learn_cruise_speed() {
+  if (!flags.in_air) {
+    speed_learn.turn_start_valid = false;
+    speed_learn.sample_count = 0;
+    speed_learn.sample_next = 0;
+    if (!speed_learn.save_pending)
+      speed_learn.saved_speed = profile.navigation.cruise_speed;
+    return;
+  }
+
+  const float roll = state.attitude.roll;
+  const float pitch = state.attitude.pitch;
+  if (fabsf(pitch) > TURN_PITCH_LIMIT) {
+    speed_learn.turn_start_valid = false;
+    return;
+  }
+  // Earth-up rate from body rates; pitch is positive nose-down.
+  const float heading_rate = (fastcos(roll) * state.gyro.yaw - fastsin(roll) * state.gyro.pitch) / fastcos(pitch);
+  speed_learn.heading_change += heading_rate * state.looptime;
+
+  const uint32_t gps_ms = state.gps_last_update_ms;
+  if (!state.gps_lock || time_millis() - gps_ms > NAV_GPS_STALE_MS || wing_launch_in_progress()) {
+    speed_learn.turn_start_valid = false;
+    return;
+  }
+  // Compare only as each fix arrives; between fixes the gyro heading has moved
+  // on from the heading its velocity was measured at.
+  if (speed_learn.turn_start_valid && gps_ms == speed_learn.last_gps_ms)
+    return;
+  speed_learn.last_gps_ms = gps_ms;
+
+  const float heading_change = speed_learn.heading_change;
+  const bool restart = !speed_learn.turn_start_valid ||
+                       fabsf(state.wing_speed_scale - 1.0f) > SPEED_LEARN_MAX_SCALE_OFFSET ||
+                       gps_ms - speed_learn.turn_start_gps_ms > SPEED_LEARN_MAX_TURN_MS ||
+                       fabsf(state.wing_speed_scale - speed_learn.turn_start_scale) > SPEED_LEARN_MAX_SCALE_CHANGE * speed_learn.turn_start_scale;
+  if (!restart && fabsf(heading_change) < SPEED_LEARN_HEADING_CHANGE)
+    return;
+
+  if (!restart) {
+    const float velocity_change = hypotf(state.gps_vel_north - speed_learn.turn_start_north, state.gps_vel_east - speed_learn.turn_start_east);
+    const float nose_change = 2.0f * fabsf(fastsin(0.5f * heading_change));
+    const float scale = 0.5f * (state.wing_speed_scale + speed_learn.turn_start_scale);
+    speed_learn.samples[speed_learn.sample_next] = velocity_change / nose_change * scale;
+    speed_learn.sample_next = (speed_learn.sample_next + 1) % SPEED_LEARN_SAMPLES;
+    speed_learn.sample_count = MIN(speed_learn.sample_count + 1, SPEED_LEARN_SAMPLES);
+    if (speed_learn.sample_count >= SPEED_LEARN_MIN_SAMPLES) {
+      float *cruise_speed = &profile.navigation.cruise_speed;
+      const float current = constrain(*cruise_speed, SPEED_LEARN_MIN, SPEED_LEARN_MAX);
+      const float median = wing_speed_learn_median();
+      *cruise_speed = constrain(current + SPEED_LEARN_GAIN * (median - current), SPEED_LEARN_MIN, SPEED_LEARN_MAX);
+      speed_learn.save_pending |= fabsf(*cruise_speed - speed_learn.saved_speed) >= SPEED_LEARN_SAVE_CHANGE;
+    }
+  }
+
+  // Each turn sample starts the next.
+  speed_learn.turn_start_valid = true;
+  speed_learn.turn_start_gps_ms = gps_ms;
+  speed_learn.heading_change = 0.0f;
+  speed_learn.turn_start_north = state.gps_vel_north;
+  speed_learn.turn_start_east = state.gps_vel_east;
+  speed_learn.turn_start_scale = state.wing_speed_scale;
+}
+
+// Store a learned cruise speed once landed, like autotrim. Flight holds
+// profile_mutex only for passes that start disarmed, and the save blocks with
+// interrupts masked, so wait while GPS shows a gliding wing.
+static void wing_save_cruise_speed(bool armed_at_start) {
+  const bool moving = state.gps_lock && state.gps_speed >= WING_FLYING_MIN_SPEED;
+  if (!speed_learn.save_pending || flags.arm_state || armed_at_start || moving)
+    return;
+  flash_save();
+  flight_reset_runtime();
+  speed_learn.saved_speed = profile.navigation.cruise_speed;
+  speed_learn.save_pending = false;
+}
+
 bool control_failsafe_active() {
   return flags.failsafe_outputs_blocked;
 }
@@ -593,6 +779,8 @@ void control() {
   const wing_mode_t wing_mode = wing_active_mode();
   if (wing_mode == WING_MODE_NAV)
     state.throttle = wing_nav_command.throttle;
+  wing_update_speed_scale();
+  wing_learn_cruise_speed();
   const bool launch_stabilized = wing_launch_in_progress();
   if (wing_mode == WING_MODE_MANUAL && !launch_stabilized) {
     pid_reset_i();
@@ -629,6 +817,7 @@ void control() {
   }
   // Update centers after writing this loop's outputs, as in INAV's switched trim.
   wing_update_autotrim(armed_at_start);
+  wing_save_cruise_speed(armed_at_start);
 
   blackbox_set_debug(BBOX_DEBUG_WING, WING_DEBUG_MODE, wing_mode);
   blackbox_set_debug(BBOX_DEBUG_WING, WING_DEBUG_LAUNCH_STATE, state.wing_launch_state);

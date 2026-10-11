@@ -29,7 +29,6 @@ static constexpr float ALT_RATE_KP = 3.0f * DEGTORAD;          // climb angle pe
 static constexpr float ALT_RATE_KI = 1.0f * DEGTORAD;          // climb angle per m of accumulated climb-rate error
 static constexpr float ALT_MAX_CLIMB_ANGLE = 20.0f * DEGTORAD;
 static constexpr float ALT_MAX_DIVE_ANGLE = 15.0f * DEGTORAD;
-static constexpr float ALT_THROTTLE_PER_CLIMB_ANGLE = 0.015f;  // throttle per degree, holds airspeed without a sensor
 static constexpr uint32_t RTH_HEADING_TIMEOUT_MS = 10000;      // IMU-heading return after GPS loss
 static constexpr float DESCEND_GLIDE_ANGLE = 5.0f * DEGTORAD;  // nose-down during an unpowered failsafe glide
 static constexpr uint32_t DESCEND_LATCH_MS = 2000;             // GPS recovery before this resumes the return
@@ -232,14 +231,6 @@ void nav_update_wing(bool gps_valid, bool home_valid) {
   const float dt = constrain((now - nav.updated_us) * 1e-6f, 0.0f, 0.1f);
   nav.updated_us = now;
 
-  // A sustained turn's centripetal acceleration reads as level, so the gravity
-  // estimate drifts in bank and pitch in every flight mode. The IMU rotates
-  // this acceleration by heading, so publish only while heading is trusted.
-  if (flags.arm_state && flags.in_air && gps_valid && state.heading_confidence >= RTH_MIN_HEADING_CONFIDENCE)
-    nav_update_gps_accel();
-  else
-    nav_reset_gps_accel();
-
   const nav_request_t request = nav_request();
   // Loiter and return latch their own altitude targets. A manual RTH that
   // continues as failsafe RTH keeps its target.
@@ -306,7 +297,7 @@ void nav_update_wing(bool gps_valid, bool home_valid) {
   wing_nav_command.roll = nav_slew(wing_nav_command.roll, roll, BANK_SLEW_RATE * dt);
   // Attitude pitch targets are positive nose-down.
   wing_nav_command.pitch = nav_slew(wing_nav_command.pitch, -climb_angle, PITCH_SLEW_RATE * dt);
-  const float throttle = constrain(profile.navigation.cruise_throttle + ALT_THROTTLE_PER_CLIMB_ANGLE * climb_angle * RADTODEG, 0.0f, 1.0f);
+  const float throttle = constrain(profile.navigation.cruise_throttle + WING_THROTTLE_PER_CLIMB_DEG * climb_angle * RADTODEG, 0.0f, 1.0f);
   wing_nav_command.throttle = descend ? 0.0f : nav_slew(wing_nav_command.throttle, throttle, THROTTLE_SLEW_RATE * dt);
 
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 4, state.wing_nav_state);

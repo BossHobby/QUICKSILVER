@@ -145,51 +145,48 @@ static void test_loiter_banks_without_gps_and_recenters_on_recovery() {
   TEST_ASSERT_FLOAT_WITHIN(0.5f, expected, roll_command_deg());
 }
 
-// Fly a 20 s coordinated right turn at 35 degrees bank and 20 m/s through the
-// IMU and navigation. Returns the angle between the gravity estimate level
-// control uses and true gravity at the end, in degrees.
-static float sustained_turn_gravity_error_deg(bool heading_trusted) {
-  const float bank = 35.0f * DEGTORAD;
-  const float speed = 20.0f;
-  const float turn_rate = 9.80665f * tanf(bank) / speed;
-  nav_init();
-  profile.serial.gps = SERIAL_PORT1;
-  set_gps(0.0f, 0.0f, speed, 0.0f);
-  state.gps_heading = 0.0f;
-  state.gps_heading_accuracy = 1.0f;
+// Turn for 20 s at the given bank and body rates with the accelerometer reading
+// accel_raw, airborne at the cruise speed. Returns the angle between the
+// gravity estimate level control uses and true gravity at the end, in degrees.
+static float turn_gravity_error_deg(float bank, vec3_t gyro, vec3_t accel_raw) {
   state.looptime_autodetect = 1000;
   state.accel_raw = {{sinf(bank), 0, cosf(bank)}};
   imu_init();
   imu_test_attitude_init();
   flags.arm_state = 1;
   flags.in_air = 1;
+  state.wing_speed_scale = 1.0f;
   imu_calc();
-  state.heading_confidence = heading_trusted ? 1.0f : 0.0f;
 
-  // Coordinated: the accelerometer reads the whole load along body up.
-  state.accel_raw = {{0, 0, 1.0f / cosf(bank)}};
-  state.gyro = {{0, -turn_rate * sinf(bank), turn_rate * cosf(bank)}};
+  state.accel_raw = accel_raw;
+  state.gyro = gyro;
   state.gyro_delta_angle = vec3_mul(state.gyro, state.looptime);
   for (uint32_t ms = 1; ms <= 20000; ms++) {
     time_test_advance_us(1000);
-    if (ms % 100 == 0) {
-      const float course = turn_rate * ms * 0.001f;
-      set_gps(0.0f, 0.0f, speed * cosf(course), speed * sinf(course));
-      state.gps_heading = normalize_rad(course) * RADTODEG;
-    }
     imu_calc();
-    nav_update();
   }
   const vec3_t gravity = {{sinf(bank), 0, cosf(bank)}};
   return acosf(constrain(vec3_dot(state.GEstG, gravity), -1.0f, 1.0f)) * RADTODEG;
 }
 
+// A coordinated right turn at 35 degrees bank and 20 m/s, with no GPS and no
+// trusted heading: the accelerometer reads the whole load along body up.
+static float coordinated_turn_gravity_error_deg() {
+  const float bank = 35.0f * DEGTORAD;
+  profile.navigation.cruise_speed = 20.0f;
+  const float turn_rate = 9.80665f * tanf(bank) / profile.navigation.cruise_speed;
+  const vec3_t gyro = {{0, -turn_rate * sinf(bank), turn_rate * cosf(bank)}};
+  return turn_gravity_error_deg(bank, gyro, (vec3_t){{0, 0, 1.0f / cosf(bank)}});
+}
+
 static void test_turn_acceleration_keeps_imu_attitude() {
-  TEST_ASSERT_TRUE(sustained_turn_gravity_error_deg(true) < 3.0f);
-  // Without a trusted heading nothing is published and the estimate drifts.
-  TEST_ASSERT_TRUE(sustained_turn_gravity_error_deg(false) > 10.0f);
-  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.nav_accel_north);
-  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.nav_accel_east);
+  TEST_ASSERT_TRUE(coordinated_turn_gravity_error_deg() < 3.0f);
+  // Held level for a throw and turned on the spot, the wing reads only gravity.
+  state.wing_launch_available = true;
+  state.wing_launch_state = WING_LAUNCH_WAIT;
+  TEST_ASSERT_TRUE(turn_gravity_error_deg(0.0f, (vec3_t){{0, 0, 0.3f}}, (vec3_t){{0, 0, 1.0f}}) < 1.0f);
+  // Uncompensated, the coordinated turn levels the estimate.
+  TEST_ASSERT_TRUE(coordinated_turn_gravity_error_deg() > 10.0f);
 }
 
 static void test_loiter_runs_without_configured_gps() {

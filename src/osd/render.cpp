@@ -1639,18 +1639,25 @@ TickType_t osd_display() {
       nav->cruise_throttle = osd_menu_adjust_float(nav->cruise_throttle, 0.01, 0, 1);
     }
 
-    osd_menu_select(2, 6, "MAX BANK DEG");
-    if (osd_menu_select_float(21, 6, nav->max_bank_angle, 5, 0)) {
+    // A starting value; GPS turns refine it in flight.
+    osd_menu_select(2, 6, "CRUISE SPEED KM/H");
+    const float cruise_speed_kph = nav->cruise_speed * 3.6f;
+    if (osd_menu_select_float(21, 6, cruise_speed_kph, 5, 0)) {
+      nav->cruise_speed = osd_menu_adjust_float(cruise_speed_kph, 1, 18, 180) / 3.6f;
+    }
+
+    osd_menu_select(2, 7, "MAX BANK DEG");
+    if (osd_menu_select_float(21, 7, nav->max_bank_angle, 5, 0)) {
       nav->max_bank_angle = osd_menu_adjust_float(nav->max_bank_angle, 1, 0, 40);
     }
 
-    osd_menu_select(2, 7, "LOITER RADIUS M");
-    if (osd_menu_select_float(21, 7, nav->loiter_radius, 5, 0)) {
+    osd_menu_select(2, 8, "LOITER RADIUS M");
+    if (osd_menu_select_float(21, 8, nav->loiter_radius, 5, 0)) {
       nav->loiter_radius = osd_menu_adjust_float(nav->loiter_radius, 5, 5, 1000);
     }
 
-    osd_menu_select(2, 8, "LOITER DIRECTION");
-    if (osd_menu_select_enum(21, 8, nav->loiter_direction, loiter_direction_labels)) {
+    osd_menu_select(2, 9, "LOITER DIRECTION");
+    if (osd_menu_select_enum(21, 9, nav->loiter_direction, loiter_direction_labels)) {
       nav->loiter_direction = osd_menu_adjust_int(nav->loiter_direction, 1, NAV_LOITER_RIGHT, NAV_LOITER_LEFT);
     }
 #else
@@ -1659,9 +1666,10 @@ TickType_t osd_display() {
       nav->rth_altitude = osd_menu_adjust_float(nav->rth_altitude, 1, 0, 100);
     }
 
-    osd_menu_select(2, 5, "RTH SPEED M/S");
-    if (osd_menu_select_float(21, 5, nav->rth_cruise_speed, 5, 1)) {
-      nav->rth_cruise_speed = osd_menu_adjust_float(nav->rth_cruise_speed, 0.5, 0.5, 30);
+    osd_menu_select(2, 5, "RTH SPEED KM/H");
+    const float rth_speed_kph = nav->rth_cruise_speed * 3.6f;
+    if (osd_menu_select_float(21, 5, rth_speed_kph, 5, 0)) {
+      nav->rth_cruise_speed = osd_menu_adjust_float(rth_speed_kph, 1, 2, 108) / 3.6f;
     }
 
     osd_menu_select(2, 6, "THROTTLE MIN");
@@ -1885,9 +1893,9 @@ TickType_t osd_display() {
     }
 
 #ifdef VEHICLE_WING
-    osd_menu_select(1, 6, "BANKED TURNS");
-    if (osd_menu_select_enum(20, 6, profile.wing.banked_turns, on_off_labels)) {
-      profile.wing.banked_turns = osd_menu_adjust_int(profile.wing.banked_turns, 1, 0, 1);
+    osd_menu_select(1, 6, "TURN COORDINATION");
+    if (osd_menu_select_enum(20, 6, profile.wing.turn_coordination, on_off_labels)) {
+      profile.wing.turn_coordination = osd_menu_adjust_int(profile.wing.turn_coordination, 1, 0, 1);
     }
 #endif
 
