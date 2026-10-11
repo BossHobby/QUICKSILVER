@@ -252,6 +252,7 @@ typedef struct {
   uint8_t wing_autotrim_state;
   uint8_t wing_nav_state; // wing_nav_state_t, owned by wing navigation
   bool wing_nav_failsafe; // wing navigation owns a receiver failsafe; failsafe holds stage 1 with live outputs
+  float wing_speed_scale; // cruise / estimated airspeed, 0.6..1.25, from throttle and climb; 1 on the ground. Owned by wing control.
 
   uint32_t dshot_rpm[MOTOR_PIN_MAX]; // eRPM / 100 per target output slot, written by the DShot driver
 } control_state_t;
@@ -346,6 +347,7 @@ typedef struct {
   MEMBER(wing_autotrim_state, uint8_t)                 \
   MEMBER(wing_nav_state, uint8_t)                      \
   MEMBER(wing_nav_failsafe, bool)                      \
+  MEMBER(wing_speed_scale, float)                      \
   ARRAY_MEMBER(dshot_rpm, MOTOR_PIN_MAX, uint32_t)     \
   END_STRUCT()
 

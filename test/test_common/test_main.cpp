@@ -571,7 +571,10 @@ int main(int argc, char **argv) {
   RUN_TEST(test_attitude_normal_heading_pitch_weight_matches_vehicle);
   RUN_TEST(test_attitude_imu_pipeline_roll_and_pitch);
   RUN_TEST(test_attitude_imu_pipeline_yaw_while_tilted);
+#ifndef VEHICLE_WING
+  // Wings remove turn acceleration from body rates instead.
   RUN_TEST(test_attitude_imu_pipeline_drag_deceleration_stays_level);
+#endif
   RUN_TEST(test_bmp280_raw_reference_sample_returns_pascals);
   RUN_TEST(test_bmp280_discards_unused_sample_nibbles);
   RUN_TEST(test_bmp388_raw_reference_sample_retains_cubic_correction);
