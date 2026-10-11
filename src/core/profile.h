@@ -13,7 +13,7 @@
 #define VTX_POWER_LABEL_LEN 5
 
 // PROFILE version changelog (schema compatibility):
-// 0.3.1: osd: add CRSF TX power.
+// 0.3.1: osd: add CRSF TX power, vario and wing estimated airspeed.
 //        gps: add persisted constellation selection.
 //        navigation: expose return height, speed, failsafe and throttle limits only.
 //        pid: add per-axis wing rate feedforward to each PID profile.
