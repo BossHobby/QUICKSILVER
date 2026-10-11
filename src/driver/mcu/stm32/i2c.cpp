@@ -191,9 +191,9 @@ static void i2c_irq_handler(const i2c_ports_t port) {
 }
 
 static void i2c_err_irq_handler(const i2c_ports_t port) {
+#if defined(STM32F4)
   i2c_txn_t *txn = &i2c_dev[port].txn;
   const i2c_port_def_t *def = &i2c_port_defs[port];
-#if defined(STM32F4)
   if (LL_I2C_IsActiveFlag_AF(def->channel)) {
     LL_I2C_ClearFlag_AF(def->channel);
     LL_I2C_GenerateStopCondition(def->channel);
