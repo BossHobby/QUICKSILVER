@@ -65,6 +65,7 @@ extern void test_sdcard_transport_errors();
 extern void test_sdcard_transport_busy_and_timer_wrap();
 extern void test_sdcard_device_samples_during_write();
 extern void test_blackbox_navigation_roundtrip_and_unchanged_home(void);
+extern void test_blackbox_state_roundtrip_and_unchanged_state(void);
 extern void test_blackbox_full_frame_fits_device_buffer(void);
 extern void test_flash_streams_without_startup_erase_and_commits_at_stop();
 extern void test_flash_flushes_last_page_at_capacity();
@@ -463,6 +464,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_blackbox_vec4_zero_detection);
   RUN_TEST(test_blackbox_debug_change_detection);
   RUN_TEST(test_blackbox_navigation_roundtrip_and_unchanged_home);
+  RUN_TEST(test_blackbox_state_roundtrip_and_unchanged_state);
   RUN_TEST(test_blackbox_full_frame_fits_device_buffer);
   RUN_TEST(test_flash_streams_without_startup_erase_and_commits_at_stop);
   RUN_TEST(test_flash_flushes_last_page_at_capacity);

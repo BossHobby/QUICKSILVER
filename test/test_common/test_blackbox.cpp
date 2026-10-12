@@ -441,6 +441,43 @@ void test_blackbox_navigation_roundtrip_and_unchanged_home(void) {
   }
 }
 
+void test_blackbox_state_roundtrip_and_unchanged_state(void) {
+  const uint32_t fields = 1 << BBOX_FIELD_STATE;
+  blackbox_t previous = {};
+  previous.state = BBOX_STATE_IN_AIR | BBOX_STATE_LOWBATT;
+  previous.aux = (1U << AUX_ARMING) | (1U << AUX_PINIO_4);
+  for (int pass = 0; pass < 3; pass++) {
+    blackbox_t current = previous;
+    if (pass == 1) {
+      // Clearing bits sends negative deltas.
+      current.state = BBOX_STATE_IN_AIR | BBOX_STATE_FAILSAFE | FAILSAFE_PHASE_STAGE1_GUARD << BBOX_STATE_FAILSAFE_PHASE_SHIFT;
+      current.aux = 1U << AUX_ARMING;
+    }
+    uint8_t buffer[BLACKBOX_MAX_SIZE];
+    cbor_value_t codec;
+    cbor_encoder_init(&codec, buffer, sizeof(buffer));
+    TEST_ASSERT_EQUAL(CBOR_OK, cbor_encode_blackbox_frame(&codec, &current, &previous,
+        pass == 0 ? BLACKBOX_FRAME_I : BLACKBOX_FRAME_P, fields));
+    const auto length = cbor_encoder_len(&codec);
+    cbor_decoder_init(&codec, buffer, length);
+    cbor_container_t array;
+    TEST_ASSERT_TRUE(cbor_decode_array(&codec, &array) >= CBOR_OK);
+    uint32_t flags;
+    TEST_ASSERT_TRUE(cbor_decode_uint32_t(&codec, &flags) >= CBOR_OK);
+    TEST_ASSERT_EQUAL(pass != 2, (flags & (1 << BBOX_FIELD_STATE)) != 0);
+    TEST_ASSERT_TRUE(cbor_decode_skip(&codec) >= CBOR_OK); // loop
+    TEST_ASSERT_TRUE(cbor_decode_skip(&codec) >= CBOR_OK); // time
+    if (pass == 2) continue;
+    TEST_ASSERT_TRUE(cbor_decode_array(&codec, &array) >= CBOR_OK);
+    for (const auto member : {&blackbox_t::state, &blackbox_t::aux}) {
+      int32_t value;
+      TEST_ASSERT_TRUE(cbor_decode_int32_t(&codec, &value) >= CBOR_OK);
+      TEST_ASSERT_EQUAL_UINT32(current.*member, pass == 1 ? previous.*member + value : value);
+    }
+    previous = current;
+  }
+}
+
 void test_blackbox_full_frame_fits_device_buffer(void) {
   blackbox_t frame;
   memset(&frame, 0x7f, sizeof(frame));
