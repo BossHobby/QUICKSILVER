@@ -370,6 +370,7 @@ __attribute__((__used__)) int main() {
   gpio_ports_init();
   interrupt_init();
   time_init();
+  thread_stack_guard_init();
   thread_start(THREAD_FLIGHT);
   vTaskStartScheduler();
   failloop(FAILLOOP_FAULT);
