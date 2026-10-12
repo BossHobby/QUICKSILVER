@@ -23,6 +23,8 @@ static const adc_dev_t adc_dev[ADC_DEVICE_MAX] = {
 #elif defined(STM32H7)
 #define ADC_INTERNAL_CHANNEL ADC_DEVICE3
 #define ADC_SAMPLINGTIME LL_ADC_SAMPLINGTIME_387CYCLES_5
+// DBGMCU revision of the first H742/743/750/753 silicon.
+static constexpr uint32_t ADC_REV_ID_Y = 0x1003;
 #define ADC_CLOCK LL_ADC_CLOCK_SYNC_PCLK_DIV4
 
 static const adc_dev_t adc_dev[ADC_DEVICE_MAX] = {
@@ -131,6 +133,26 @@ static void adc_init_pin(adc_chan_t chan, gpio_pins_t pin) {
   }
 }
 
+#ifdef STM32H7
+static uint32_t adc_boost_mode() {
+  // The synchronous clock is HCLK / 4; Rev.V divides it by two internally.
+  uint32_t freq = SystemD2Clock / 4;
+  if (LL_DBGMCU_GetRevisionID() != ADC_REV_ID_Y)
+    freq /= 2;
+
+  // LL_ADC_SetBoostMode() maps these ranges onto the Rev.Y single boost bit.
+  if (freq <= 6250000)
+    return LL_ADC_BOOST_MODE_6MHZ25;
+  if (freq <= 12500000)
+    return LL_ADC_BOOST_MODE_12MHZ5;
+  if (freq <= 20000000)
+    return LL_ADC_BOOST_MODE_20MHZ;
+  if (freq <= 25000000)
+    return LL_ADC_BOOST_MODE_25MHZ;
+  return LL_ADC_BOOST_MODE_50MHZ;
+}
+#endif
+
 static void adc_init_dev(uint32_t index) {
   const adc_dev_t *dev = &adc_dev[index];
 
@@ -205,6 +227,10 @@ static void adc_init_dev(uint32_t index) {
 
 #if defined(STM32G4)
   LL_ADC_StartCalibration(dev->adc, LL_ADC_SINGLE_ENDED);
+#else // STM32H7
+  // Boost must match the ADC clock before calibrating or converting.
+  LL_ADC_SetBoostMode(dev->adc, adc_boost_mode());
+  LL_ADC_StartCalibration(dev->adc, LL_ADC_CALIB_OFFSET, LL_ADC_SINGLE_ENDED);
 #endif
   while (LL_ADC_IsCalibrationOnGoing(dev->adc) != 0)
     ;
