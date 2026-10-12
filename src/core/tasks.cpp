@@ -25,11 +25,11 @@
 
 // Cortex-M budgets include callers and saved task context. DisplayPort uses a
 // ~2 KiB frame and Blackbox encoding ~600 B; USB frame buffers live on the heap.
-static FAST_RAM StackType_t flight_stack[1024]; // 4 KiB
-static StackType_t blackbox_stack[512];        // 2 KiB
-static StackType_t usb_stack[512];             // 2 KiB
-static StackType_t osd_stack[1024];            // 4 KiB, including DisplayPort frames
-static StackType_t io_stack[1024];             // 4 KiB: RX MSP dispatch and VTX frames.
+static FAST_RAM thread_stack_t<1024> flight_stack; // 4 KiB
+static thread_stack_t<512> blackbox_stack;         // 2 KiB
+static thread_stack_t<512> usb_stack;              // 2 KiB
+static thread_stack_t<1024> osd_stack;             // 4 KiB, including DisplayPort frames
+static thread_stack_t<1024> io_stack;              // 4 KiB: RX MSP dispatch and VTX frames.
 static uint8_t applied_mask;
 
 extern "C" void thread_assert_failed() {
@@ -47,6 +47,14 @@ thread_t threads[THREAD_MAX] = {
     [THREAD_OSD] = CREATE_THREAD("osd", TASK_MASK_ALWAYS, 1, osd_thread, osd_stack),
     [THREAD_IO] = CREATE_THREAD("io", TASK_MASK_ALWAYS, 1, io_thread, io_stack),
 };
+
+void thread_stack_guard_init() {
+  static_assert(THREAD_MAX <= MPU_STACK_GUARD_MAX);
+  const uint8_t *guards[THREAD_MAX];
+  for (uint32_t i = 0; i < THREAD_MAX; i++)
+    guards[i] = threads[i].guard;
+  mpu_stack_guard_init(guards, THREAD_MAX);
+}
 
 void thread_start(thread_id_t id) {
   auto &thread = threads[id];

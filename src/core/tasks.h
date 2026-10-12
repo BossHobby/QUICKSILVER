@@ -9,6 +9,7 @@
 #include "project.h"
 
 #include "control/control.h"
+#include "driver/mpu.h"
 #include "driver/time.h"
 
 typedef enum {
@@ -53,11 +54,20 @@ enum io_work_t : uint32_t {
   IO_WORK_PINIO = 1u << IO_PINIO,
 };
 
+// The MPU guard sits directly below the stack, so a task overflowing its stack
+// faults instead of corrupting neighbouring memory.
+template <uint32_t N>
+struct alignas(MPU_GUARD_SIZE) thread_stack_t {
+  uint8_t guard[MPU_GUARD_SIZE];
+  StackType_t stack[N];
+};
+
 struct thread_t {
   const char *name;
   uint8_t mask;
   UBaseType_t priority;
   TaskFunction_t entry;
+  const uint8_t *guard;
   StackType_t *stack;
   uint32_t stack_size;
   StaticTask_t control;
@@ -65,12 +75,14 @@ struct thread_t {
 };
 
 #define CREATE_THREAD(p_name, p_mask, p_priority, p_entry, p_stack) \
-  {p_name, p_mask, p_priority, p_entry, p_stack, sizeof(p_stack) / sizeof(p_stack[0]), {}, nullptr}
+  {p_name, p_mask, p_priority, p_entry, p_stack.guard, p_stack.stack, sizeof(p_stack.stack) / sizeof(p_stack.stack[0]), {}, nullptr}
 
 extern thread_t threads[THREAD_MAX];
 
 void flight_thread(void *);
 void io_thread(void *);
+// Called once before any thread starts.
+void thread_stack_guard_init();
 void thread_start(thread_id_t id);
 // Called by Flight between passes, with ground configuration ownership held.
 void threads_update();
