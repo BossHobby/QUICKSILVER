@@ -279,6 +279,12 @@ cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *cu
       if (current->altitude != previous->altitude)
         active_fields |= 1 << BBOX_FIELD_ALTITUDE;
     }
+    if (field_flags & (1 << BBOX_FIELD_STATE)) {
+      deltas.state = current->state - previous->state;
+      deltas.aux = current->aux - previous->aux;
+      if (deltas.state || deltas.aux)
+        active_fields |= 1 << BBOX_FIELD_STATE;
+    }
     encoded_field_flags = active_fields | BLACKBOX_FRAME_TYPE_BIT;
   }
   
@@ -340,12 +346,19 @@ cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *cu
                                  : (int32_t)current->altitude - previous->altitude;
     CBOR_CHECK_ERROR(res = cbor_encode_int32_t(enc, &altitude));
   }
-  // Debug remains the last field in the wire format.
+  // Fields follow enum order, so state comes after debug.
   if (active_flags & (1 << BBOX_FIELD_DEBUG)) {
     CBOR_CHECK_ERROR(res = cbor_encode_array(enc, BLACKBOX_DEBUG_SIZE));
     for (uint32_t i = 0; i < BLACKBOX_DEBUG_SIZE; i++) {
       CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &source->debug[i]));
     }
+  }
+  if (active_flags & (1 << BBOX_FIELD_STATE)) {
+    const int32_t state_word = source->state;
+    const int32_t aux = source->aux;
+    CBOR_CHECK_ERROR(res = cbor_encode_array(enc, 2));
+    CBOR_CHECK_ERROR(res = cbor_encode_int32_t(enc, &state_word));
+    CBOR_CHECK_ERROR(res = cbor_encode_int32_t(enc, &aux));
   }
   CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
   return res;
@@ -390,6 +403,46 @@ static uint32_t blackbox_rate_div() {
   const uint32_t loop_hz = 1000000.0f / state.looptime_autodetect;
   const uint32_t rate = loop_hz / profile.blackbox.sample_rate_hz;
   return MAX(1U, rate);
+}
+
+static_assert(AUX_FUNCTION_MAX < 32, "aux bits must stay below 2^31 for int32 state deltas");
+static_assert(FAILSAFE_PHASE_RECOVERY < 1 << 3);
+#if defined(VEHICLE_WING)
+static_assert(WING_NAV_DESCEND < 1 << 4);
+static_assert(WING_LAUNCH_ABORTED < 1 << 4);
+static_assert(WING_AUTOTRIM_SAVED < 1 << 2);
+#elif defined(VEHICLE_MULTI)
+static_assert(RTH_STATE_NAV_FAILED < 1 << 4);
+#endif
+
+static uint32_t blackbox_state_word() {
+  uint32_t result = (uint32_t)state.failsafe_phase << BBOX_STATE_FAILSAFE_PHASE_SHIFT;
+  if (flags.in_air)
+    result |= BBOX_STATE_IN_AIR;
+  if (flags.on_ground)
+    result |= BBOX_STATE_ON_GROUND;
+  if (flags.failsafe)
+    result |= BBOX_STATE_FAILSAFE;
+  if (flags.failsafe_signal_lost)
+    result |= BBOX_STATE_RX_LOST;
+  if (flags.lowbatt)
+    result |= BBOX_STATE_LOWBATT;
+#if defined(VEHICLE_WING)
+  if (state.wing_nav_failsafe)
+    result |= BBOX_STATE_WING_NAV_FAILSAFE;
+  result |= (uint32_t)state.wing_nav_state << BBOX_STATE_WING_NAV_SHIFT;
+  result |= (uint32_t)state.wing_launch_state << BBOX_STATE_WING_LAUNCH_SHIFT;
+  result |= (uint32_t)state.wing_autotrim_state << BBOX_STATE_WING_AUTOTRIM_SHIFT;
+#elif defined(VEHICLE_MULTI)
+  if (state.rth_active)
+    result |= BBOX_STATE_RTH_ACTIVE;
+  if (state.rth_failsafe_active)
+    result |= BBOX_STATE_RTH_FAILSAFE;
+  if (state.failsafe_hold)
+    result |= BBOX_STATE_FAILSAFE_HOLD;
+  result |= (uint32_t)state.rth_state << BBOX_STATE_RTH_SHIFT;
+#endif
+  return result;
 }
 
 void blackbox_capture() {
@@ -491,6 +544,11 @@ void blackbox_capture() {
 
   if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_DEBUG)) {
     memcpy(blackbox.debug, capture.debug, sizeof(blackbox.debug));
+  }
+
+  if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_STATE)) {
+    blackbox.state = blackbox_state_word();
+    blackbox.aux = state.aux_active;
   }
 
   mailbox.pending.store(true, std::memory_order_release);
