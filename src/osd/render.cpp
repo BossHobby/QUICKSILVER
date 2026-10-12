@@ -652,6 +652,18 @@ static void print_osd_crsf_tx_power(osd_element_t *el) {
   }
 }
 
+// Navigation replaces the stick with its own command in state.throttle.
+static float osd_throttle() {
+#if defined(VEHICLE_WING)
+  if (state.wing_nav_state != WING_NAV_INACTIVE)
+    return state.throttle;
+#elif defined(VEHICLE_MULTI)
+  if (flags.controls_override && (state.rth_active || state.failsafe_hold))
+    return state.throttle;
+#endif
+  return state.rx_filtered.throttle;
+}
+
 static void print_heading(float heading_deg) {
   // Bearings run clockwise; font arrows run from south toward east and north.
   const uint8_t direction = (uint8_t)((normalize_deg(heading_deg) + 11.25f) / 22.5f) % 16;
@@ -735,7 +747,7 @@ static void osd_display_regular() {
 
     case OSD_THROTTLE: {
       osd_start_el(el);
-      const float throttle = state.rx_filtered.throttle * 100.0f;
+      const float throttle = osd_throttle() * 100.0f;
       if (profile.osd.guac_mode && throttle > 99.0f) {
         osd_write_str("GUAC");
       } else {
