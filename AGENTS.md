@@ -85,7 +85,7 @@ Environment names include the vehicle prefix. Current `platformio.ini` and gener
 
 ## Profiles, targets and vehicles
 
-- Advance `PROFILE_VERSION` once after the previous version has been publicly released. Extend the current unreleased version's changelog for further changes; check public release history before bumping.
+- Advance `PROFILE_VERSION` (`src/core/profile.h`) and `BLACKBOX_VERSION` (`src/io/blackbox.h`) once after the previous version has been publicly released. Extend the current unreleased version's changelog above the define for further changes; check public release history before bumping.
 - Configurator migrations cover publicly released formats only. Do not add migration adapters/default filling for intermediate development artifacts; update current schema and normal defaults directly.
 - Do not add on-device profile migrations. Changed persisted layouts are reset or rewritten off-device.
 - Vehicle selection is compile-time: `VEHICLE_MULTI`, `VEHICLE_ROVER` or `VEHICLE_WING`. Target YAML `vehicles` lists capabilities, not selection; absent capabilities default to multirotor. `target_init()` rejects incompatible vehicles.
