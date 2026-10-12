@@ -23,12 +23,13 @@
 #include "project.h"
 #include "rx/rx.h"
 
-// Cortex-M budgets include callers and saved task context. DisplayPort uses a
-// ~2 KiB frame and Blackbox encoding ~600 B; USB frame buffers live on the heap.
+// Cortex-M budgets include callers and ~200 B of saved FPU task context.
+// Blackbox frame encoding takes ~600 B before the storage driver; DisplayPort
+// MSP frames are static and USB frame buffers live on the heap.
 static FAST_RAM thread_stack_t<1024> flight_stack; // 4 KiB
-static thread_stack_t<512> blackbox_stack;         // 2 KiB
+static thread_stack_t<768> blackbox_stack;         // 3 KiB
 static thread_stack_t<512> usb_stack;              // 2 KiB
-static thread_stack_t<1024> osd_stack;             // 4 KiB, including DisplayPort frames
+static thread_stack_t<768> osd_stack;              // 3 KiB, including VTX service
 static thread_stack_t<1024> io_stack;              // 4 KiB: RX MSP dispatch and VTX frames.
 static uint8_t applied_mask;
 
