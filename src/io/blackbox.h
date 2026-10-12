@@ -3,7 +3,15 @@
 #include "core/profile.h"
 #include "util/util.h"
 
-#define BLACKBOX_VERSION MAKE_SEMVER(0, 3, 2) // cpu_load is a percentage since 0.3.2 (was microseconds)
+// BLACKBOX version changelog (log format compatibility):
+// 0.3.2: cpu_load is a percentage 0-100 (was microseconds).
+//        add state field with flags, aux switches, failsafe phase, RTH and wing states.
+// 0.3.1 (95765fe1): add GPS coordinate, home and altitude fields; grow debug to 16 entries.
+//        replace the four-motor field with per-output values (a1887d4f).
+// 0.2.0 (7343f574): delta-encode I/P frames, scale 100 (was 1000), store the profile with each log
+//        and widen the file blackbox_rate to uint32.
+// 0.1.0: initial versioned blackbox format.
+#define BLACKBOX_VERSION MAKE_SEMVER(0, 3, 2)
 
 #define BLACKBOX_SCALE 100
 #define BLACKBOX_DEBUG_SIZE 16
@@ -26,6 +34,7 @@ typedef enum {
   BBOX_FIELD_GPS_HOME,
   BBOX_FIELD_ALTITUDE,
   BBOX_FIELD_DEBUG,
+  BBOX_FIELD_STATE,
 
   BBOX_FIELD_MAX,
 } blackbox_field_t;
@@ -36,6 +45,36 @@ typedef enum {
   BBOX_DEBUG_NAVIGATION = 0x1 << 2,
   BBOX_DEBUG_WING = 0x1 << 3,
 } blackbox_debug_flag_t;
+
+// State word. Bits 0-7 are common; bits from 8 belong to the recording
+// vehicle, whose modes derive from these states and the aux bits.
+typedef enum {
+  BBOX_STATE_IN_AIR = 0x1 << 0,
+  BBOX_STATE_ON_GROUND = 0x1 << 1,
+  BBOX_STATE_FAILSAFE = 0x1 << 2,
+  BBOX_STATE_RX_LOST = 0x1 << 3,
+  BBOX_STATE_LOWBATT = 0x1 << 4,
+  // failsafe_phase_t, 3 bits at BBOX_STATE_FAILSAFE_PHASE_SHIFT
+
+#if defined(VEHICLE_WING)
+  BBOX_STATE_WING_NAV_FAILSAFE = 0x1 << 8,
+  // wing_nav_state_t, wing_launch_state_t and wing_autotrim_state_t at their shifts
+#elif defined(VEHICLE_MULTI)
+  BBOX_STATE_RTH_ACTIVE = 0x1 << 8,
+  BBOX_STATE_RTH_FAILSAFE = 0x1 << 9,
+  BBOX_STATE_FAILSAFE_HOLD = 0x1 << 10,
+  // rth_state_t at BBOX_STATE_RTH_SHIFT
+#endif
+} blackbox_state_flag_t;
+
+static constexpr uint32_t BBOX_STATE_FAILSAFE_PHASE_SHIFT = 5;
+#if defined(VEHICLE_WING)
+static constexpr uint32_t BBOX_STATE_WING_NAV_SHIFT = 9;       // 4 bits
+static constexpr uint32_t BBOX_STATE_WING_LAUNCH_SHIFT = 13;   // 4 bits
+static constexpr uint32_t BBOX_STATE_WING_AUTOTRIM_SHIFT = 17; // 2 bits
+#elif defined(VEHICLE_MULTI)
+static constexpr uint32_t BBOX_STATE_RTH_SHIFT = 11; // 4 bits
+#endif
 
 typedef struct {
   int16_t axis[MOTOR_PIN_MAX];
@@ -69,6 +108,10 @@ typedef struct {
   int16_t altitude;     // state.altitude, decimeters above launch; saturated
 
   int16_t debug[BLACKBOX_DEBUG_SIZE];
+
+  // State field; both stay below 2^31, so P-frame deltas fit int32.
+  uint32_t state; // blackbox_state_flag_t bits and packed states
+  uint32_t aux;   // state.aux_active, bit per aux_function_t of the recording vehicle
 } blackbox_t;
 
 // Frame types for I-frame/P-frame encoding
