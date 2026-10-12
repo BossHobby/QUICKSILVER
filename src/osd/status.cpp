@@ -201,8 +201,9 @@ static const char *osd_wing_autotrim_message(void) {
   if (autotrim_state == WING_AUTOTRIM_ACTIVE) {
     return "AUTOTRIM: HOLD LEVEL";
   }
-  // A failsafe or motor test cancelled the capture; it never restarts by itself.
-  return "AUTOTRIM: SWITCH OFF";
+  // A failsafe or motor test cancelled the capture, which never restarts by
+  // itself, or there is no GPS fix to prove flight.
+  return "AUTOTRIM: FLIP IN AIR";
 }
 
 static const char *osd_wing_nav_message(void) {

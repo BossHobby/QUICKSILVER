@@ -43,6 +43,13 @@ typedef enum {
 #define WING_FLYING_ACCEL_THRESHOLD 0.3f
 #define WING_FLYING_ACCEL_TIME_MS 250
 
+// Banked turns hold up elevator and opposite aileron, and climbs or dives
+// change the elevator for the current airspeed, so autotrim needs near-level
+// flight. Outside Manual it also needs centered sticks.
+static constexpr float AUTOTRIM_MAX_ROLL = 10.0f * DEGTORAD;
+static constexpr float AUTOTRIM_MAX_PITCH = 20.0f * DEGTORAD;
+static constexpr float AUTOTRIM_STICK_CENTER = 0.05f;
+
 static constexpr float GRAVITY = 9.80665f; // m/s^2
 // Cruise-to-current airspeed ratio limits; the throttle proxy is coarse. Idle
 // glides read slow although they keep near cruise airspeed, so the slow limit
@@ -90,6 +97,9 @@ static struct {
 
 static struct {
   bool ready = true;
+  // The switch was off earlier in this flight, so turning it on asks for a
+  // capture in the air.
+  bool off_in_air;
   bool steady;
   uint32_t last_ms;
   uint32_t capture_ms;
@@ -266,6 +276,20 @@ static bool wing_autotrim_surface(uint8_t index) {
   return surface;
 }
 
+// Roll, pitch and yaw share of a surface command. Channel mixes such as flaps
+// remain in the mix after trimming, so the trim must not absorb them.
+static float wing_autotrim_surface_command(uint8_t index) {
+  float value = 0.0f;
+  for (uint8_t i = 0; i < MIXER_RULE_MAX; i++) {
+    const profile_mixer_rule_t *rule = &profile.mixer[i];
+    if (rule->output_index != index)
+      continue;
+    if (rule->source == OUTPUT_SOURCE_ROLL || rule->source == OUTPUT_SOURCE_PITCH || rule->source == OUTPUT_SOURCE_YAW)
+      value += state.mixer_source[rule->source] * ((float)rule->weight / 100.0f);
+  }
+  return value;
+}
+
 static void wing_cancel_autotrim() {
   if (state.wing_autotrim_state == WING_AUTOTRIM_SAVE_PENDING) {
     for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
@@ -277,13 +301,32 @@ static void wing_cancel_autotrim() {
   state.wing_autotrim_state = WING_AUTOTRIM_IDLE;
 }
 
-static bool wing_autotrim_steady() {
-  // Trim is the command that holds settled flight: not on the ground, during
-  // autolaunch, while navigating or while the airframe is still rotating.
+// Without GPS nothing tells a throttle run-up from flight, so turning the switch
+// on in the air is the evidence of flight.
+static bool wing_autotrim_flying() {
+  if (state.gps_lock)
+    return state.gps_speed >= WING_FLYING_MIN_SPEED;
+  return autotrim.off_in_air;
+}
+
+static bool wing_autotrim_steady(wing_mode_t mode) {
+  // Trim is the command that holds settled level flight: not on the ground,
+  // during autolaunch, while navigating, turning or still rotating.
   if (!flags.in_air || wing_launch_in_progress() || state.wing_nav_state != WING_NAV_INACTIVE) {
     return false;
   }
-  if (state.gps_lock && state.gps_speed < WING_FLYING_MIN_SPEED) {
+  if (!wing_autotrim_flying()) {
+    return false;
+  }
+  if (fabsf(state.attitude.roll) > AUTOTRIM_MAX_ROLL || fabsf(state.attitude.pitch) > AUTOTRIM_MAX_PITCH) {
+    return false;
+  }
+  // Stabilized modes capture the integrator's correction, not stick commands.
+  // In Manual the sticks themselves hold the trim.
+  if (mode != WING_MODE_MANUAL &&
+      (fabsf(state.rx_filtered.roll) >= AUTOTRIM_STICK_CENTER ||
+       fabsf(state.rx_filtered.pitch) >= AUTOTRIM_STICK_CENTER ||
+       fabsf(state.rx_filtered.yaw) >= AUTOTRIM_STICK_CENTER)) {
     return false;
   }
   return fabsf(state.gyro.roll) < WING_AUTOTRIM_MAX_RATE &&
@@ -291,11 +334,15 @@ static bool wing_autotrim_steady() {
          fabsf(state.gyro.yaw) < WING_AUTOTRIM_MAX_RATE;
 }
 
-static void wing_update_autotrim(bool armed_at_start) {
+static void wing_update_autotrim(bool armed_at_start, wing_mode_t mode) {
   if (!rx_aux_on(AUX_AUTOTRIM)) {
     wing_cancel_autotrim();
     autotrim.ready = true;
+    autotrim.off_in_air = flags.in_air;
     return;
+  }
+  if (!flags.in_air) {
+    autotrim.off_in_air = false;
   }
   if (flags.failsafe || flags.failsafe_outputs_blocked || flags.motortest_override) {
     wing_cancel_autotrim();
@@ -324,7 +371,7 @@ static void wing_update_autotrim(bool armed_at_start) {
     }
     return;
   }
-  if (autotrim.ready) {
+  if (autotrim.ready && (state.gps_lock || autotrim.off_in_air)) {
     autotrim.ready = false;
     autotrim.steady = false;
     autotrim.capture_ms = 0;
@@ -347,7 +394,7 @@ static void wing_update_autotrim(bool armed_at_start) {
 
   // Capture time only accumulates across consecutive steady passes.
   const uint32_t now_ms = time_millis();
-  const bool steady = wing_autotrim_steady();
+  const bool steady = wing_autotrim_steady(mode);
   if (steady && autotrim.steady) {
     autotrim.capture_ms += now_ms - autotrim.last_ms;
   }
@@ -357,11 +404,11 @@ static void wing_update_autotrim(bool armed_at_start) {
     return;
   }
 
-  // Sample each surface once, after mixing, inversion, trim and travel limits.
-  // These are normalized commanded positions, not measured servo feedback.
+  // Sample each surface's attitude command once, after inversion, trim and
+  // travel limits. These are commanded positions, not servo feedback.
   for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
     if (autotrim.outputs[i].selected) {
-      autotrim.outputs[i].sum += output_apply_config(&profile.outputs[i], state.output[i]);
+      autotrim.outputs[i].sum += output_apply_config(&profile.outputs[i], wing_autotrim_surface_command(i));
     }
   }
   autotrim.samples++;
@@ -821,7 +868,7 @@ void control() {
         state.mixer_source[OUTPUT_SOURCE_YAW]);
   }
   // Update centers after writing this loop's outputs, as in INAV's switched trim.
-  wing_update_autotrim(armed_at_start);
+  wing_update_autotrim(armed_at_start, wing_mode);
   wing_save_cruise_speed(armed_at_start);
 
   blackbox_set_debug(BBOX_DEBUG_WING, WING_DEBUG_MODE, wing_mode);

@@ -359,8 +359,11 @@ static void test_gliding_retains_airborne_state_and_motor_cutoff() {
   TEST_ASSERT_FALSE(flags.in_air);
   TEST_ASSERT_TRUE(flags.on_ground);
 }
+// Without GPS the switch must be turned on in the air.
 static void start_autotrim() {
   flags.in_air = 1;
+  state.aux_active &= ~(1U << AUX_AUTOTRIM);
+  control();
   state.aux_active |= (1U << AUX_AUTOTRIM);
   control();
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
@@ -456,8 +459,12 @@ static void test_autotrim_cancel_during_capture_and_on_early_disarm() {
   time_test_advance_us(3000000);
   control();
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_IDLE, state.wing_autotrim_state);
-  // The switch is still on: the next arm captures again.
+  // The switch is still on: the next arm captures again once GPS can show
+  // flight. Without a fix the switch must be cycled in the air.
   state.aux_active |= 1U << AUX_ARMING;
+  control();
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_IDLE, state.wing_autotrim_state);
+  state.gps_lock = 1;
   control();
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
 }
@@ -538,6 +545,8 @@ static void test_autotrim_bounds_centers_and_excludes_throttle_mixes() {
 
 static void test_autotrim_waits_for_steady_flight() {
   arm();
+  state.gps_lock = 1;
+  state.gps_speed = 10.0f;
   state.rx_filtered.roll = 0.2f;
   state.aux_active |= (1U << AUX_AUTOTRIM);
   control();
@@ -561,6 +570,79 @@ static void test_autotrim_waits_for_steady_flight() {
   time_test_advance_us(1000);
   control();
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_SAVE_PENDING, state.wing_autotrim_state);
+  TEST_ASSERT_EQUAL_INT(200, profile.outputs[1].trim);
+}
+
+static void test_autotrim_leaves_channel_mixes_out_of_trim() {
+  arm();
+  // Flaperon with flaps up at -30%, cancelled by the existing trim.
+  profile.mixer[6] = {.output_index = 1, .source = OUTPUT_SOURCE_RX_CHANNEL, .source_index = 5, .weight = 30};
+  state.rx_channels[5] = 0;
+  profile.outputs[1].trim = 300;
+  state.rx_filtered.roll = 0.2f;
+  start_autotrim();
+  const float held = pwm_values[1];
+  TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.2f, held);
+  finish_autotrim();
+  TEST_ASSERT_EQUAL_INT(500, profile.outputs[1].trim);
+
+  // With the sticks released the flaps still need their offset.
+  state.rx_filtered = {};
+  control();
+  TEST_ASSERT_FLOAT_WITHIN(0.0001f, held, pwm_values[1]);
+}
+
+static void test_autotrim_ignores_turns_and_stabilized_stick_input() {
+  arm();
+  state.aux_active |= 1U << AUX_ACROMODE;
+  start_autotrim();
+
+  state.attitude.roll = 30.0f * DEGTORAD;
+  control();
+  time_test_advance_us(3000000);
+  control(); // Banked turn: no capture.
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
+
+  state.attitude.roll = 0.0f;
+  state.rx_filtered.roll = 0.2f;
+  control();
+  time_test_advance_us(3000000);
+  control(); // Acro stick input: no capture.
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
+
+  state.rx_filtered.roll = 0.0f;
+  control();
+  finish_autotrim();
+}
+
+static void test_autotrim_without_gps_needs_switch_on_in_air() {
+  state.aux_active = 1U << AUX_PREARM;
+  control(); // Disarmed with the switch off, as at boot.
+  state.aux_active = (1U << AUX_ARMING) | (1U << AUX_PREARM) | (1U << AUX_AUTOTRIM);
+  control();
+  TEST_ASSERT_TRUE(flags.arm_state);
+  // A throttle run-up latches in_air but is not flight.
+  state.rx_filtered.throttle = 0.5f;
+  state.rx_filtered.roll = 0.2f;
+  control();
+  TEST_ASSERT_TRUE(flags.in_air);
+  time_test_advance_us(3000000);
+  control();
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_IDLE, state.wing_autotrim_state);
+  TEST_ASSERT_EQUAL_INT(0, profile.outputs[1].trim);
+
+  // A GPS fix lost before launch does not prove flight either.
+  state.gps_lock = 1;
+  control();
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
+  state.gps_lock = 0;
+  control();
+  time_test_advance_us(3000000);
+  control();
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
+
+  start_autotrim();
+  finish_autotrim();
   TEST_ASSERT_EQUAL_INT(200, profile.outputs[1].trim);
 }
 
@@ -610,6 +692,9 @@ int main() {
   RUN_TEST(test_autotrim_switch_off_on_disarm_cancels_without_saving);
   RUN_TEST(test_autotrim_bounds_centers_and_excludes_throttle_mixes);
   RUN_TEST(test_autotrim_waits_for_steady_flight);
+  RUN_TEST(test_autotrim_leaves_channel_mixes_out_of_trim);
+  RUN_TEST(test_autotrim_ignores_turns_and_stabilized_stick_input);
+  RUN_TEST(test_autotrim_without_gps_needs_switch_on_in_air);
   RUN_TEST(test_failsafe_stops_surfaces_at_trimmed_center);
   run_wing_safety_tests();
   run_wing_navigation_tests();
