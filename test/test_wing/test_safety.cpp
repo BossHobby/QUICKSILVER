@@ -264,8 +264,11 @@ static void test_wing_launch_failsafe_stops_motor_and_disarms() {
 
 static void test_wing_launch_abort_returns_surfaces_to_manual() {
   launch_to_active();
+  // Sticks bumped by the throw cannot abort before the minimum launch time.
   state.rx_filtered.roll = 0.2f;
   tick();
+  TEST_ASSERT_EQUAL(WING_LAUNCH_ACTIVE, state.wing_launch_state);
+  tick(profile.wing.autolaunch.min_time_ms);
   TEST_ASSERT_EQUAL(WING_LAUNCH_ABORTED, state.wing_launch_state);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.2f, pwm_values[1]);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, -0.2f, pwm_values[2]);
