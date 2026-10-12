@@ -199,10 +199,11 @@ static const char *osd_wing_autotrim_message(void) {
     return "AUTOTRIM: ARM FIRST";
   }
   if (autotrim_state == WING_AUTOTRIM_ACTIVE) {
-    return "AUTOTRIM: HOLD LEVEL";
+    return "AUTOTRIM: FLY STRAIGHT";
   }
-  // A failsafe or motor test cancelled the capture; it never restarts by itself.
-  return "AUTOTRIM: SWITCH OFF";
+  // A failsafe, motor test or disarm cancelled the capture, which never
+  // restarts by itself.
+  return "AUTOTRIM: FLIP IN AIR";
 }
 
 static const char *osd_wing_nav_message(void) {
