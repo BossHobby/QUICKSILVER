@@ -165,8 +165,10 @@ static wing_mode_t wing_active_mode() {
   return WING_MODE_MANUAL;
 }
 
+// Launch takes over from arming, so an always-on switch leaves the disarmed
+// surfaces on the sticks for preflight checks and OSD menus.
 static bool wing_launch_in_progress() {
-  return rx_aux_on(AUX_AUTOLAUNCH) && state.wing_launch_available &&
+  return flags.arm_state && rx_aux_on(AUX_AUTOLAUNCH) && state.wing_launch_available &&
          !flags.failsafe && state.wing_launch_state < WING_LAUNCH_DONE;
 }
 
