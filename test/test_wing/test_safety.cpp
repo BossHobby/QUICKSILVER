@@ -324,6 +324,28 @@ static void test_wing_launch_switch_reenabled_in_flight_does_not_restart() {
   TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[2]);
 }
 
+static void test_wing_launch_always_on_leaves_disarmed_surfaces_on_sticks() {
+  prepare_launch();
+  state.aux_active &= ~(1U << AUX_ARMING);
+  state.rx_filtered.throttle = 0;
+  tick(2);
+  TEST_ASSERT_FALSE(flags.arm_state);
+  TEST_ASSERT_TRUE(state.wing_launch_available);
+
+  state.GEstG = {{0.5f, 0, 0.8660254f}};
+  state.rx_filtered.roll = 0.2f;
+  tick();
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.2f, pwm_values[1]);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, -0.2f, pwm_values[2]);
+
+  state.rx_filtered.roll = 0;
+  state.aux_active |= 1U << AUX_ARMING;
+  tick();
+  TEST_ASSERT_TRUE(flags.arm_state);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_IDLE, state.wing_launch_state);
+  assert_launch_stabilized();
+}
+
 static void test_wing_launch_gps_requires_launch_attitude() {
   prepare_launch();
   state.gps_lock = 1;
@@ -468,6 +490,7 @@ void run_wing_safety_tests() {
   RUN_TEST(test_wing_launch_abort_returns_surfaces_to_manual);
   RUN_TEST(test_wing_launch_stage1_recovery_requires_disarm_before_relaunch);
   RUN_TEST(test_wing_launch_switch_reenabled_in_flight_does_not_restart);
+  RUN_TEST(test_wing_launch_always_on_leaves_disarmed_surfaces_on_sticks);
   RUN_TEST(test_wing_launch_gps_requires_launch_attitude);
   RUN_TEST(test_wing_launch_pitch_exceeds_level_limit);
   RUN_TEST(test_wing_failsafe_stage1_levels_manual_mode);
