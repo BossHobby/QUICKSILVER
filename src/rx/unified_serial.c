@@ -12,6 +12,7 @@
 #include "driver/time.h"
 #include "flight/control.h"
 #include "io/led.h"
+#include "rx/mavlink_serial.h"
 #include "util/ring_buffer.h"
 #include "util/util.h"
 
@@ -80,6 +81,9 @@ static float rx_serial_expected_fps() {
   case RX_SERIAL_PROTOCOL_REDPINE:
   case RX_SERIAL_PROTOCOL_REDPINE_INVERTED:
     return 500;
+
+  case RX_SERIAL_PROTOCOL_MAVLINK:
+    return rx_serial_mavlink_expected_fps();
   }
 
   return 0;
@@ -102,6 +106,8 @@ static packet_status_t rx_serial_process(rx_serial_protocol_t proto) {
   case RX_SERIAL_PROTOCOL_REDPINE:
   case RX_SERIAL_PROTOCOL_REDPINE_INVERTED:
     return rx_serial_process_redpine();
+  case RX_SERIAL_PROTOCOL_MAVLINK:
+    return rx_serial_process_mavlink();
   default:
     return PACKET_ERROR;
   }
@@ -159,6 +165,12 @@ static void serial_rx_init(rx_serial_protocol_t proto) {
     config.direction = SERIAL_DIR_RX;
     break;
 
+  case RX_SERIAL_PROTOCOL_MAVLINK:
+    config.baudrate = 460800;
+    config.stop_bits = SERIAL_STOP_BITS_1;
+    config.direction = SERIAL_DIR_TX_RX;
+    break;
+
   default:
     break;
   }
@@ -194,6 +206,9 @@ static void rx_serial_find_protocol() {
 #ifdef RX_DSM
   bind_storage.unified.protocol = RX_SERIAL_PROTOCOL_DSM;
 #endif
+#ifdef RX_MAVLINK
+  bind_storage.unified.protocol = RX_SERIAL_PROTOCOL_MAVLINK;
+#endif
 
   if (bind_storage.unified.protocol != RX_SERIAL_PROTOCOL_INVALID) {
     state.rx_status = RX_STATUS_DETECTED + bind_storage.unified.protocol;
@@ -205,6 +220,7 @@ static void rx_serial_find_protocol() {
   static uint32_t protocol_detect_time = 0;
   static rx_serial_protocol_t protocol_to_check = RX_SERIAL_PROTOCOL_INVALID;
 
+  // protocols are tried in enum order, MAVLink last so the RC protocols lock first
   if ((time_millis() - protocol_detect_time) > 1000 || protocol_to_check == RX_SERIAL_PROTOCOL_INVALID) {
     protocol_to_check++; // Check the next protocol down the list.
     if (protocol_to_check > RX_SERIAL_PROTOCOL_MAX) {
@@ -213,7 +229,7 @@ static void rx_serial_find_protocol() {
     quic_debugf("UNIFIED: trying protocol %d", protocol_to_check);
 
     state.rx_status = RX_STATUS_DETECTING + protocol_to_check;
-    serial_rx_init(protocol_to_check); // Configure a protocol!
+    serial_rx_init(protocol_to_check); // configure the port for this protocol
 
     protocol_detect_time = time_millis();
     bind_safety = 0;
@@ -226,9 +242,11 @@ static void rx_serial_find_protocol() {
     return;
   }
 
-  // dsm does only 45 packets / second worst case
-  // lets hope that ~40 is enough
-  if (bind_safety < 40) {
+  // dsm does only 45 packets / second worst case, so ~40 is enough for the rc protocols.
+  // mavlink frames are validated by a message specific crc_extra and its rc uplink is
+  // much slower, so a few frames are already conclusive
+  const uint8_t detect_frames = protocol_to_check == RX_SERIAL_PROTOCOL_MAVLINK ? 3 : 40;
+  if (bind_safety < detect_frames) {
     flags.rx_mode = RXMODE_BIND;
     bind_safety++;
   } else {
@@ -285,6 +303,9 @@ bool rx_serial_check() {
       break;
     case RX_SERIAL_PROTOCOL_CRSF:
       rx_serial_send_crsf_telemetry();
+      break;
+    case RX_SERIAL_PROTOCOL_MAVLINK:
+      rx_serial_send_mavlink_telemetry();
       break;
 
     default:
