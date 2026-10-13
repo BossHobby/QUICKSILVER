@@ -68,6 +68,7 @@
 // #define RX_IBUS
 // #define RX_FPORT
 // #define RX_DSM
+// #define RX_MAVLINK
 
 // ---- SERIAL PORT CONFIGURATION ----
 // Serial receiver UART selection (uncomment for default from target or if using SPI receiver)
