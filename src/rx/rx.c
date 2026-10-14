@@ -148,7 +148,6 @@ void rx_init() {
   case RX_PROTOCOL_IBUS:
   case RX_PROTOCOL_FPORT:
   case RX_PROTOCOL_DSM:
-  case RX_PROTOCOL_MAVLINK:
 #ifdef USE_RX_UNIFIED
     rx_serial_init();
 #endif
@@ -230,7 +229,6 @@ bool rx_check() {
   case RX_PROTOCOL_IBUS:
   case RX_PROTOCOL_FPORT:
   case RX_PROTOCOL_DSM:
-  case RX_PROTOCOL_MAVLINK:
 #ifdef USE_RX_UNIFIED
     return rx_serial_check();
 #else

@@ -23,7 +23,6 @@ typedef enum {
   RX_PROTOCOL_EXPRESS_LRS,
   RX_PROTOCOL_FLYSKY_AFHDS,
   RX_PROTOCOL_FLYSKY_AFHDS2A,
-  RX_PROTOCOL_MAVLINK,
   RX_PROTOCOL_MAX,
 } __attribute__((__packed__)) rx_protocol_t;
 
