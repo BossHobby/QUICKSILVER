@@ -8,6 +8,8 @@
 typedef enum {
   RX_PROTOCOL_INVALID,
   RX_PROTOCOL_UNIFIED_SERIAL,
+  // SBUS..BAYANG are never advertised and only keep the persisted numbering;
+  // serial protocols are selected inside unified serial.
   RX_PROTOCOL_SBUS,
   RX_PROTOCOL_CRSF,
   RX_PROTOCOL_IBUS,

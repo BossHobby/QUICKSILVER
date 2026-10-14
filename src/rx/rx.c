@@ -138,24 +138,10 @@ void rx_init() {
   }
 
   switch (profile.receiver.protocol) {
-  case RX_PROTOCOL_INVALID:
-  case RX_PROTOCOL_MAX:
-    break;
-
   case RX_PROTOCOL_UNIFIED_SERIAL:
-  case RX_PROTOCOL_SBUS:
-  case RX_PROTOCOL_CRSF:
-  case RX_PROTOCOL_IBUS:
-  case RX_PROTOCOL_FPORT:
-  case RX_PROTOCOL_DSM:
 #ifdef USE_RX_UNIFIED
     rx_serial_init();
 #endif
-    break;
-
-  case RX_PROTOCOL_NRF24_BAYANG_TELEMETRY:
-  case RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON:
-  case RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND:
     break;
 
   case RX_PROTOCOL_FRSKY_D8:
@@ -193,6 +179,9 @@ void rx_init() {
     rx_flysky_afhds2a_init();
 #endif
     break;
+
+  default:
+    break;
   }
 }
 
@@ -219,26 +208,12 @@ bool rx_check() {
   return simulator_rx_check();
 #else
   switch (profile.receiver.protocol) {
-  case RX_PROTOCOL_INVALID:
-  case RX_PROTOCOL_MAX:
-    return false;
-
   case RX_PROTOCOL_UNIFIED_SERIAL:
-  case RX_PROTOCOL_SBUS:
-  case RX_PROTOCOL_CRSF:
-  case RX_PROTOCOL_IBUS:
-  case RX_PROTOCOL_FPORT:
-  case RX_PROTOCOL_DSM:
 #ifdef USE_RX_UNIFIED
     return rx_serial_check();
 #else
     return false;
 #endif
-
-  case RX_PROTOCOL_NRF24_BAYANG_TELEMETRY:
-  case RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON:
-  case RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND:
-    return false;
 
   case RX_PROTOCOL_FRSKY_D8:
 #ifdef USE_RX_SPI_FRSKY
@@ -281,9 +256,10 @@ bool rx_check() {
 #else
     return false;
 #endif
-  }
 
-  return false;
+  default:
+    return false;
+  }
 #endif
 }
 
