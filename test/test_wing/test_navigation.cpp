@@ -3,6 +3,7 @@
 
 #include "control/control.h"
 #include "control/imu.h"
+#include "control/mission.h"
 #include "control/navigation.h"
 #include "control/wing/navigation.h"
 #include "core/profile.h"
@@ -777,6 +778,224 @@ static void test_cruise_yields_to_loiter() {
   TEST_ASSERT_EQUAL(WING_NAV_LOITER, state.wing_nav_state);
 }
 
+// Waypoints 300 m north, then 300 m east of that, at 50 m.
+static void mission_route(mission_end_action_t end_action) {
+  const float lon_scale = METERS_PER_DEGREE_LAT * cosf(ORIGIN.lat * 1e-7f * DEGTORAD);
+  mission = {.count = 2, .end_action = end_action};
+  const float route[2][2] = {{300.0f, 0.0f}, {300.0f, 300.0f}};
+  for (unsigned i = 0; i < 2; i++) {
+    mission.waypoints[i] = {
+        .coord = {.lon = ORIGIN.lon + (int32_t)lrintf(route[i][1] / lon_scale * 1e7f),
+                  .lat = ORIGIN.lat + (int32_t)lrintf(route[i][0] / METERS_PER_DEGREE_LAT * 1e7f)},
+        .altitude = 50.0f,
+        .speed = 0.0f,
+    };
+  }
+}
+
+// Move in fixes the GPS position-jump check accepts.
+static void fly_track(float north0, float east0, float north1, float east1) {
+  const float length = hypotf(north1 - north0, east1 - east0);
+  const float vel_north = 15.0f * (north1 - north0) / length;
+  const float vel_east = 15.0f * (east1 - east0) / length;
+  for (float d = 20.0f; d <= length; d += 20.0f) {
+    set_gps(north0 + (north1 - north0) * d / length, east0 + (east1 - east0) * d / length, vel_north, vel_east);
+    step(100);
+  }
+}
+
+// A mission starts from a switch edge in flight.
+static void fly_mission() {
+  fly(0);
+  state.aux_active |= 1U << AUX_MISSION;
+  step();
+}
+
+static void test_mission_steers_to_waypoints_in_order_and_circles_last() {
+  mission_route(MISSION_END_HOLD);
+  fly_mission();
+  step(1000);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+  TEST_ASSERT_TRUE(state.mission_active);
+  TEST_ASSERT_EQUAL_STRING("MISSION", control_flight_mode_name());
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+  TEST_ASSERT_FLOAT_WITHIN(1.0f, 300.0f, state.nav_target_distance);
+  // Flying east with the waypoint to the north: turn left.
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, -profile.navigation.max_bank_angle, roll_command_deg());
+
+  fly_track(0.0f, 0.0f, 300.0f, 0.0f);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  TEST_ASSERT_FLOAT_WITHIN(1.0f, 90.0f, state.nav_target_bearing);
+  step(2000);
+  // Flying north with the next waypoint to the east: turn right.
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, profile.navigation.max_bank_angle, roll_command_deg());
+
+  fly_track(300.0f, 0.0f, 300.0f, 300.0f);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION_HOLD, state.wing_nav_state);
+  TEST_ASSERT_TRUE(state.mission_active);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  // The circle passes through the arrival point; hold the last waypoint indefinitely.
+  step(5000);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION_HOLD, state.wing_nav_state);
+
+  state.aux_active &= ~(1U << AUX_MISSION);
+  step();
+  TEST_ASSERT_EQUAL(WING_NAV_INACTIVE, state.wing_nav_state);
+  TEST_ASSERT_FALSE(state.mission_active);
+
+  // A completed mission starts over.
+  state.aux_active |= 1U << AUX_MISSION;
+  step();
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+
+  // So does an interrupted one after a new arming.
+  fly_track(300.0f, 300.0f, 300.0f, 0.0f);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  state.aux_active = 0;
+  state.rx_filtered.throttle = 0.0f;
+  step();
+  TEST_ASSERT_FALSE(flags.arm_state);
+  fly_mission();
+  step();
+  TEST_ASSERT_TRUE(state.mission_active);
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+}
+
+static void test_mission_advances_past_a_missed_waypoint() {
+  mission_route(MISSION_END_HOLD);
+  fly_mission();
+  step(100);
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+
+  // Blown 150 m east of the northbound leg, short of the waypoint and
+  // outside the arrival radius: keep going.
+  fly_track(0.0f, 0.0f, 250.0f, 150.0f);
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+
+  // Past the waypoint: an orbit would never enter the arrival radius, so
+  // passing it counts as arrival.
+  fly_track(250.0f, 150.0f, 310.0f, 150.0f);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+}
+
+static void test_mission_end_returns_home() {
+  mission_route(MISSION_END_RTH);
+  fly_mission();
+  fly_track(0.0f, 0.0f, 300.0f, 0.0f);
+  fly_track(300.0f, 0.0f, 300.0f, 300.0f);
+  step(100);
+  TEST_ASSERT_FALSE(state.mission_active);
+  TEST_ASSERT_EQUAL(WING_NAV_RTH_RETURN, state.wing_nav_state);
+  TEST_ASSERT_EQUAL_STRING("RTH", control_flight_mode_name());
+  TEST_ASSERT_FLOAT_WITHIN(1.0f, state.home_distance, state.nav_target_distance);
+}
+
+static void test_mission_without_route_loiters_in_place() {
+  mission = {};
+  fly_mission();
+  step(1000);
+  TEST_ASSERT_EQUAL(WING_NAV_LOITER, state.wing_nav_state);
+  TEST_ASSERT_FALSE(state.mission_active);
+
+  // A route planned elsewhere is not flown either.
+  mission_route(MISSION_END_HOLD);
+  mission.waypoints[0].coord.lat += (int32_t)lrintf(5000.0f / METERS_PER_DEGREE_LAT * 1e7f);
+  state.aux_active &= ~(1U << AUX_MISSION);
+  step();
+  state.aux_active |= 1U << AUX_MISSION;
+  step(1000);
+  TEST_ASSERT_EQUAL(WING_NAV_LOITER, state.wing_nav_state);
+  TEST_ASSERT_FALSE(state.mission_active);
+}
+
+static void test_mission_yields_to_rth_and_failsafe() {
+  mission_route(MISSION_END_HOLD);
+  fly_mission();
+  // Past the first waypoint and beyond the loiter radius, so a return flies toward home.
+  fly_track(0.0f, 0.0f, 300.0f, 0.0f);
+  fly_track(300.0f, 0.0f, 300.0f, 100.0f);
+  TEST_ASSERT_TRUE(state.mission_active);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  state.aux_active |= 1U << AUX_RETURN_TO_HOME;
+  step(100);
+  TEST_ASSERT_FALSE(state.mission_active);
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+  TEST_ASSERT_EQUAL(WING_NAV_RTH_RETURN, state.wing_nav_state);
+
+  // Releasing RTH resumes toward the waypoint not yet reached.
+  state.aux_active &= ~(1U << AUX_RETURN_TO_HOME);
+  step(100);
+  TEST_ASSERT_TRUE(state.mission_active);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+
+  lose_link();
+  step(2000);
+  TEST_ASSERT_TRUE(state.wing_nav_failsafe);
+  TEST_ASSERT_FALSE(state.mission_active);
+  TEST_ASSERT_EQUAL(WING_NAV_RTH_RETURN, state.wing_nav_state);
+}
+
+static void test_mission_needs_switch_edge_after_arming() {
+  mission_route(MISSION_END_HOLD);
+  // A switch left on through arming does not fly the stored route.
+  fly(1U << AUX_MISSION);
+  step(1000);
+  TEST_ASSERT_EQUAL(WING_NAV_INACTIVE, state.wing_nav_state);
+  TEST_ASSERT_FALSE(state.mission_active);
+
+  state.aux_active &= ~(1U << AUX_MISSION);
+  step();
+  state.aux_active |= 1U << AUX_MISSION;
+  step();
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+  TEST_ASSERT_TRUE(state.mission_active);
+}
+
+static void test_mission_starts_once_gps_recovers() {
+  mission_route(MISSION_END_HOLD);
+  fly(0);
+  state.gps_lock = false;
+  state.aux_active |= 1U << AUX_MISSION;
+  step(100);
+  TEST_ASSERT_EQUAL(WING_NAV_LOITER_BANK, state.wing_nav_state);
+  TEST_ASSERT_FALSE(state.mission_active);
+
+  // No new switch edge is needed once the route can be flown.
+  set_gps(0.0f, 0.0f, 0.0f, 15.0f);
+  step(1000);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+  TEST_ASSERT_TRUE(state.mission_active);
+}
+
+static void test_mission_gps_loss_returns_at_rth_altitude() {
+  mission_route(MISSION_END_HOLD);
+  fly_mission();
+  // At the waypoint altitude, so the mission holds it level.
+  state.baro_valid = true;
+  state.altitude = mission.waypoints[0].altitude;
+  state.baro_vertical_speed = 0.0f;
+  step(2000);
+  TEST_ASSERT_FLOAT_WITHIN(1.0f * DEGTORAD, 0.0f, wing_nav_command.pitch);
+
+  // Heading home on the IMU climbs by the return altitude, as RTH does.
+  state.heading_confidence = 1.0f;
+  state.heading = 90.0f;
+  state.gps_lock = false;
+  step(2000);
+  TEST_ASSERT_EQUAL(WING_NAV_RTH_HEADING, state.wing_nav_state);
+  TEST_ASSERT_FALSE(state.mission_active);
+  TEST_ASSERT_EQUAL_STRING("RTH", control_flight_mode_name());
+  TEST_ASSERT_TRUE(wing_nav_command.pitch < -5.0f * DEGTORAD);
+
+  // GPS recovery resumes the route at the waypoint altitude.
+  set_gps(0.0f, 0.0f, 0.0f, 15.0f);
+  step(1000);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+  TEST_ASSERT_TRUE(state.mission_active);
+}
+
 void run_wing_navigation_tests() {
   RUN_TEST(test_loiter_requires_switch_and_flight);
   RUN_TEST(test_loiter_enters_tangentially_on_turn_side);
@@ -817,4 +1036,12 @@ void run_wing_navigation_tests() {
   RUN_TEST(test_cruise_pitch_stick_climbs_and_latches_altitude);
   RUN_TEST(test_cruise_pitch_stick_sets_climb_angle_without_baro);
   RUN_TEST(test_cruise_yields_to_loiter);
+  RUN_TEST(test_mission_steers_to_waypoints_in_order_and_circles_last);
+  RUN_TEST(test_mission_advances_past_a_missed_waypoint);
+  RUN_TEST(test_mission_end_returns_home);
+  RUN_TEST(test_mission_without_route_loiters_in_place);
+  RUN_TEST(test_mission_yields_to_rth_and_failsafe);
+  RUN_TEST(test_mission_needs_switch_edge_after_arming);
+  RUN_TEST(test_mission_starts_once_gps_recovers);
+  RUN_TEST(test_mission_gps_loss_returns_at_rth_altitude);
 }

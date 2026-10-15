@@ -101,6 +101,8 @@ const char *control_flight_mode_name(void) {
     return state.wing_nav_state == WING_NAV_DESCEND ? "FS DESCEND" : "FS RTH";
   if (state.failsafe_phase == FAILSAFE_PHASE_STAGE1_GUARD)
     return "FS LEVEL";
+  if (state.mission_active)
+    return "MISSION";
   switch (state.wing_nav_state) {
   case WING_NAV_LOITER:
   case WING_NAV_LOITER_BANK:
@@ -126,6 +128,8 @@ const char *control_flight_mode_name(void) {
     return "FS RTH";
   if (state.failsafe_hold)
     return "FS HOLD";
+  if (state.mission_active)
+    return "MISSION";
   if (state.rth_active || rx_aux_on(AUX_RETURN_TO_HOME))
     return "RTH";
   if (!rx_aux_on(AUX_LEVELMODE))
@@ -173,8 +177,9 @@ static void failsafe_clear_stage1_fallback(void) {
 
 #ifdef VEHICLE_MULTI
 static bool failsafe_airborne(uint32_t now_us) {
+  // Guided flight flies the throttle, so a low pilot stick says nothing then.
   return flags.arm_state && flags.in_air &&
-         (now_us - failsafe_throttle_up_us) < FAILSAFE_THROTTLE_LOW_TIME_US;
+         (state.rth_active || (now_us - failsafe_throttle_up_us) < FAILSAFE_THROTTLE_LOW_TIME_US);
 }
 
 static bool failsafe_sticks_active(void) {
@@ -190,8 +195,12 @@ static void failsafe_update_rth_ownership(uint32_t now_us) {
   if (!state.rth_active || !profile.navigation.rth_on_failsafe || flags.rx_ready != 1 || !flags.arm_state) {
     failsafe_rth = {};
   } else if (flags.failsafe_signal_lost) {
-    failsafe_rth.owns_link_loss = true;
-    failsafe_rth.link_recovering = false;
+    // A mission rides out the hold-last window like manual flight, so a brief
+    // dropout neither ends it nor leaves failsafe owning the recovery.
+    if (!state.mission_active || now_us - state.last_frame_time_us >= FAILSAFE_HOLD_TIME_US) {
+      failsafe_rth.owns_link_loss = true;
+      failsafe_rth.link_recovering = false;
+    }
   } else if (failsafe_rth.owns_link_loss) {
     if (!failsafe_rth.link_recovering) {
       failsafe_rth.link_recovering = true;

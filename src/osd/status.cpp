@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "control/control.h"
+#include "control/mission.h"
 #include "core/profile.h"
 #include "driver/osd/osd.h"
 #include "driver/time.h"
@@ -137,6 +138,28 @@ static void osd_status_show(osd_status_mode_t mode, osd_status_entries_t entry) 
   osd_status_show_text(mode, entry, labels[entry]);
 }
 
+#ifndef VEHICLE_ROVER
+// "WP 3/8 FLY": the active waypoint, counted from one, and the mission length.
+// Formatted by hand: newlib reentrancy is disabled, so printf stays off the OSD thread.
+static const char *osd_mission_message(const char *action) {
+  static char text[LABEL_LEN + 1];
+  const uint8_t numbers[2] = {(uint8_t)(state.mission_index + 1), mission.count};
+  char *p = text;
+  *p++ = 'W';
+  *p++ = 'P';
+  for (uint32_t i = 0; i < 2; i++) {
+    *p++ = i ? '/' : ' ';
+    if (numbers[i] >= 10)
+      *p++ = '0' + numbers[i] / 10;
+    *p++ = '0' + numbers[i] % 10;
+  }
+  *p++ = ' ';
+  // Actions are short literals: "WP 32/32 " leaves 13 characters.
+  strcpy(p, action);
+  return text;
+}
+#endif
+
 #ifdef VEHICLE_WING
 // Messages fit LABEL_LEN so they read without scrolling.
 static const char *osd_wing_autolaunch_message(void) {
@@ -208,11 +231,21 @@ static const char *osd_wing_autotrim_message(void) {
 
 static const char *osd_wing_nav_message(void) {
   const bool rth = state.wing_nav_failsafe || rx_aux_on(AUX_RETURN_TO_HOME);
+  // A mission switch that loiters could not start its route.
+  const bool mission_unavailable = !rth && rx_aux_on(AUX_MISSION);
   switch (state.wing_nav_state) {
   case WING_NAV_LOITER:
+    if (mission_unavailable)
+      return mission.count ? "MISSION: UNAVAILABLE" : "NO MISSION";
     return rth ? "RTH: NO HOME" : NULL;
   case WING_NAV_LOITER_BANK:
+    if (mission_unavailable)
+      return "MISSION: NO GPS";
     return rth ? "RTH: NO GPS" : "LOITER: NO GPS";
+  case WING_NAV_MISSION:
+    return osd_mission_message("FLY");
+  case WING_NAV_MISSION_HOLD:
+    return osd_mission_message("CIRCLE");
   case WING_NAV_RTH_RETURN:
     return "RETURN HOME";
   case WING_NAV_RTH_HOME:
@@ -223,6 +256,11 @@ static const char *osd_wing_nav_message(void) {
     return "FS: DESCENDING";
   case WING_NAV_CRUISE_NO_GPS:
     return "CRUISE: NO GPS";
+  case WING_NAV_INACTIVE:
+    // Starting needs a switch edge in flight, after any launch.
+    if (mission_unavailable && flags.arm_state)
+      return mission.count ? "MISSION: TOGGLE IN AIR" : "NO MISSION";
+    return NULL;
   default:
     return NULL;
   }
@@ -262,6 +300,21 @@ static const char *osd_rth_message() {
     return "ABORTED";
   }
 
+  if (state.mission_active) {
+    switch (state.rth_state) {
+    case RTH_STATE_CLIMB:
+      return osd_mission_message("CLIMB");
+    case RTH_STATE_TURN:
+      return osd_mission_message("TURN");
+    case RTH_STATE_NAVIGATE:
+      return osd_mission_message("FLY");
+    case RTH_STATE_HOVER_HOME:
+      return osd_mission_message("HOLD");
+    default:
+      break;
+    }
+  }
+
   if (state.rth_active) {
     switch (state.rth_state) {
     case RTH_STATE_CLIMB:
@@ -294,6 +347,12 @@ static const char *osd_rth_message() {
       return "NO HOME";
     if (!flags.arm_state && !nav_gps_ready())
       return "NO GPS FIX";
+  }
+
+  if (rx_aux_on(AUX_MISSION)) {
+    if (mission.count == 0) return "NO MISSION";
+    // Starting needs a switch edge in flight, clear of the ground.
+    return flags.arm_state ? "MISSION: TOGGLE IN AIR" : "ARM FIRST";
   }
   return NULL;
 }

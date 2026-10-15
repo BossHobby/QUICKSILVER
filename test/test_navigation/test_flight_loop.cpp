@@ -4,6 +4,7 @@
 
 #include "control/control.h"
 #include "control/imu.h"
+#include "control/mission.h"
 #include "control/multi/navigation.h"
 #include "control/navigation.h"
 #include "control/pid.h"
@@ -196,7 +197,7 @@ struct flight_t {
   plant_t truth;
   fix_t history[HISTORY_SIZE] = {};
   unsigned tick = 0, next_gps = 0, gps_count = 0;
-  bool arm = false, rth = false, rc_available = true, gps_available = true, baro_available = true;
+  bool arm = false, rth = false, mission_switch = false, rc_available = true, gps_available = true, baro_available = true;
   float roll = 0, pitch = 0, yaw = 0, throttle = 0;
   double return_height = 0, takeover_height = 0;
   char context[512];
@@ -208,6 +209,7 @@ struct flight_t {
     flags = {};
     flags.on_ground = 1;
     target = {};
+    mission = {};
     profile_set_defaults(&profile);
     for (unsigned i = 0; i < 4; i++) {
       // Deliberately permute physical pins; plant reads actual mapped outputs.
@@ -219,6 +221,7 @@ struct flight_t {
     for (auto &aux : profile.receiver.aux) aux = {RX_CHANNEL_OFF, 0, 0};
     profile.receiver.aux[AUX_ARMING] = {static_cast<rx_channel_t>(4), AUX_VALUE_MID, AUX_VALUE_MAX};
     profile.receiver.aux[AUX_RETURN_TO_HOME] = {static_cast<rx_channel_t>(5), AUX_VALUE_MID, AUX_VALUE_MAX};
+    profile.receiver.aux[AUX_MISSION] = {static_cast<rx_channel_t>(6), AUX_VALUE_MID, AUX_VALUE_MAX};
     profile.receiver.aux[AUX_PREARM] = {RX_CHANNEL_ON, 0, 0};
     profile.receiver.aux[AUX_LEVELMODE] = {RX_CHANNEL_ON, 0, 0};
     profile.receiver.aux[AUX_IDLE_UP] = {RX_CHANNEL_ON, 0, 0};
@@ -291,6 +294,7 @@ struct flight_t {
       channels[3] = lround((double(yaw) + 1) * 0.5 * AUX_VALUE_MAX);
       channels[4] = arm ? AUX_VALUE_MAX : 0;
       channels[5] = rth ? AUX_VALUE_MAX : 0;
+      channels[6] = mission_switch ? AUX_VALUE_MAX : 0;
       flags.rx_ready = 1; // Native transport has no RF detection handshake.
       rx_lqi_got_packet();
       simulator_rx_test_frame(channels);
@@ -521,4 +525,51 @@ void test_navigation_motor_loop_rc_loss_and_handback() {
   flight.arm = false;
   flight.run(20);
   flight.check(!flags.arm_state, "pilot disarm");
+}
+
+void test_navigation_motor_loop_mission() {
+  flight_t flight({"mission", 100, true, 1.0, 0.5});
+  flight.depart();
+  // A square leg sequence from the departure point, changing altitude on the way.
+  const double origin[2] = {flight.truth.position[0], flight.truth.position[1]};
+  const double route[3][4] = {{30, 0, 11, 0}, {30, 30, 14, 0}, {0, 30, 10, 3}}; // north, east, altitude, speed
+  mission = {.count = 3, .end_action = MISSION_END_HOLD};
+  for (unsigned i = 0; i < 3; i++) {
+    mission.waypoints[i] = {
+        .coord = {.lon = int32_t(lround((origin[1] + route[i][1]) * 1e7 / 111194.93)),
+                  .lat = int32_t(lround((origin[0] + route[i][0]) * 1e7 / 111194.93))},
+        .altitude = float(route[i][2]),
+        .speed = float(route[i][3]),
+    };
+  }
+  const double takeover_height = -flight.truth.position[2];
+  flight.mission_switch = true;
+  flight.run(100);
+  flight.check(state.mission_active && state.rth_active, "mission accepted");
+
+  // Each waypoint is reached before the next becomes active.
+  double closest[3] = {1e9, 1e9, 1e9};
+  for (unsigned i = 0; i < 90000; i++) {
+    flight.step();
+    flight.check(state.mission_active && flags.arm_state, "mission remains armed and active");
+    const unsigned index = state.mission_index;
+    flight.check(index < 3, "waypoint index stays within the route");
+    const double north = flight.truth.position[0] - origin[0] - route[index][0];
+    const double east = flight.truth.position[1] - origin[1] - route[index][1];
+    closest[index] = fmin(closest[index], hypot(north, east));
+    if (index > 0) flight.check(closest[index - 1] < 4, "previous waypoint reached before advancing");
+    flight.check(-flight.truth.position[2] > fmin(takeover_height, 10) - 2 && -flight.truth.position[2] < 16, "mission altitude bounded");
+    if (i >= 80000) {
+      flight.check(index == 2 && state.rth_state == RTH_STATE_HOVER_HOME, "holds the last waypoint");
+      flight.check(hypot(north, east) < 3, "sustained last waypoint position error below 3m");
+      flight.check(fabs(-flight.truth.position[2] - route[2][2]) < 1, "sustained last waypoint altitude error below 1m");
+    }
+  }
+  printf("%s: last waypoint error=%.2fm altitude=%.2fm closest=(%.2f,%.2f,%.2f)\n", flight.scenario.name,
+      closest[2], -flight.truth.position[2], closest[0], closest[1], closest[2]);
+
+  // Switching the mission off hands control back to the pilot.
+  flight.mission_switch = false;
+  flight.run(100);
+  flight.check(!state.rth_active && !flags.controls_override && flags.arm_state, "mission switch hands back");
 }

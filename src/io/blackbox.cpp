@@ -8,6 +8,7 @@
 #include <task.h>
 
 #include "control/control.h"
+#include "control/mission.h"
 #include "core/tasks.h"
 #include "driver/time.h"
 #include "io/blackbox_device.h"
@@ -408,11 +409,14 @@ static uint32_t blackbox_rate_div() {
 static_assert(AUX_FUNCTION_MAX < 32, "aux bits must stay below 2^31 for int32 state deltas");
 static_assert(FAILSAFE_PHASE_RECOVERY < 1 << 3);
 #if defined(VEHICLE_WING)
-static_assert(WING_NAV_CRUISE_NO_GPS < 1 << 4);
+static_assert(WING_NAV_MISSION_HOLD < 1 << 4);
 static_assert(WING_LAUNCH_ABORTED < 1 << 4);
 static_assert(WING_AUTOTRIM_SAVED < 1 << 2);
 #elif defined(VEHICLE_MULTI)
 static_assert(RTH_STATE_NAV_FAILED < 1 << 4);
+#endif
+#ifndef VEHICLE_ROVER
+static_assert(MISSION_WAYPOINT_MAX <= 1 << 5);
 #endif
 
 static uint32_t blackbox_state_word() {
@@ -441,6 +445,11 @@ static uint32_t blackbox_state_word() {
   if (state.failsafe_hold)
     result |= BBOX_STATE_FAILSAFE_HOLD;
   result |= (uint32_t)state.rth_state << BBOX_STATE_RTH_SHIFT;
+#endif
+#ifndef VEHICLE_ROVER
+  if (state.mission_active)
+    result |= BBOX_STATE_MISSION_ACTIVE;
+  result |= (uint32_t)state.mission_index << BBOX_STATE_MISSION_INDEX_SHIFT;
 #endif
   return result;
 }

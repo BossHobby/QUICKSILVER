@@ -12,6 +12,11 @@ constexpr uint32_t NAV_GPS_STALE_MS = 500;
 // Local displacement in meters; GPS coordinates are signed degrees * 1e7.
 void nav_position_delta(gps_coord_t start, gps_coord_t end, float *north, float *east);
 
+// The stored waypoint lies within MISSION_START_MAX_DISTANCE of the vehicle.
+bool nav_mission_in_start_range(uint8_t index);
+// Publish nav_target_* toward the active waypoint during a mission, otherwise home.
+void nav_update_target();
+
 void nav_init();
 void nav_update();
 

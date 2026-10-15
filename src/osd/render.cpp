@@ -1320,6 +1320,7 @@ TickType_t osd_display() {
       osd_menu_select_aux_adjust(4, OSD_AUTO, "LOITER", 17, 22, &profile.receiver.aux[AUX_LOITER]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "CRUISE", 17, 22, &profile.receiver.aux[AUX_CRUISE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "RETURN HOME", 17, 22, &profile.receiver.aux[AUX_RETURN_TO_HOME]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "MISSION", 17, 22, &profile.receiver.aux[AUX_MISSION]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BUZZER", 17, 22, &profile.receiver.aux[AUX_BUZZER_ENABLE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
@@ -1339,6 +1340,7 @@ TickType_t osd_display() {
       osd_menu_select_aux_adjust(4, OSD_AUTO, "MOTOR TEST", 17, 22, &profile.receiver.aux[AUX_MOTOR_TEST]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "RETURN HOME", 17, 22, &profile.receiver.aux[AUX_RETURN_TO_HOME]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "MISSION", 17, 22, &profile.receiver.aux[AUX_MISSION]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
 #endif
       osd_menu_aux_outputs();

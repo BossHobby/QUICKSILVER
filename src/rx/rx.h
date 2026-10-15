@@ -116,6 +116,9 @@ typedef enum {
   AUX_LOITER,
   AUX_CRUISE,
 #endif
+#ifndef VEHICLE_ROVER
+  AUX_MISSION,
+#endif
 
   AUX_PINIO_1,
   AUX_PINIO_2,

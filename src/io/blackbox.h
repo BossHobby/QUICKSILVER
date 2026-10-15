@@ -5,7 +5,7 @@
 
 // BLACKBOX version changelog (log format compatibility):
 // 0.3.2: cpu_load is a percentage 0-100 (was microseconds).
-//        add state field with flags, aux switches, failsafe phase, RTH and wing states.
+//        add state field with flags, aux switches, failsafe phase, RTH, wing and mission states.
 // 0.3.1 (95765fe1): add GPS coordinate, home and altitude fields; grow debug to 16 entries.
 //        replace the four-motor field with per-output values (a1887d4f).
 // 0.2.0 (7343f574): delta-encode I/P frames, scale 100 (was 1000), store the profile with each log
@@ -65,6 +65,11 @@ typedef enum {
   BBOX_STATE_FAILSAFE_HOLD = 0x1 << 10,
   // rth_state_t at BBOX_STATE_RTH_SHIFT
 #endif
+#ifndef VEHICLE_ROVER
+  // At the same bits on multirotors and wings, with the waypoint index at
+  // BBOX_STATE_MISSION_INDEX_SHIFT.
+  BBOX_STATE_MISSION_ACTIVE = 0x1 << 20,
+#endif
 } blackbox_state_flag_t;
 
 static constexpr uint32_t BBOX_STATE_FAILSAFE_PHASE_SHIFT = 5;
@@ -74,6 +79,9 @@ static constexpr uint32_t BBOX_STATE_WING_LAUNCH_SHIFT = 13;   // 4 bits
 static constexpr uint32_t BBOX_STATE_WING_AUTOTRIM_SHIFT = 17; // 2 bits
 #elif defined(VEHICLE_MULTI)
 static constexpr uint32_t BBOX_STATE_RTH_SHIFT = 11; // 4 bits
+#endif
+#ifndef VEHICLE_ROVER
+static constexpr uint32_t BBOX_STATE_MISSION_INDEX_SHIFT = 21; // 5 bits, active waypoint from 0
 #endif
 
 typedef struct {

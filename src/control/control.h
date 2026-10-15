@@ -100,6 +100,8 @@ typedef enum {
   WING_NAV_CRUISE_STEER,  // Cruise with the pilot banking; the course locks after centered roll and yaw.
   WING_NAV_CRUISE,        // Cruise holding the GPS ground track latched at lock.
   WING_NAV_CRUISE_NO_GPS, // Cruise without valid GPS: the pilot banks and the course cannot lock.
+  WING_NAV_MISSION,       // Flying the GPS ground track toward the active waypoint.
+  WING_NAV_MISSION_HOLD,  // Circling the last waypoint after the mission.
 } wing_nav_state_t;
 
 // THE UN OF STRUCTS
@@ -226,8 +228,14 @@ typedef struct {
   float home_bearing;
   float home_distance;
   uint8_t rth_state; // rth_state_t
-  bool rth_active;
+  bool rth_active;   // multirotor guided flight owns the controls: RTH, or a mission when mission_active
   bool rth_failsafe_active;
+  // Guided flight target, published by navigation at its 10 ms cadence: the
+  // active waypoint during a mission, otherwise home.
+  float nav_target_bearing;  // degrees true from the vehicle
+  float nav_target_distance; // meters
+  bool mission_active;       // following the stored waypoint mission
+  uint8_t mission_index;     // active waypoint while mission_active
   bool failsafe_hold; // airborne stage 1 failsafe: level and hold altitude instead of idling
   float rth_yaw_rate; // radians/s, independent of pilot rates
   // Horizontal acceleration from GPS velocity, m/s^2. Published by multirotor
@@ -332,6 +340,10 @@ typedef struct {
   MEMBER(rth_state, uint8_t)                           \
   MEMBER(rth_active, bool)                             \
   MEMBER(rth_failsafe_active, bool)                    \
+  MEMBER(nav_target_bearing, float)                    \
+  MEMBER(nav_target_distance, float)                   \
+  MEMBER(mission_active, bool)                         \
+  MEMBER(mission_index, uint8_t)                       \
   MEMBER(failsafe_hold, bool)                          \
   MEMBER(rth_yaw_rate, float)                          \
   MEMBER(setpoint, vec3_t)                             \
