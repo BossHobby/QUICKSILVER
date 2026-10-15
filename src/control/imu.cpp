@@ -73,20 +73,14 @@ static vec3_t mahony_correct(vec3_t gyro, vec3_t gravity_estimate) {
   return vec3_add(gyro, vec3_mul(error, kp));
 }
 
-static bool imu_value_finite(float value) {
-  // Hardware builds use -Ofast; isfinite() may be optimized away there.
-  const union { float value; uint32_t bits; } sample = {.value = value};
-  return (sample.bits & 0x7f800000U) != 0x7f800000U;
-}
-
 static uint8_t gps_heading_sensor_blocks() {
   uint8_t sensor_blocks = 0;
   if (!state.gps_lock) sensor_blocks |= HEADING_NO_FIX;
   if (time_millis() - state.gps_last_update_ms > GPS_HEADING_STALE_MS)
     sensor_blocks |= HEADING_STALE;
-  if (!imu_value_finite(state.gps_speed) || state.gps_speed <= GPS_MIN_SPEED)
+  if (!float_is_finite(state.gps_speed) || state.gps_speed <= GPS_MIN_SPEED)
     sensor_blocks |= HEADING_LOW_SPEED;
-  if (!imu_value_finite(state.gps_heading) || !imu_value_finite(state.gps_heading_accuracy) || state.gps_heading_accuracy < 0 || state.gps_heading_accuracy >= GPS_MAX_HEADING_ACCURACY)
+  if (!float_is_finite(state.gps_heading) || !float_is_finite(state.gps_heading_accuracy) || state.gps_heading_accuracy < 0 || state.gps_heading_accuracy >= GPS_MAX_HEADING_ACCURACY)
     sensor_blocks |= HEADING_POOR_ACCURACY;
   return sensor_blocks;
 }
@@ -240,7 +234,7 @@ static void imu_update_attitude(bool gravity_valid) {
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 3, (int16_t)(state.heading_confidence * 1000));
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 7, state.heading_correction_flags);
   // 0.1 degrees; -1 means the receiver supplied a non-finite accuracy.
-  const int16_t heading_accuracy = imu_value_finite(state.gps_heading_accuracy) ? (int16_t)constrain(state.gps_heading_accuracy * 10.0f, 0.0f, 32767.0f) : -1;
+  const int16_t heading_accuracy = float_is_finite(state.gps_heading_accuracy) ? (int16_t)constrain(state.gps_heading_accuracy * 10.0f, 0.0f, 32767.0f) : -1;
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 8, heading_accuracy);
 }
 
@@ -362,7 +356,7 @@ void imu_calc() {
 
   // Normalize once for both control consumers and attitude correction.
   const float gravity_magnitude = vec3_magnitude(state.GEstG);
-  const bool gravity_valid = imu_value_finite(gravity_magnitude) && gravity_magnitude > 0.01f;
+  const bool gravity_valid = float_is_finite(gravity_magnitude) && gravity_magnitude > 0.01f;
   if (gravity_valid) {
     state.GEstG = vec3_mul(state.GEstG, ACC_1G / gravity_magnitude);
   }
@@ -376,7 +370,7 @@ void imu_test_attitude_init() { imu_reset_attitude(); }
 void imu_test_attitude_update() {
   // Isolated attitude tests supply gravity directly, bypassing the IMU stage.
   const float magnitude = vec3_magnitude(state.GEstG);
-  const bool valid = imu_value_finite(magnitude) && magnitude > 0.01f;
+  const bool valid = float_is_finite(magnitude) && magnitude > 0.01f;
   if (valid)
     state.GEstG = vec3_mul(state.GEstG, ACC_1G / magnitude);
   imu_update_attitude(valid);
