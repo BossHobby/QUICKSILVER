@@ -26,6 +26,7 @@
 //            retiring unified serial (now serial autodetect) and Bayang; add receiver.invert.
 //        rx: drop receiver.bind.bind_saved; bind data is kept as-is and DSM bind is requested in it.
 //        meta: encode the firmware build (git version); it is not persisted or decoded.
+//        navigation: add waypoint mission switch before the PINIO switches.
 // 0.3.0 (1e5b55c3): feat: add full 16-bit aux channel resolution with range-based function mapping.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.

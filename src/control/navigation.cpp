@@ -4,6 +4,7 @@
 
 #include "control/control.h"
 #include "control/imu.h"
+#include "control/mission.h"
 #ifdef VEHICLE_MULTI
 #include "control/multi/navigation.h"
 #endif
@@ -208,6 +209,22 @@ static float nav_distance_between(gps_coord_t start, gps_coord_t end) {
   float north, east;
   nav_position_delta(start, end, &north, &east);
   return sqrtf(north * north + east * east);
+}
+
+bool nav_mission_in_start_range(uint8_t index) {
+  return nav_distance_between(state.gps_coord, mission.waypoints[index].coord) <= MISSION_START_MAX_DISTANCE;
+}
+
+void nav_update_target() {
+  if (!state.mission_active) {
+    state.nav_target_distance = state.home_distance;
+    state.nav_target_bearing = state.home_bearing;
+    return;
+  }
+  float north, east;
+  nav_position_delta(state.gps_coord, mission.waypoints[state.mission_index].coord, &north, &east);
+  state.nav_target_distance = sqrtf(north * north + east * east);
+  state.nav_target_bearing = normalize_rad(atan2f(east, north)) * RADTODEG;
 }
 
 static bool nav_gps_quality_ok(void) {

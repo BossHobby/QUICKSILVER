@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "control/control.h"
+#include "control/mission.h"
 #include "core/profile.h"
 #include "core/tasks.h"
 #include "driver/time.h"
@@ -208,7 +209,7 @@ void test_osd_render_completes_before_transfer() {
   profile.osd = saved_osd;
 }
 
-static void assert_looptime_label(bool visible) {
+static void assert_status_label(const char *label, bool visible) {
   for (uint32_t i = 0; i < 64; i++) {
     if (osd_update())
       break;
@@ -216,7 +217,11 @@ static void assert_looptime_label(bool visible) {
   char row[51] = {};
   for (uint8_t x = 0; x < 50; x++)
     row[x] = simulator_osd_test_char(x, 0);
-  TEST_ASSERT_EQUAL(visible, strstr(row, "LOOPTIME") != nullptr);
+  TEST_ASSERT_EQUAL_MESSAGE(visible, strstr(row, label) != nullptr, row);
+}
+
+static void assert_looptime_label(bool visible) {
+  assert_status_label("LOOPTIME", visible);
 }
 
 void test_osd_looptime_warning_is_temporary_until_2khz() {
@@ -271,6 +276,64 @@ void test_osd_looptime_warning_is_temporary_until_2khz() {
   profile.osd.guac_mode = saved_guac;
   osd_clear();
   osd_status_reset();
+}
+
+void test_osd_mission_status_names_the_waypoint() {
+#ifndef VEHICLE_ROVER
+  const auto saved_state = state;
+  const auto saved_flags = flags;
+  const auto saved_mission = mission;
+  flags = {};
+  flags.rx_ready = 1;
+  flags.arm_state = 1;
+  state = {};
+  mission = {.count = 12};
+  state.mission_active = true;
+  state.mission_index = 9;
+#ifdef VEHICLE_WING
+  state.wing_nav_state = WING_NAV_MISSION;
+#else
+  state.rth_active = true;
+  state.rth_state = RTH_STATE_NAVIGATE;
+#endif
+  osd_element_t el = {};
+  osd_device_init();
+  osd_clear();
+  osd_status_reset();
+  simulator_osd_test_reset(false);
+  // Let the arming announcement expire.
+  osd_status_update(&el);
+  time_test_advance_us(1001000);
+  osd_status_update(&el);
+  osd_status_update(&el);
+  osd_status_update(&el);
+  assert_status_label("WP 10/12 FLY", true);
+
+  // Each arrival rewrites the label.
+  state.mission_index = 10;
+  osd_status_update(&el);
+  assert_status_label("WP 11/12 FLY", true);
+
+#ifdef VEHICLE_MULTI
+  // Failsafe RTH readiness outranks the hint to toggle the mission switch.
+  const auto saved_navigation = profile.navigation;
+  const auto saved_gps = profile.serial.gps;
+  profile.navigation.rth_on_failsafe = true;
+  profile.serial.gps = SERIAL_PORT1;
+  state = {};
+  state.aux_active = 1U << AUX_MISSION;
+  osd_status_update(&el);
+  assert_status_label("NO BARO", true);
+  profile.navigation = saved_navigation;
+  profile.serial.gps = saved_gps;
+#endif
+
+  state = saved_state;
+  flags = saved_flags;
+  mission = saved_mission;
+  osd_clear();
+  osd_status_reset();
+#endif
 }
 
 void test_osd_renders_latest_telemetry() {

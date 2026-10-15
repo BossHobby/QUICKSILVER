@@ -433,7 +433,7 @@ void test_attitude_rth_large_heading_error_can_recover(void) {
   flags.controls_override = 1;
   state.rth_active = true;
   state.rth_state = RTH_STATE_NAVIGATE;
-  state.home_bearing = 180;
+  state.nav_target_bearing = 180;
   state.gps_vel_east = 4;
   state.rx_override.pitch = 0.15f;
   state.gps_lock = true;
@@ -484,7 +484,7 @@ static float run_rth_heading_recovery(uint8_t phase, float speed_home, float acc
   state.gps_speed = 4;
   state.gps_vel_north = -2;
   state.gps_vel_east = sqrtf(12);
-  state.home_bearing = speed_home > 0 ? 120 : 300;
+  state.nav_target_bearing = speed_home > 0 ? 120 : 300;
   state.gps_heading = 120;
   state.gps_heading_accuracy = accuracy;
   const float pitch = 8 * DEGTORAD;
@@ -554,7 +554,7 @@ void test_attitude_rth_weak_aligned_course_retains_confidence() {
   flags.controls_override = 1;
   state.rth_active = true;
   state.rth_state = RTH_STATE_NAVIGATE;
-  state.home_bearing = 0;
+  state.nav_target_bearing = 0;
   state.gps_lock = true;
   state.gps_heading_accuracy = 2;
   run_rth_forward_flight(30, 8, 0, 10000);

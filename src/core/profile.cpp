@@ -568,6 +568,9 @@ const profile_t default_profile = {
             LOITER,     // AUX_LOITER
             CRUISE,     // AUX_CRUISE
 #endif
+#ifndef VEHICLE_ROVER
+            {RX_CHANNEL_OFF, 0, 0}, // AUX_MISSION
+#endif
             {RX_CHANNEL_OFF, 0, 0}, // AUX_PINIO_1
             {RX_CHANNEL_OFF, 0, 0}, // AUX_PINIO_2
             {RX_CHANNEL_OFF, 0, 0}, // AUX_PINIO_3
