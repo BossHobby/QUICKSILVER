@@ -49,6 +49,12 @@ constexpr auto MAX(T a, U b) {
   return common_type(a) > common_type(b) ? +a : +b;
 }
 
+// Hardware builds use -Ofast, which can remove ordinary isfinite() checks.
+inline bool float_is_finite(float value) {
+  const union { float value; uint32_t bits; } sample = {.value = value};
+  return (sample.bits & 0x7f800000U) != 0x7f800000U;
+}
+
 #define MHZ_TO_HZ(mhz) (mhz * 1000000)
 
 #define MAKE_SEMVER(major, minor, patch) ((major << 16) | (minor << 8) | patch)
