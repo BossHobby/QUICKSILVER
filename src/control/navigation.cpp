@@ -71,14 +71,8 @@ static struct {
   uint32_t updated_ms;
 } gps_accel;
 
-static bool nav_value_finite(float value) {
-  // Hardware uses -Ofast, which can remove ordinary isfinite() checks.
-  const union { float value; uint32_t bits; } sample = {.value = value};
-  return (sample.bits & 0x7f800000U) != 0x7f800000U;
-}
-
 static void nav_filter_altitude(float altitude, uint32_t timestamp_ms) {
-  if (!nav_value_finite(altitude)) {
+  if (!float_is_finite(altitude)) {
     state.baro_valid = false;
     return;
   }
@@ -124,7 +118,7 @@ static void nav_accumulate_accel() {
   // accel_raw and GEstG share the body frame in g, and GEstG is normalized to
   // ACC_1G: their dot product is the specific force along earth vertical.
   const float specific_force = vec3_dot(state.accel_raw, state.GEstG) / (ACC_1G * ACC_1G);
-  if (!nav_value_finite(specific_force))
+  if (!float_is_finite(specific_force))
     return;
   vertical.accel_sum += (specific_force - 1.0f) * GRAVITY_MS2;
   vertical.accel_count++;
@@ -163,7 +157,7 @@ static void nav_update_vertical(float dt) {
     vertical.velocity -= dt / (VERTICAL_NO_BARO_DECAY_TIME + dt) * vertical.velocity;
   }
 
-  if (!nav_value_finite(vertical.velocity) || !nav_value_finite(vertical.height)) {
+  if (!float_is_finite(vertical.velocity) || !float_is_finite(vertical.height)) {
     vertical.velocity = 0.0f;
     vertical.height = vertical.baro_height;
   }
