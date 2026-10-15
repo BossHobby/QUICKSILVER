@@ -29,6 +29,7 @@ extern void test_rx_mailbox_coalesces_complete_frames();
 extern void test_io_worker_publishes_rx_without_configuration_wait();
 extern void test_io_worker_services_cadence_without_notification();
 extern void test_osd_looptime_warning_is_temporary_until_2khz();
+extern void test_osd_mission_status_names_the_waypoint();
 extern void test_osd_transfer_is_bounded_and_retries();
 extern void test_osd_merges_short_gaps_and_retries();
 extern void test_osd_render_completes_before_transfer();
@@ -173,6 +174,11 @@ extern void test_cbor_failed_enum_decode_preserves_value(void);
 extern void test_lzss_roundtrip(void);
 extern void test_quic_compresses_reply_only_when_requested(void);
 
+// Mission tests
+extern void test_mission_full_route_roundtrip(void);
+extern void test_mission_rejects_oversized_and_out_of_range_routes(void);
+extern void test_mission_upload_persists_and_rejects_invalid_routes(void);
+
 // SPI tests
 extern void test_spi_initial_state(void);
 extern void test_spi_init(void);
@@ -228,6 +234,7 @@ extern void test_failsafe_stage1_applies_neutral_fallback(void);
 extern void test_failsafe_stage1_retains_idle_throttle_until_recovery_or_drop(void);
 extern void test_failsafe_stage2_drop_blocks_outputs_and_disarms(void);
 extern void test_failsafe_rth_keeps_outputs_allowed_past_stage2_time(void);
+extern void test_failsafe_mission_rides_out_a_brief_loss(void);
 extern void test_failsafe_recovery_clears_with_arm_switch_high_but_blocks_rearm(void);
 extern void test_failsafe_repeated_loss_keeps_outputs_blocked_after_stage2(void);
 extern void test_failsafe_blocks_new_arming_while_outputs_are_allowed(void);
@@ -341,6 +348,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_threads_suspend_ground_workers_with_pending_work);
   RUN_TEST(test_imu_without_gps_publishes_tilt_without_heading_estimator);
   RUN_TEST(test_osd_looptime_warning_is_temporary_until_2khz);
+  RUN_TEST(test_osd_mission_status_names_the_waypoint);
   RUN_TEST(test_osd_transfer_is_bounded_and_retries);
   RUN_TEST(test_osd_merges_short_gaps_and_retries);
   RUN_TEST(test_osd_render_completes_before_transfer);
@@ -449,6 +457,11 @@ int main(int argc, char **argv) {
   RUN_TEST(test_lzss_roundtrip);
   RUN_TEST(test_quic_compresses_reply_only_when_requested);
 
+  // Mission tests
+  RUN_TEST(test_mission_full_route_roundtrip);
+  RUN_TEST(test_mission_rejects_oversized_and_out_of_range_routes);
+  RUN_TEST(test_mission_upload_persists_and_rejects_invalid_routes);
+
   // SPI tests
   RUN_TEST(test_spi_initial_state);
   RUN_TEST(test_spi_init);
@@ -520,6 +533,7 @@ int main(int argc, char **argv) {
 #ifdef VEHICLE_MULTI
   RUN_TEST(test_failsafe_stage1_retains_idle_throttle_until_recovery_or_drop);
   RUN_TEST(test_failsafe_rth_keeps_outputs_allowed_past_stage2_time);
+  RUN_TEST(test_failsafe_mission_rides_out_a_brief_loss);
 #endif
   RUN_TEST(test_failsafe_recovery_clears_with_arm_switch_high_but_blocks_rearm);
   RUN_TEST(test_failsafe_repeated_loss_keeps_outputs_blocked_after_stage2);

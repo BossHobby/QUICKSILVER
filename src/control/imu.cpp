@@ -96,9 +96,9 @@ static float gps_heading_gain() {
       state.heading_correction_flags |= HEADING_NOT_FORWARD;
     if (state.heading_correction_flags) return 0.0f;
 
-    const float bearing = state.home_bearing * DEGTORAD;
-    const float speed_home = state.gps_vel_north * cosf(bearing) + state.gps_vel_east * sinf(bearing);
-    const float recovery = constrain((state.gps_speed - speed_home) / GPS_TRUST_SPEED, 0.0f, 3.5f);
+    const float bearing = state.nav_target_bearing * DEGTORAD;
+    const float speed_target = state.gps_vel_north * cosf(bearing) + state.gps_vel_east * sinf(bearing);
+    const float recovery = constrain((state.gps_speed - speed_target) / GPS_TRUST_SPEED, 0.0f, 3.5f);
     const float speed_quality = constrain((state.gps_speed - GPS_MIN_SPEED) / (GPS_TRUST_SPEED - GPS_MIN_SPEED), 0.0f, 1.0f);
     return GPS_HEADING_KP * speed_quality * (constrain(state.attitude.pitch / (30.0f * DEGTORAD), 0.0f, 2.0f) + recovery);
   }

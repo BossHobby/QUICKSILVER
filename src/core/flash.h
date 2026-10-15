@@ -1,5 +1,6 @@
 #pragma once
 
+#include "control/mission.h"
 #include "core/profile.h"
 #include "rx/rx_spi.h"
 
@@ -20,6 +21,10 @@ extern flash_storage_t flash_storage;
 
 #define PROFILE_STORAGE_OFFSET (FLASH_STORAGE_OFFSET + FLASH_STORAGE_SIZE)
 #define PROFILE_STORAGE_SIZE FLASH_ALIGN(4096 + 128 + 512)
+
+// Kept out of the profile so mission uploads do not change its layout.
+#define MISSION_STORAGE_OFFSET (PROFILE_STORAGE_OFFSET + PROFILE_STORAGE_SIZE)
+#define MISSION_STORAGE_SIZE FLASH_ALIGN(FMC_MAGIC_SIZE + sizeof(mission_t))
 
 void flash_save();
 void flash_load();

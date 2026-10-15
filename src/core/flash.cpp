@@ -72,6 +72,13 @@ void flash_save() {
     fmc_write_buf(PROFILE_STORAGE_OFFSET, buffer, PROFILE_STORAGE_SIZE);
   }
 
+  {
+    memset(buffer, 0, MISSION_STORAGE_SIZE);
+    flash_write_magic(buffer, FMC_MAGIC | MISSION_STORAGE_OFFSET);
+    memcpy(buffer + FMC_MAGIC_SIZE, (uint8_t *)&mission, sizeof(mission_t));
+    fmc_write_buf(MISSION_STORAGE_OFFSET, buffer, MISSION_STORAGE_SIZE);
+  }
+
   fmc_lock();
   free(buffer);
   __enable_irq();
@@ -146,6 +153,14 @@ void flash_load() {
     memcpy((uint8_t *)&profile, buffer + FMC_MAGIC_SIZE, sizeof(profile_t));
   }
   profile_output_update();
+
+  if (flash_compare_magic(MISSION_STORAGE_OFFSET, (FMC_MAGIC | MISSION_STORAGE_OFFSET))) {
+    fmc_read_buf(MISSION_STORAGE_OFFSET, buffer, MISSION_STORAGE_SIZE);
+    memcpy((uint8_t *)&mission, buffer + FMC_MAGIC_SIZE, sizeof(mission_t));
+    // Flight trusts the count and coordinates; never fly a damaged block.
+    if (!mission_valid(&mission))
+      mission = {};
+  }
 
 #ifdef EXPRESS_LRS_UID
   if (profile.receiver.bind.elrs.is_set == 0x0 && profile.receiver.bind.elrs.magic != 0x37) {

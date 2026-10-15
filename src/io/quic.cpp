@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "control/control.h"
+#include "control/mission.h"
 #include "control/pid.h"
 #include "control/sixaxis.h"
 #include "core/debug.h"
@@ -700,6 +701,60 @@ SLOW_FLASH static void process_rx(quic_t *quic, cbor_value_t *dec) {
   }
 }
 
+SLOW_FLASH static void process_mission(quic_t *quic, cbor_value_t *dec) {
+  cbor_result_t res = CBOR_OK;
+
+  cbor_value_t enc;
+  cbor_encoder_init(&enc, encode_buffer, ENCODE_BUFFER_SIZE);
+
+  quic_mission_command cmd;
+  res = cbor_decode_member(dec, &cmd, cbor_decode_uint8_t);
+  check_cbor_error(QUIC_CMD_MISSION);
+
+  if (cmd != QUIC_MISSION_GET && flags.arm_state) {
+    quic_errorf(QUIC_CMD_MISSION, "ARMED");
+    return;
+  }
+
+  switch (cmd) {
+  case QUIC_MISSION_GET:
+    break;
+  case QUIC_MISSION_SET: {
+    // Decode into a heap copy so a rejected upload leaves the stored mission.
+    mission_t *uploaded = (mission_t *)calloc(1, sizeof(mission_t));
+    if (uploaded == NULL) {
+      quic_errorf(QUIC_CMD_MISSION, "MISSION ALLOC FAILED");
+      return;
+    }
+    res = cbor_decode_mission_t(dec, uploaded);
+    const bool valid = res >= CBOR_OK && mission_valid(uploaded);
+    if (valid)
+      mission = *uploaded;
+    free(uploaded);
+    check_cbor_error(QUIC_CMD_MISSION);
+    if (!valid) {
+      quic_errorf(QUIC_CMD_MISSION, "INVALID MISSION");
+      return;
+    }
+    flash_save();
+    break;
+  }
+  case QUIC_MISSION_CLEAR:
+    mission = {};
+    flash_save();
+    break;
+  default:
+    quic_errorf(QUIC_CMD_MISSION, "INVALID CMD %d", cmd);
+    return;
+  }
+
+  // Every command replies with the stored mission.
+  res = cbor_encode_mission_t(&enc, &mission);
+  check_cbor_error(QUIC_CMD_MISSION);
+
+  quic_send(quic, QUIC_CMD_MISSION, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+}
+
 SLOW_FLASH bool quic_process(quic_t *quic, uint8_t *data, uint32_t size, bool fault_mode) {
   if (size < 4) {
     return false;
@@ -773,6 +828,9 @@ SLOW_FLASH bool quic_process(quic_t *quic, uint8_t *data, uint32_t size, bool fa
     break;
   case QUIC_CMD_RX:
     process_rx(quic, &dec);
+    break;
+  case QUIC_CMD_MISSION:
+    process_mission(quic, &dec);
     break;
   default:
     quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);

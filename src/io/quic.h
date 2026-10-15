@@ -9,6 +9,7 @@
 #define QUIC_HEADER_LEN 4
 
 // QUIC protocol changelog (protocol compatibility):
+// 0.2.11: mission: add waypoint mission get/set/clear command and mission state.
 // 0.2.10: blackbox: add GPS/home coordinates and navigation altitude (0.1 m), move Debug to field 16.
 //         quic: add QUIC_HEADER_COMPRESSED; requests carrying it accept LZSS replies.
 //         state: add RTH heading acquisition and heading-failed phases; reorder RTH phase values.
@@ -26,7 +27,7 @@
 // 0.1.2 (9eb3a5a2): increment quic protocol version.
 // 0.1.1 (e1e99633): extract quic protocol.
 // 0.1.0: introduce QUIC protocol serialization.
-#define QUIC_PROTOCOL_VERSION MAKE_SEMVER(0, 2, 10)
+#define QUIC_PROTOCOL_VERSION MAKE_SEMVER(0, 2, 11)
 
 typedef enum {
   QUIC_CMD_INVALID,
@@ -40,6 +41,7 @@ typedef enum {
   QUIC_CMD_SERIAL,
   QUIC_CMD_OSD,
   QUIC_CMD_RX,
+  QUIC_CMD_MISSION,
 } __attribute__((__packed__)) quic_command;
 
 typedef enum {
@@ -70,6 +72,12 @@ typedef enum {
 typedef enum {
   QUIC_RX_BIND,
 } __attribute__((__packed__)) quic_rx_command;
+
+typedef enum {
+  QUIC_MISSION_GET,
+  QUIC_MISSION_SET,
+  QUIC_MISSION_CLEAR,
+} __attribute__((__packed__)) quic_mission_command;
 
 typedef enum {
   QUIC_FLAG_NONE,

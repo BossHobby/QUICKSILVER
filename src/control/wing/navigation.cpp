@@ -1,8 +1,10 @@
 #include "control/wing/navigation.h"
 
+#include <float.h>
 #include <math.h>
 
 #include "control/control.h"
+#include "control/mission.h"
 #include "control/navigation.h"
 #include "core/profile.h"
 #include "driver/baro/baro.h"
@@ -35,6 +37,14 @@ static constexpr uint32_t DESCEND_LATCH_MS = 2000;             // GPS recovery b
 static constexpr uint32_t CRUISE_LOCK_DELAY_MS = 500;          // centered roll and yaw before the course locks, as in ArduPlane
 static constexpr float CRUISE_STICK_CENTER = 0.05f;            // filtered stick magnitude treated as centered
 static constexpr float CRUISE_LOOKAHEAD = 1000.0f;             // meters along the locked track, as in ArduPlane
+// A wing cannot stop on a waypoint: advance within the turn radius at the
+// navigation bank, bounded for slow GPS speed and shallow bank settings.
+static constexpr float MISSION_ARRIVAL_MIN_BANK = 10.0f * DEGTORAD;
+static constexpr float MISSION_ARRIVAL_MIN_RADIUS = 10.0f;     // meters
+static constexpr float MISSION_ARRIVAL_MAX_RADIUS = 100.0f;    // meters
+// A leg can need more climb than a wing makes on it; circle a waypoint arrived
+// at farther below its altitude than this before flying on.
+static constexpr float MISSION_ALTITUDE_TOLERANCE = 10.0f;     // meters
 
 typedef enum {
   NAV_REQUEST_NONE,
@@ -42,6 +52,7 @@ typedef enum {
   NAV_REQUEST_RTH,
   NAV_REQUEST_FAILSAFE,
   NAV_REQUEST_CRUISE,
+  NAV_REQUEST_MISSION,
 } nav_request_t;
 
 wing_nav_command_t wing_nav_command;
@@ -52,6 +63,7 @@ static struct {
   uint32_t gps_lost_ms; // start of the IMU-heading return
   uint32_t descend_ms;  // start of the failsafe glide
   float speed;          // latest valid GPS ground speed, m/s
+  bool mission_held;    // mission switch on since before navigation was available
 } nav;
 
 static struct {
@@ -74,8 +86,24 @@ static struct {
   bool climbing;      // pitch stick was off center in the previous pass
 } cruise;
 
+// Mission progress. A new request resumes at the active waypoint unless the
+// mission finished; disarming starts it over.
+static struct {
+  bool requested; // the previous update requested the mission
+  bool valid;     // the route was flyable when requested
+  uint8_t index;  // active waypoint, kept while other modes interrupt the mission
+  gps_coord_t leg_origin; // where the leg to the active waypoint started
+  bool climbing;  // circling the active waypoint until its altitude is reached
+  bool complete;  // circling the last waypoint
+  bool returning; // finished with MISSION_END_RTH
+} route;
+
 static float nav_slew(float current, float target, float step) {
   return constrain(target, current - step, current + step);
+}
+
+static bool nav_baro_ok() {
+  return state.baro_valid && time_millis() - state.baro_last_update_ms <= BARO_STALE_MS;
 }
 
 static float loiter_direction() {
@@ -86,12 +114,20 @@ static nav_request_t nav_request() {
   // Launch owns attitude and throttle until it finishes; navigation never
   // starts on the ground. Failsafe ignores the switches, which hold stale values.
   const bool launching = state.wing_launch_available && state.wing_launch_state < WING_LAUNCH_DONE;
-  if (!flags.arm_state || !flags.in_air || launching)
+  // As on a multirotor, a mission needs a switch edge in flight: a switch left
+  // on through arming and launch does not fly an old route.
+  const bool mission_switch = rx_aux_on(AUX_MISSION);
+  if (!flags.arm_state || !flags.in_air || launching) {
+    nav.mission_held = mission_switch;
     return NAV_REQUEST_NONE;
+  }
+  nav.mission_held = nav.mission_held && mission_switch;
   if (flags.failsafe)
     return profile.navigation.rth_on_failsafe ? NAV_REQUEST_FAILSAFE : NAV_REQUEST_NONE;
   if (rx_aux_on(AUX_RETURN_TO_HOME))
     return NAV_REQUEST_RTH;
+  if (mission_switch && !nav.mission_held)
+    return NAV_REQUEST_MISSION;
   if (rx_aux_on(AUX_LOITER))
     return NAV_REQUEST_LOITER;
   if (rx_aux_on(AUX_CRUISE))
@@ -118,6 +154,106 @@ static wing_nav_state_t cruise_next_state(bool gps_valid, uint32_t now_ms) {
   return WING_NAV_CRUISE_STEER;
 }
 
+// Map a mission request onto what the aircraft flies: the route, a return
+// after MISSION_END_RTH or without GPS, or a loiter in place until the route
+// can be flown.
+static nav_request_t nav_mission_request(nav_request_t request, bool gps_valid) {
+  if (!flags.arm_state)
+    route = {};
+  const bool requested = request == NAV_REQUEST_MISSION;
+  if (requested && !route.requested) {
+    const uint8_t resume = route.complete || route.returning ? 0 : route.index;
+    route = {.index = resume};
+  }
+  route.requested = requested;
+  if (!requested)
+    return request;
+  if (!route.valid) {
+    // Checked until the route can be flown, so a brief GPS dropout at the
+    // switch edge does not leave the aircraft loitering.
+    if (mission.count == 0 || !gps_valid || !nav_mission_in_start_range(route.index))
+      return NAV_REQUEST_LOITER;
+    route.valid = true;
+    route.leg_origin = state.gps_coord;
+  }
+  // Without GPS the route cannot be followed; return on the IMU heading, at
+  // the RTH altitude, until it recovers.
+  return route.returning || !gps_valid ? NAV_REQUEST_RTH : NAV_REQUEST_MISSION;
+}
+
+// Beyond the line through the waypoint square to the leg. Turning toward a
+// point inside the turn circle, or with wind stretching it, can otherwise
+// orbit just outside the arrival radius.
+static bool nav_mission_passed() {
+  const gps_coord_t waypoint = mission.waypoints[route.index].coord;
+  float leg_north, leg_east, north, east;
+  nav_position_delta(route.leg_origin, waypoint, &leg_north, &leg_east);
+  nav_position_delta(waypoint, state.gps_coord, &north, &east);
+  return leg_north * north + leg_east * east > 0.0f;
+}
+
+// tan(turn / 2) for the turn onto the next leg: a turn of that radius started
+// this fraction of it before the waypoint rolls out on the next leg, as in
+// ArduPlane's turn_distance(). Turns of 90 degrees or more, and the last
+// waypoint, use the whole radius.
+static float nav_mission_turn_scale() {
+  if (route.index + 1 >= mission.count)
+    return 1.0f;
+  const gps_coord_t waypoint = mission.waypoints[route.index].coord;
+  float in_north, in_east, out_north, out_east;
+  nav_position_delta(route.leg_origin, waypoint, &in_north, &in_east);
+  nav_position_delta(waypoint, mission.waypoints[route.index + 1].coord, &out_north, &out_east);
+  const float dot = in_north * out_north + in_east * out_east;
+  if (dot <= 0.0f)
+    return 1.0f;
+  const float cross = in_north * out_east - in_east * out_north;
+  return MIN(fabsf(cross) / (hypotf(in_north, in_east) * hypotf(out_north, out_east) + dot), 1.0f);
+}
+
+static bool nav_mission_arrived(float max_bank) {
+  const float bank = MAX(max_bank, MISSION_ARRIVAL_MIN_BANK);
+  const float turn_radius = MIN(nav.speed * nav.speed / (GRAVITY * tanf(bank)), MISSION_ARRIVAL_MAX_RADIUS);
+  const float radius = MAX(turn_radius * nav_mission_turn_scale(), MISSION_ARRIVAL_MIN_RADIUS);
+  return state.nav_target_distance <= radius || nav_mission_passed();
+}
+
+// The altitude target latched for the active waypoint is reached, or cannot be
+// checked without the barometer.
+static bool nav_mission_altitude_reached() {
+  if (!altitude.target_valid || !nav_baro_ok())
+    return true;
+  return state.altitude >= altitude.target - MISSION_ALTITUDE_TOLERANCE;
+}
+
+static void nav_mission_advance(float max_bank) {
+  if (route.climbing) {
+    if (!nav_mission_altitude_reached())
+      return;
+    route.climbing = false;
+  } else {
+    if (!nav_mission_arrived(max_bank))
+      return;
+    // Circle the waypoint rather than fly the next leg below its planned
+    // altitude. Mission end actions set their own altitude.
+    if (route.index + 1 < mission.count && !nav_mission_altitude_reached()) {
+      route.climbing = true;
+      return;
+    }
+  }
+  if (route.index + 1 < mission.count) {
+    route.leg_origin = mission.waypoints[route.index].coord;
+    route.index++;
+    state.mission_index = route.index;
+    // Latch the next waypoint's altitude.
+    altitude.target_valid = false;
+    nav_update_target();
+  } else if (mission.end_action == MISSION_END_RTH) {
+    route.returning = true;
+  } else {
+    route.complete = true;
+  }
+}
+
 static wing_nav_state_t nav_next_state(nav_request_t request, bool gps_valid, bool home_valid, uint32_t now_ms) {
   if (request == NAV_REQUEST_CRUISE)
     return cruise_next_state(gps_valid, now_ms);
@@ -129,6 +265,8 @@ static wing_nav_state_t nav_next_state(nav_request_t request, bool gps_valid, bo
     return WING_NAV_DESCEND;
   const bool returning = request != NAV_REQUEST_LOITER && home_valid;
   if (gps_valid) {
+    if (request == NAV_REQUEST_MISSION)
+      return route.complete || route.climbing ? WING_NAV_MISSION_HOLD : WING_NAV_MISSION;
     if (returning) {
       if (previous == WING_NAV_RTH_HOME || state.home_distance <= profile.navigation.loiter_radius)
         return WING_NAV_RTH_HOME;
@@ -139,7 +277,9 @@ static wing_nav_state_t nav_next_state(nav_request_t request, bool gps_valid, bo
   }
 
   if (returning && state.heading_confidence >= RTH_MIN_HEADING_CONFIDENCE) {
-    if (previous == WING_NAV_RTH_RETURN || previous == WING_NAV_RTH_HOME) {
+    // GPS lost on a mission also heads home on the IMU heading.
+    if (previous == WING_NAV_RTH_RETURN || previous == WING_NAV_RTH_HOME ||
+        previous == WING_NAV_MISSION || previous == WING_NAV_MISSION_HOLD) {
       nav.gps_lost_ms = now_ms;
       return WING_NAV_RTH_HEADING;
     }
@@ -163,8 +303,8 @@ static void circle_place_ahead() {
   circle.center_east = state.gps_vel_north * scale;
 }
 
-static void circle_place_home() {
-  circle.origin = state.gps_home;
+static void circle_place_at(gps_coord_t center) {
+  circle.origin = center;
   circle.center_north = 0.0f;
   circle.center_east = 0.0f;
 }
@@ -221,11 +361,14 @@ static float circle_lateral_accel() {
   return circle_accel;
 }
 
+static float l1_distance(float speed) {
+  return MAX(L1_DAMPING * L1_PERIOD * speed / M_PI_F, 1.0f);
+}
+
 // L1 lateral acceleration for the angle nu from the ground track to the
 // look-ahead point, clamped to +-90 degrees, as in ArduPlane's AP_L1_Control.
 static float l1_lateral_accel(float sin_nu, float speed) {
-  const float l1_distance = MAX(L1_DAMPING * L1_PERIOD * speed / M_PI_F, 1.0f);
-  return 4.0f * L1_DAMPING * L1_DAMPING * speed * speed / l1_distance * sin_nu;
+  return 4.0f * L1_DAMPING * L1_DAMPING * speed * speed / l1_distance(speed) * sin_nu;
 }
 
 // L1 waypoint guidance toward a bearing, as in ArduPlane's
@@ -237,21 +380,20 @@ static float waypoint_lateral_accel(float bearing, float course, float speed) {
   return l1_lateral_accel(sinf(nu), speed);
 }
 
-static void cruise_lock() {
-  cruise.origin = state.gps_coord;
-  cruise.dir_north = state.gps_vel_north / nav.speed;
-  cruise.dir_east = state.gps_vel_east / nav.speed;
-}
-
-// L1 toward a point CRUISE_LOOKAHEAD ahead of the aircraft along the locked
-// track, as in ArduPlane's CRUISE, so cross-track error is steered out as
-// well as wind drift. Vector form keeps libm trig out of the Flight loop.
-static float cruise_lateral_accel() {
+// L1 toward a point lookahead meters ahead of the aircraft along the track
+// from origin in the unit direction dir, ending length meters along it, so
+// cross-track error is steered out as well as wind drift. Looking at least as
+// far ahead as the cross-track error caps the intercept at 45 degrees, as in
+// ArduPlane's AP_L1_Control::update_waypoint(). Vector form keeps libm trig
+// out of the Flight loop.
+static float track_lateral_accel(gps_coord_t origin, float dir_north, float dir_east, float length, float lookahead) {
   float north, east;
-  nav_position_delta(cruise.origin, state.gps_coord, &north, &east);
-  const float ahead = north * cruise.dir_north + east * cruise.dir_east + CRUISE_LOOKAHEAD;
-  const float los_north = ahead * cruise.dir_north - north;
-  const float los_east = ahead * cruise.dir_east - east;
+  nav_position_delta(origin, state.gps_coord, &north, &east);
+  const float cross_track = dir_north * east - dir_east * north; // right positive
+  const float along = north * dir_north + east * dir_east;
+  const float ahead = MIN(along + MAX(lookahead, fabsf(cross_track)), length);
+  const float los_north = ahead * dir_north - north;
+  const float los_east = ahead * dir_east - east;
 
   // Cross and dot products of ground velocity and line of sight scale sin(nu)
   // and cos(nu) by both lengths; beyond 90 degrees nu clamps to the turn side.
@@ -259,17 +401,44 @@ static float cruise_lateral_accel() {
   const float vel_east = state.gps_vel_east;
   const float cross = vel_north * los_east - vel_east * los_north;
   const float dot = vel_north * los_north + vel_east * los_east;
-  const float sin_nu = dot > 0.0f ? cross / (nav.speed * hypotf(los_north, los_east)) : copysignf(1.0f, cross);
+  const float sin_nu = dot > 0.0f ? cross / MAX(nav.speed * hypotf(los_north, los_east), 1e-3f) : copysignf(1.0f, cross);
 
-  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 5, (int16_t)constrain(cruise.dir_north * east - cruise.dir_east * north, -32768.0f, 32767.0f)); // cross-track meters, right positive
+  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 5, (int16_t)constrain(cross_track, -32768.0f, 32767.0f)); // cross-track meters
   return l1_lateral_accel(sin_nu, nav.speed);
+}
+
+// Track the leg from its origin to the target, as ArduPlane does between
+// waypoints, so crosswind does not curve the path away from the planned line.
+static float mission_lateral_accel() {
+  const gps_coord_t target = mission.waypoints[route.index].coord;
+  gps_coord_t origin = route.leg_origin;
+  float north, east;
+  nav_position_delta(origin, target, &north, &east);
+  float length = hypotf(north, east);
+  if (length < 1.0f) {
+    // Repeated waypoints leave the leg without a direction; fly at the target.
+    origin = state.gps_coord;
+    nav_position_delta(origin, target, &north, &east);
+    length = MAX(hypotf(north, east), 1.0f);
+  }
+  return track_lateral_accel(origin, north / length, east / length, length, l1_distance(nav.speed));
+}
+
+static void cruise_lock() {
+  cruise.origin = state.gps_coord;
+  cruise.dir_north = state.gps_vel_north / nav.speed;
+  cruise.dir_east = state.gps_vel_east / nav.speed;
+}
+
+// The locked track has no end; look CRUISE_LOOKAHEAD along it, as in ArduPlane's CRUISE.
+static float cruise_lateral_accel() {
+  return track_lateral_accel(cruise.origin, cruise.dir_north, cruise.dir_east, FLT_MAX, CRUISE_LOOKAHEAD);
 }
 
 // Holds the target latched when the barometer first becomes usable for this
 // request. Returns the climb angle in radians, positive nose-up.
 static float altitude_climb_angle(float dt, float entry_target) {
-  const bool baro_ok = state.baro_valid && time_millis() - state.baro_last_update_ms <= BARO_STALE_MS;
-  if (!baro_ok) {
+  if (!nav_baro_ok()) {
     // Loiter and cruise relatch the altitude reached; a return keeps its target.
     if (nav.request == NAV_REQUEST_LOITER || nav.request == NAV_REQUEST_CRUISE)
       altitude.target_valid = false;
@@ -323,9 +492,13 @@ void nav_update_wing(bool gps_valid, bool home_valid) {
   const float dt = constrain((now - nav.updated_us) * 1e-6f, 0.0f, 0.1f);
   nav.updated_us = now;
 
-  const nav_request_t request = nav_request();
-  // Loiter and return latch their own altitude targets. A manual RTH that
-  // continues as failsafe RTH keeps its target.
+  const nav_request_t request = nav_mission_request(nav_request(), gps_valid);
+  state.mission_active = request == NAV_REQUEST_MISSION;
+  // route.index survives interruptions, but is published only while flown.
+  state.mission_index = state.mission_active ? route.index : 0;
+  nav_update_target();
+  // Loiter, return and each waypoint latch their own altitude targets. A
+  // manual RTH that continues as failsafe RTH keeps its target.
   const bool was_returning = nav.request == NAV_REQUEST_RTH || nav.request == NAV_REQUEST_FAILSAFE;
   const bool is_returning = request == NAV_REQUEST_RTH || request == NAV_REQUEST_FAILSAFE;
   if (request != nav.request && !(was_returning && is_returning))
@@ -350,12 +523,16 @@ void nav_update_wing(bool gps_valid, bool home_valid) {
   if (gps_valid)
     nav.speed = hypotf(state.gps_vel_north, state.gps_vel_east);
 
+  if (request == NAV_REQUEST_MISSION && gps_valid && !route.complete)
+    nav_mission_advance(max_bank);
   const wing_nav_state_t next = nav_next_state(request, gps_valid, home_valid, now_ms);
   state.wing_nav_state = next;
   if (next == WING_NAV_LOITER && previous != WING_NAV_LOITER)
     circle_place_ahead();
   if (next == WING_NAV_RTH_HOME && previous != WING_NAV_RTH_HOME)
-    circle_place_home();
+    circle_place_at(state.gps_home);
+  if (next == WING_NAV_MISSION_HOLD && previous != WING_NAV_MISSION_HOLD)
+    circle_place_at(mission.waypoints[route.index].coord);
   if (next == WING_NAV_DESCEND && previous != WING_NAV_DESCEND)
     nav.descend_ms = now_ms;
   if (next == WING_NAV_CRUISE && previous != WING_NAV_CRUISE)
@@ -373,7 +550,11 @@ void nav_update_wing(bool gps_valid, bool home_valid) {
     break;
   case WING_NAV_LOITER:
   case WING_NAV_RTH_HOME:
+  case WING_NAV_MISSION_HOLD:
     roll = atanf(circle_lateral_accel() / GRAVITY);
+    break;
+  case WING_NAV_MISSION:
+    roll = atanf(mission_lateral_accel() / GRAVITY);
     break;
   case WING_NAV_RTH_RETURN: {
     const float course = atan2f(state.gps_vel_east, state.gps_vel_north);
@@ -389,7 +570,9 @@ void nav_update_wing(bool gps_valid, bool home_valid) {
   }
 
   const bool returning = request != NAV_REQUEST_LOITER && home_valid;
-  const float entry_target = state.altitude + (returning ? MAX(profile.navigation.rth_altitude, 0.0f) : 0.0f);
+  float entry_target = state.altitude + (returning ? MAX(profile.navigation.rth_altitude, 0.0f) : 0.0f);
+  if (request == NAV_REQUEST_MISSION)
+    entry_target = mission.waypoints[route.index].altitude;
   const bool descend = next == WING_NAV_DESCEND;
   float climb_angle;
   if (descend) {
