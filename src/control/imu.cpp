@@ -183,10 +183,13 @@ static void gps_heading_update(float dt) {
     heading_error += 2.0f * M_PI_F;
   }
 
-  // Like Betaflight, require alignment within about 15 degrees and weight confidence by useful forward motion, rather than merely passing the gates.
+  // Like Betaflight, require alignment within about 15 degrees. The observation
+  // strength sets how quickly confidence follows that alignment, not its level:
+  // slowing down or flying at a shallow tilt weakens the evidence without
+  // contradicting the integrated heading.
   const float alignment = MAX(1.0f - fabsf(heading_error) / (15.0f * DEGTORAD), 0.0f);
-  const float confidence = constrain(fusion_gain * alignment, 0.0f, 1.0f);
-  state.heading_confidence += gps_dt / (CONFIDENCE_TIME_CONSTANT + gps_dt) * (confidence - state.heading_confidence);
+  const float evidence_dt = MIN(fusion_gain, 1.0f) * gps_dt;
+  state.heading_confidence += evidence_dt / (CONFIDENCE_TIME_CONSTANT + evidence_dt) * (alignment - state.heading_confidence);
 
   // apply gps heading correction if suppression allows
   if (fusion_gain > 0.01f) {

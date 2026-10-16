@@ -270,6 +270,7 @@ extern void test_attitude_heading_wraparound(void);
 extern void test_attitude_acquisition_rejects_bad_course(void);
 extern void test_attitude_course_accuracy_tapers_recovery(void);
 extern void test_attitude_forward_flight_builds_and_hover_retains_confidence(void);
+extern void test_attitude_rth_weak_aligned_course_retains_confidence(void);
 extern void test_attitude_yaw_between_gps_samples_suppresses_correction(void);
 extern void test_gps_configuration_and_fix_validity(void);
 extern void test_gps_burst_resumes_partial_packet(void);
@@ -557,6 +558,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_attitude_acquisition_rejects_bad_course);
   RUN_TEST(test_attitude_course_accuracy_tapers_recovery);
   RUN_TEST(test_attitude_forward_flight_builds_and_hover_retains_confidence);
+  RUN_TEST(test_attitude_rth_weak_aligned_course_retains_confidence);
   RUN_TEST(test_attitude_yaw_between_gps_samples_suppresses_correction);
   RUN_TEST(test_gps_configuration_and_fix_validity);
   RUN_TEST(test_gps_burst_resumes_partial_packet);

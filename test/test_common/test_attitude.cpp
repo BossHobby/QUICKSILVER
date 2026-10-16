@@ -536,6 +536,43 @@ void test_attitude_forward_flight_builds_and_hover_retains_confidence() {
   TEST_ASSERT_EQUAL_FLOAT(0, state.heading_confidence);
 }
 
+static void run_rth_forward_flight(float pitch_deg, float speed, float course, uint32_t loops) {
+  state.rx_override.pitch = pitch_deg / 65.0f;
+  state.gps_speed = speed;
+  state.gps_vel_north = speed;
+  state.gps_heading = course;
+  const float pitch = pitch_deg * DEGTORAD;
+  for (uint32_t i = 0; i < loops; i++) {
+    attitude_advance_with_gps_sample(i);
+    set_imu_data(0, 0, 0, -sinf(pitch), 0, cosf(pitch));
+    imu_test_attitude_update();
+  }
+}
+
+void test_attitude_rth_weak_aligned_course_retains_confidence() {
+  attitude_test_setup();
+  flags.controls_override = 1;
+  state.rth_active = true;
+  state.rth_state = RTH_STATE_NAVIGATE;
+  state.home_bearing = 0;
+  state.gps_lock = true;
+  state.gps_heading_accuracy = 2;
+  run_rth_forward_flight(30, 8, 0, 10000);
+  TEST_ASSERT_TRUE(state.heading_confidence > 0.9f);
+
+  // Decelerating into a waypoint, then a shallow tailwind cruise: both are
+  // weak observations that agree with the heading.
+  run_rth_forward_flight(3, 1.5f, 0, 20000);
+  TEST_ASSERT_TRUE(state.heading_confidence > 0.9f);
+  run_rth_forward_flight(10, 8, 0, 30000);
+  TEST_ASSERT_TRUE(state.heading_confidence > 0.9f);
+
+  // A strong course that disagrees still lowers it.
+  const float confidence = state.heading_confidence;
+  run_rth_forward_flight(30, 8, 40, 500);
+  TEST_ASSERT_TRUE(state.heading_confidence < confidence - 0.1f);
+}
+
 void test_attitude_yaw_between_gps_samples_suppresses_correction() {
   attitude_test_setup();
   state.gps_lock = true;
