@@ -32,7 +32,7 @@ typedef enum {
   ARMING_DISABLED_ARM_SWITCH = 1U << 0,
   ARMING_DISABLED_THROTTLE = 1U << 1,
   ARMING_DISABLED_FAILSAFE = 1U << 2,
-  ARMING_DISABLED_CONFIGURATOR = 1U << 3, // USB or CRSF configurator session
+  ARMING_DISABLED_CONFIGURATOR = 1U << 3, // USB configurator session
 } arming_disabled_flags_t;
 
 typedef enum {
@@ -232,11 +232,13 @@ typedef struct {
   bool rth_active;   // multirotor guided flight owns the controls: RTH, or a mission when mission_active
   bool rth_failsafe_active;
   // Guided flight target, published by navigation at its 10 ms cadence: the
-  // active waypoint during a mission, otherwise home.
+  // ground station target, the active waypoint during a mission, otherwise home.
   float nav_target_bearing;  // degrees true from the vehicle
   float nav_target_distance; // meters
   bool mission_active;       // following the stored waypoint mission
   uint8_t mission_index;     // active waypoint while mission_active
+  bool guided_active;        // following the ground station target in nav_guided
+  bool guided_ready;         // the pilot grants guided flight: ground station commands are accepted
   bool failsafe_hold; // airborne stage 1 failsafe: level and hold altitude instead of idling
   float rth_yaw_rate; // radians/s, independent of pilot rates
   // Horizontal acceleration from GPS velocity, m/s^2. Published by multirotor
@@ -346,6 +348,8 @@ typedef struct {
   MEMBER(nav_target_distance, float)                   \
   MEMBER(mission_active, bool)                         \
   MEMBER(mission_index, uint8_t)                       \
+  MEMBER(guided_active, bool)                          \
+  MEMBER(guided_ready, bool)                           \
   MEMBER(failsafe_hold, bool)                          \
   MEMBER(rth_yaw_rate, float)                          \
   MEMBER(setpoint, vec3_t)                             \

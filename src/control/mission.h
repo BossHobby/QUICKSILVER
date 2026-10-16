@@ -36,6 +36,8 @@ cbor_result_t cbor_encode_mission_t(cbor_value_t *enc, const mission_t *m);
 // truncating the route. Check mission_valid() before using the result.
 cbor_result_t cbor_decode_mission_t(cbor_value_t *dec, mission_t *m);
 
-// Waypoints are set, in coordinate range, within the vehicle's altitude limits
-// above launch and at most 30 m/s; the end action is known.
+// Set, in coordinate range, within the vehicle's altitude limits above launch
+// and at most 30 m/s.
+bool mission_waypoint_valid(const mission_waypoint_t *wp);
+// Every waypoint is valid and the end action is known.
 bool mission_valid(const mission_t *m);

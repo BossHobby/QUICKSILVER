@@ -5,7 +5,7 @@
 
 // BLACKBOX version changelog (log format compatibility):
 // 0.3.2: cpu_load is a percentage 0-100 (was microseconds).
-//        add state field with flags, aux switches, failsafe phase, RTH, wing and mission states.
+//        add state field with flags, aux switches, failsafe phase, RTH, wing, mission and guided states.
 //        add the UTC start datetime to each directory entry.
 // 0.3.1 (95765fe1): add GPS coordinate, home and altitude fields; grow debug to 16 entries.
 //        replace the four-motor field with per-output values (a1887d4f).
@@ -70,6 +70,7 @@ typedef enum {
   // At the same bits on multirotors and wings, with the waypoint index at
   // BBOX_STATE_MISSION_INDEX_SHIFT.
   BBOX_STATE_MISSION_ACTIVE = 0x1 << 20,
+  BBOX_STATE_GUIDED_ACTIVE = 0x1 << 26, // following a ground station target
 #endif
 } blackbox_state_flag_t;
 

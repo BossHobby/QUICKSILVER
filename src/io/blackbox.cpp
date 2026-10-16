@@ -449,6 +449,8 @@ static uint32_t blackbox_state_word() {
 #ifndef VEHICLE_ROVER
   if (state.mission_active)
     result |= BBOX_STATE_MISSION_ACTIVE;
+  if (state.guided_active)
+    result |= BBOX_STATE_GUIDED_ACTIVE;
   result |= (uint32_t)state.mission_index << BBOX_STATE_MISSION_INDEX_SHIFT;
 #endif
   return result;

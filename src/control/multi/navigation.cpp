@@ -16,7 +16,7 @@
 #define ALT_KI 0.05f
 #define ALT_POSITION_KP 0.5f // m/s per meter of altitude error
 #define ALT_ACCEL_LIMIT 1.0f // m/s^2 target vertical acceleration
-#define ALT_BRAKE_ACCEL_LIMIT 5.0f // m/s^2, stopping a descent is never smoothed as gently
+#define ALT_BRAKE_ACCEL_LIMIT 5.0f // m/s^2, stopping a climb or descent is never smoothed as gently
 #define GRAVITY_MS2 9.80665f
 #define HOVER_LEARN_TIME 3.0f     // seconds, hover throttle estimate time constant
 #define HOVER_LEARN_MIN_TIME 2.0f // seconds of steady flight before the estimate is used
@@ -57,6 +57,12 @@
 #define RTH_ACQUIRE_SLEW_RATE 0.2f // normalized stick/s
 #define RTH_ACQUIRE_CONFIDENCE 0.6f
 
+// Along-track velocity gain at cruise speed, relative to NAV_VEL_KP, ramped in
+// between the two speeds. Slow flight and cross-track keep the full gain.
+static constexpr float NAV_VEL_CRUISE_KP_SCALE = 0.5f;
+static constexpr float NAV_VEL_CRUISE_SPEED_MIN = 2.0f;  // m/s
+static constexpr float NAV_VEL_CRUISE_SPEED_FULL = 5.0f; // m/s
+
 // A turn counts as aligned inside the yaw hold radius. Realign only well
 // beyond it, so position wander near that radius keeps navigating.
 static constexpr float RTH_REALIGN_RADIUS = 2.0f * RTH_YAW_HOLD_RADIUS; // meters
@@ -75,6 +81,7 @@ static struct {
   } previous;
   float hover_learned_time; // seconds of steady flight in state.hover_throttle
   uint8_t mission_resume;   // waypoint the next mission start flies to; 0 after completion and disarm
+  bool guided_granted;      // mission switch turned on in flight; grants ground station commands
   struct {
     bool active;
     float altitude; // meters above launch, latched on engagement
@@ -116,6 +123,7 @@ static struct {
     float altitude; // meters above launch, latched when a sensor is lost
   } pause;
   uint32_t failed_ms;    // start of a heading or navigation failure hold
+  bool hold_stopping;    // HOLD brakes first; the hold point follows until stopped
   bool mission_complete; // holding at the last waypoint
   bool mission_return;   // returning after MISSION_END_RTH; the mission switch still ends it
 } rth;
@@ -211,9 +219,11 @@ static void nav_update_altitude_control(float target_alt, float max_rate, float 
 
   // Without altitude, hold vertical speed at zero on the accelerometer estimate.
   const float desired_rate = altitude_ok ? constrain(ALT_POSITION_KP * error, -max_rate, max_rate) : 0.0f;
-  const bool braking_descent = alt.desired_rate < 0.0f && desired_rate > alt.desired_rate;
+  // A takeover while climbing hard otherwise keeps climbing until the slew passes zero.
+  const bool braking = (alt.desired_rate < 0.0f && desired_rate > alt.desired_rate) ||
+                       (alt.desired_rate > 0.0f && desired_rate < alt.desired_rate);
   alt.desired_rate = nav_slew(alt.desired_rate, desired_rate,
-      (braking_descent ? ALT_BRAKE_ACCEL_LIMIT : ALT_ACCEL_LIMIT) * safe_dt);
+      (braking ? ALT_BRAKE_ACCEL_LIMIT : ALT_ACCEL_LIMIT) * safe_dt);
   const float rate_error = alt.desired_rate - state.vertical_speed;
   const float tilt = nav_tilt();
   // A low-hover-throttle craft gets more acceleration per throttle unit.
@@ -240,11 +250,6 @@ static void nav_update_altitude_control(float target_alt, float max_rate, float 
   const float throttle_target = (throttle_hover + ALT_KP * effective_hover * rate_error + alt.integral) / tilt;
   alt.throttle_command = constrain(throttle_target, applied_min, applied_max);
   state.rx_override.throttle = constrain(alt.throttle_command, throttle_min, throttle_max);
-}
-
-// Guided target: the active waypoint during a mission, otherwise home.
-static gps_coord_t nav_target_coord(void) {
-  return state.mission_active ? mission.waypoints[state.mission_index].coord : state.gps_home;
 }
 
 static float nav_heading_error() {
@@ -275,13 +280,100 @@ static void nav_update_yaw(float distance, float dt) {
   state.rth_yaw_rate += dt / (0.03f + dt) * (yaw_rate - state.rth_yaw_rate);
 }
 
+// Slew the desired earth-frame velocity toward the request and fly it with
+// tilt. Navigation calls this every pass it steers, so the tilt and the
+// wind and drag trim carry across state changes.
+static void nav_update_velocity_control(float request_north, float request_east, bool moving_away, float dt) {
+  const float velocity_step = RTH_NAV_ACCEL_LIMIT * dt;
+  rth.horizontal.desired_velocity_north = nav_slew(rth.horizontal.desired_velocity_north, request_north, velocity_step);
+  rth.horizontal.desired_velocity_east = nav_slew(rth.horizontal.desired_velocity_east, request_east, velocity_step);
+  const float desired_vel_north = rth.horizontal.desired_velocity_north;
+  const float desired_vel_east = rth.horizontal.desired_velocity_east;
+
+  const float vel_error_north = desired_vel_north - state.gps_vel_north;
+  const float vel_error_east = desired_vel_east - state.gps_vel_east;
+
+  const float heading_rad = state.heading * DEGTORAD;
+  const float cos_heading = cosf(heading_rad);
+  const float sin_heading = sinf(heading_rad);
+
+  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 10, (int16_t)(desired_vel_north * 10));
+  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 11, (int16_t)(desired_vel_east * 10));
+  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 12, (int16_t)(state.gps_vel_north * 10));
+  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 13, (int16_t)(state.gps_vel_east * 10));
+
+  if (moving_away) {
+    const float decay = expf(-2.0f * dt);
+    rth.horizontal.integral_north *= decay;
+    rth.horizontal.integral_east *= decay;
+  }
+  const float authority = 0.25f + 0.75f * state.heading_confidence;
+  const float max_angle_rad = MAX(profile.rate.level_max_angle, 0.0f) * DEGTORAD * authority;
+
+  // At cruise speed, ride out speed sags from thrust and gusts instead of
+  // pitching against each one; the integral still trims drag and wind.
+  float north_p = NAV_VEL_KP * vel_error_north;
+  float east_p = NAV_VEL_KP * vel_error_east;
+  const float desired_speed = hypotf(desired_vel_north, desired_vel_east);
+  if (desired_speed > 0.01f) {
+    const float cruise = constrain((desired_speed - NAV_VEL_CRUISE_SPEED_MIN) /
+                                       (NAV_VEL_CRUISE_SPEED_FULL - NAV_VEL_CRUISE_SPEED_MIN),
+                                   0.0f, 1.0f);
+    const float along_north = desired_vel_north / desired_speed;
+    const float along_east = desired_vel_east / desired_speed;
+    const float along_error = vel_error_north * along_north + vel_error_east * along_east;
+    const float along_reduction = NAV_VEL_KP * (1.0f - NAV_VEL_CRUISE_KP_SCALE) * cruise * along_error;
+    north_p -= along_reduction * along_north;
+    east_p -= along_reduction * along_east;
+  }
+  const float north_pd = north_p - NAV_VEL_KD * state.nav_accel_north;
+  const float east_pd = east_p - NAV_VEL_KD * state.nav_accel_east;
+  // Cruise drag into a headwind can need most of the tilt: the trim may use
+  // all of it rather than leaving the proportional term a standing error.
+  float north_i = rth.horizontal.integral_north + NAV_VEL_KI * vel_error_north * dt;
+  float east_i = rth.horizontal.integral_east + NAV_VEL_KI * vel_error_east * dt;
+  const float integral_scale = MIN(1.0f, max_angle_rad / MAX(hypotf(north_i, east_i), 0.001f));
+  north_i *= integral_scale;
+  east_i *= integral_scale;
+  const float candidate_north = north_pd + north_i;
+  const float candidate_east = east_pd + east_i;
+  const float candidate_length = hypotf(candidate_north, candidate_east);
+  if (!moving_away && (candidate_length <= max_angle_rad || candidate_north * vel_error_north + candidate_east * vel_error_east < 0.0f)) {
+    rth.horizontal.integral_north = north_i;
+    rth.horizontal.integral_east = east_i;
+  }
+  float north_angle = north_pd + rth.horizontal.integral_north;
+  float east_angle = east_pd + rth.horizontal.integral_east;
+  const float angle_scale = MIN(1.0f, max_angle_rad / MAX(hypotf(north_angle, east_angle), 0.001f));
+  north_angle *= angle_scale;
+  east_angle *= angle_scale;
+  const float pitch_angle = north_angle * cos_heading + east_angle * sin_heading;
+  const float roll_angle = east_angle * cos_heading - north_angle * sin_heading;
+
+  // Angle mode interprets stick input using level_max_angle, so scale by that
+  // rather than by the navigation angle limit.
+  const float level_max_angle_rad = MAX(profile.rate.level_max_angle, 1.0f) * DEGTORAD;
+  const float slew_step = RTH_ANGLE_SLEW_RATE * dt;
+  const float pitch_command = pitch_angle / level_max_angle_rad;
+  const float roll_command = roll_angle / level_max_angle_rad;
+  const float command_gain = dt / (RTH_NAV_COMMAND_TIME_CONSTANT + dt);
+  rth.horizontal.pitch_command += constrain(command_gain * (pitch_command - rth.horizontal.pitch_command), -slew_step, slew_step);
+  rth.horizontal.roll_command += constrain(command_gain * (roll_command - rth.horizontal.roll_command), -slew_step, slew_step);
+  state.rx_override.pitch = rth.horizontal.pitch_command;
+  state.rx_override.roll = rth.horizontal.roll_command;
+}
+
 static void nav_update_horizontal_control(float dt) {
   const float safe_dt = MAX(dt, 0.001f);
   float error_north, error_east;
   nav_position_delta(state.gps_coord, nav_target_coord(), &error_north, &error_east);
   const float distance = sqrtf(error_north * error_north + error_east * error_east);
 
-  const float waypoint_speed = state.mission_active ? mission.waypoints[state.mission_index].speed : 0.0f;
+  float waypoint_speed = 0.0f;
+  if (state.guided_active)
+    waypoint_speed = nav_guided.speed;
+  else if (state.mission_active)
+    waypoint_speed = mission.waypoints[state.mission_index].speed;
   const float cruise_speed = MAX(waypoint_speed > 0.0f ? waypoint_speed : profile.navigation.rth_cruise_speed, 0.1f);
   // Reserve response time as well as braking distance: d = v*t + v^2/(2*a).
   // Slow toward the home center continuously, without a minimum approach speed.
@@ -308,74 +400,12 @@ static void nav_update_horizontal_control(float dt) {
     desired_vel_east = error_east * (desired_speed / distance);
   }
 
-  const float velocity_step = RTH_NAV_ACCEL_LIMIT * safe_dt;
-  rth.horizontal.desired_velocity_north = nav_slew(rth.horizontal.desired_velocity_north, desired_vel_north, velocity_step);
-  rth.horizontal.desired_velocity_east = nav_slew(rth.horizontal.desired_velocity_east, desired_vel_east, velocity_step);
-  desired_vel_north = rth.horizontal.desired_velocity_north;
-  desired_vel_east = rth.horizontal.desired_velocity_east;
-
-  const float vel_error_north = desired_vel_north - state.gps_vel_north;
-  const float vel_error_east = desired_vel_east - state.gps_vel_east;
-
-  const float heading_rad = state.heading * DEGTORAD;
-  const float cos_heading = cosf(heading_rad);
-  const float sin_heading = sinf(heading_rad);
-
-  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 10, (int16_t)(desired_vel_north * 10));
-  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 11, (int16_t)(desired_vel_east * 10));
-  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 12, (int16_t)(state.gps_vel_north * 10));
-  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 13, (int16_t)(state.gps_vel_east * 10));
-
   // Do not build a persistent tilt demand while heading recovery is needed.
   // Use actual progress along the home vector, independent of estimated yaw.
   const bool moving_away = state.rth_state == RTH_STATE_NAVIGATE &&
       state.gps_vel_north * error_north + state.gps_vel_east * error_east < 0.0f;
-  if (moving_away) {
-    const float decay = expf(-2.0f * safe_dt);
-    rth.horizontal.integral_north *= decay;
-    rth.horizontal.integral_east *= decay;
-  }
-  const float authority = 0.25f + 0.75f * state.heading_confidence;
-  const float max_angle_rad = MAX(profile.rate.level_max_angle, 0.0f) * DEGTORAD * authority;
-  const float north_pd = NAV_VEL_KP * vel_error_north - NAV_VEL_KD * state.nav_accel_north;
-  const float east_pd = NAV_VEL_KP * vel_error_east - NAV_VEL_KD * state.nav_accel_east;
-  const float north_i = constrain(rth.horizontal.integral_north + NAV_VEL_KI * vel_error_north * safe_dt,
-                                 -max_angle_rad * 0.5f, max_angle_rad * 0.5f);
-  const float east_i = constrain(rth.horizontal.integral_east + NAV_VEL_KI * vel_error_east * safe_dt,
-                                -max_angle_rad * 0.5f, max_angle_rad * 0.5f);
-  const float candidate_north = north_pd + north_i;
-  const float candidate_east = east_pd + east_i;
-  const float candidate_length = hypotf(candidate_north, candidate_east);
-  if (!moving_away && (candidate_length <= max_angle_rad || candidate_north * vel_error_north + candidate_east * vel_error_east < 0.0f)) {
-    rth.horizontal.integral_north = north_i;
-    rth.horizontal.integral_east = east_i;
-  }
-  float north_angle = north_pd + rth.horizontal.integral_north;
-  float east_angle = east_pd + rth.horizontal.integral_east;
-  const float angle_scale = MIN(1.0f, max_angle_rad / MAX(hypotf(north_angle, east_angle), 0.001f));
-  north_angle *= angle_scale;
-  east_angle *= angle_scale;
-  const float pitch_angle = north_angle * cos_heading + east_angle * sin_heading;
-  const float roll_angle = east_angle * cos_heading - north_angle * sin_heading;
-
-  // Angle mode interprets stick input using level_max_angle, so scale by that
-  // rather than by the navigation angle limit.
-  const float level_max_angle_rad = MAX(profile.rate.level_max_angle, 1.0f) * DEGTORAD;
-  const float slew_step = RTH_ANGLE_SLEW_RATE * safe_dt;
-  const float pitch_command = pitch_angle / level_max_angle_rad;
-  const float roll_command = roll_angle / level_max_angle_rad;
-  const float command_gain = safe_dt / (RTH_NAV_COMMAND_TIME_CONSTANT + safe_dt);
-  rth.horizontal.pitch_command += constrain(command_gain * (pitch_command - rth.horizontal.pitch_command), -slew_step, slew_step);
-  rth.horizontal.roll_command += constrain(command_gain * (roll_command - rth.horizontal.roll_command), -slew_step, slew_step);
-  state.rx_override.pitch = rth.horizontal.pitch_command;
-  state.rx_override.roll = rth.horizontal.roll_command;
+  nav_update_velocity_control(desired_vel_north, desired_vel_east, moving_away, safe_dt);
   nav_update_yaw(distance, safe_dt);
-}
-
-static void nav_rth_abort(void) {
-  nav_rth_stop();
-  // Do not automatically retry a failed rescue during the same signal loss.
-  state.rth_state = RTH_STATE_ABORTED;
 }
 
 static void nav_reset_horizontal(void) {
@@ -384,9 +414,31 @@ static void nav_reset_horizontal(void) {
   state.rx_override.roll = state.rx_override.pitch = state.rx_override.yaw = 0.0f;
 }
 
+// Slow to a stop over the ground and hold against the wind without steering
+// toward the target. Earth-frame tilt needs a trusted heading; level without one.
+static void nav_update_brake(float dt) {
+  if (state.heading_confidence < RTH_MIN_HEADING_CONFIDENCE) {
+    nav_reset_horizontal();
+    return;
+  }
+  if (!rth.horizontal.tracking) {
+    // Slow down from the ground velocity instead of pitching hard against it.
+    rth.horizontal.tracking = true;
+    rth.horizontal.desired_velocity_north = state.gps_vel_north;
+    rth.horizontal.desired_velocity_east = state.gps_vel_east;
+  }
+  nav_update_velocity_control(0.0f, 0.0f, false, MAX(dt, 0.001f));
+}
+
+static void nav_rth_abort(void) {
+  nav_rth_stop();
+  // Do not automatically retry a failed rescue during the same signal loss.
+  state.rth_state = RTH_STATE_ABORTED;
+}
+
+// The turn brakes from the current tilt and velocity; it does not level first.
 static void nav_begin_turn(uint32_t now_ms) {
   state.rth_state = RTH_STATE_TURN;
-  nav_reset_horizontal();
   rth.progress.updated_ms = now_ms;
 }
 
@@ -407,23 +459,49 @@ static void nav_begin_route(uint32_t now_ms) {
 
 // An interrupted mission resumes at the waypoint it was flying to; a
 // completed one starts over.
+static uint8_t nav_mission_resume_index() {
+  if (!state.mission_active)
+    return nav.mission_resume;
+  return rth.mission_complete ? 0 : state.mission_index;
+}
+
 static void nav_mission_leave() {
-  if (state.mission_active)
-    nav.mission_resume = rth.mission_complete ? 0 : state.mission_index;
+  nav.mission_resume = nav_mission_resume_index();
 }
 
 // Climb in place by rth_altitude, then fly home.
 static void nav_begin_return(uint32_t now_ms) {
   nav_mission_leave();
   state.mission_active = false;
+  state.guided_active = false;
   state.mission_index = 0;
   rth.mission_complete = false;
+  rth.hold_stopping = false;
   nav_update_target();
   state.rth_state = RTH_STATE_CLIMB;
   rth.target_altitude = state.altitude + profile.navigation.rth_altitude;
   rth.progress.best_error = fabsf(profile.navigation.rth_altitude);
   rth.progress.updated_ms = now_ms;
-  nav_reset_horizontal();
+}
+
+// Fly to the selected target at rth.target_altitude: climb in place to a
+// higher one, descend toward a lower one on the way.
+static void nav_begin_leg(uint32_t now_ms) {
+  rth.progress.best_error = fabsf(rth.target_altitude - state.altitude);
+  rth.progress.updated_ms = now_ms;
+  if (rth.target_altitude > state.altitude + 1.0f)
+    state.rth_state = RTH_STATE_CLIMB;
+  else
+    nav_begin_route(now_ms);
+}
+
+// Retarget a leg already flying or holding without leveling to turn first:
+// keep the velocity, realign past RTH_REALIGN_ERROR_DEG and change altitude
+// on the way.
+static void nav_continue_leg(uint32_t now_ms) {
+  state.rth_state = RTH_STATE_NAVIGATE;
+  rth.progress.best_error = state.nav_target_distance;
+  rth.progress.updated_ms = now_ms;
 }
 
 static void nav_mission_select(uint8_t index) {
@@ -519,10 +597,9 @@ static void nav_update_rth_control() {
   case RTH_STATE_CLIMB: {
     nav_update_altitude_control(rth.target_altitude, RTH_CLIMB_RATE, dt);
 
-    // Hold level while climbing; horizontal navigation starts after target altitude.
-    state.rx_override.roll = 0.0f;
-    state.rx_override.pitch = 0.0f;
-    state.rx_override.yaw = 0.0f;
+    // Stop and hold position while climbing; navigation starts after target altitude.
+    nav_update_brake(dt);
+    state.rx_override.yaw = state.rth_yaw_rate = 0.0f;
 
     const float altitude_error = fabsf(state.altitude - rth.target_altitude);
     if (altitude_error + 0.5f < rth.progress.best_error) {
@@ -574,8 +651,8 @@ static void nav_update_rth_control() {
       return;
     }
     nav_update_altitude_control(rth.target_altitude, RTH_DESCENT_RATE, dt);
-    // Hold level until the nose points at the target and the turn has slowed down.
-    state.rx_override.roll = state.rx_override.pitch = 0.0f;
+    // Stop and hold position until the nose points at the target and the turn has slowed down.
+    nav_update_brake(dt);
     nav_update_yaw(state.nav_target_distance, MAX(dt, 0.001f));
     const bool arrived = state.nav_target_distance < RTH_HOME_RADIUS;
     // Inside the yaw hold radius the nose stays put; steering is earth-frame.
@@ -617,6 +694,17 @@ static void nav_update_rth_control() {
     break;
 
   case RTH_STATE_HOVER_HOME:
+    if (rth.hold_stopping) {
+      // HOLD keeps the point where the brake comes to rest, not where it began.
+      nav_update_altitude_control(rth.target_altitude, RTH_DESCENT_RATE, dt);
+      nav_update_brake(dt);
+      state.rx_override.yaw = state.rth_yaw_rate = 0.0f;
+      nav_guided.coord = state.gps_coord;
+      nav_update_target();
+      rth.hold_stopping = rth.horizontal.desired_velocity_north != 0.0f ||
+                          rth.horizontal.desired_velocity_east != 0.0f;
+      break;
+    }
     // Stationary hover is success. Resume progress supervision if blown out.
     if (state.nav_target_distance > 2.0f * RTH_HOME_RADIUS) {
       nav_begin_turn(now_ms);
@@ -632,6 +720,7 @@ static void nav_update_rth_control() {
 // Take over the controls for guided flight; the caller selects the target.
 static void nav_guided_start(void) {
   rth = {};
+  nav_reset_horizontal();
   state.rth_active = true;
   state.rth_failsafe_active = profile.navigation.rth_on_failsafe && flags.failsafe_signal_lost;
   if (nav.hold.active) {
@@ -647,7 +736,7 @@ static void nav_guided_start(void) {
 void nav_rth_start() {
   // An RTH request owns a return the mission started.
   rth.mission_return = false;
-  if (state.mission_active) {
+  if (state.mission_active || state.guided_active) {
     // Already guided: retarget home without a second takeover.
     nav_begin_return(time_millis());
     return;
@@ -659,28 +748,28 @@ void nav_rth_start() {
   nav_begin_return(time_millis());
 }
 
+static bool nav_airborne(void) {
+  return flags.in_air && !flags.on_ground && state.altitude >= MISSION_START_MIN_ALTITUDE;
+}
+
+// A mission or ground station target is not a takeoff command: start only
+// clear of the ground.
+static bool nav_guided_can_start(void) {
+  return nav_airborne() && nav_rth_can_start();
+}
+
 static bool nav_mission_can_start(void) {
-  // A mission is not a takeoff command: start only clear of the ground.
-  const bool airborne = flags.in_air && !flags.on_ground && state.altitude >= MISSION_START_MIN_ALTITUDE;
-  return mission.count > 0 && airborne && nav_rth_can_start() && nav_mission_in_start_range(nav.mission_resume);
+  return mission.count > 0 && nav_guided_can_start() && nav_mission_in_start_range(nav.mission_resume);
 }
 
 void nav_mission_start() {
   if (state.rth_active || !nav_mission_can_start()) {
     return;
   }
-  const uint32_t now_ms = time_millis();
   nav_guided_start();
   state.mission_active = true;
   nav_mission_select(nav.mission_resume);
-  rth.progress.best_error = fabsf(rth.target_altitude - state.altitude);
-  rth.progress.updated_ms = now_ms;
-  nav_reset_horizontal();
-  // Climb in place to a higher first waypoint; descend toward a lower one on the way.
-  if (rth.target_altitude > state.altitude + 1.0f)
-    state.rth_state = RTH_STATE_CLIMB;
-  else
-    nav_begin_route(now_ms);
+  nav_begin_leg(time_millis());
 }
 
 void nav_rth_stop() {
@@ -694,6 +783,7 @@ void nav_rth_stop() {
   state.rth_active = false;
   state.rth_failsafe_active = false;
   state.mission_active = false;
+  state.guided_active = false;
   state.mission_index = 0;
   state.rth_yaw_rate = 0.0f;
   nav_reset_gps_accel();
@@ -724,18 +814,20 @@ static void nav_update_request() {
   // RTH takes priority: a mission switched on during RTH is ignored.
   const uint8_t mission_aux = rx_aux_on(AUX_MISSION);
   if (mission_aux != nav.previous.mission_aux) {
+    // As for a mission, a switch left on through arming and takeoff grants nothing.
+    nav.guided_granted = mission_aux && nav_airborne();
     if (mission_aux) {
       nav_mission_start();
-    } else if (!link_lost && (state.mission_active || rth.mission_return)) {
+    } else if (!link_lost && (state.mission_active || state.guided_active || rth.mission_return)) {
       nav_rth_stop();
     }
     nav.previous.mission_aux = mission_aux;
   }
 
-  // A mission rides out the hold-last window, but never continues away from a
-  // pilot once failsafe engages: failsafe RTH returns, otherwise the failsafe
-  // hold takes over.
-  if (state.mission_active && flags.failsafe) {
+  // A mission or ground station target rides out the hold-last window, but
+  // never continues away from a pilot once failsafe engages: failsafe RTH
+  // returns, otherwise the failsafe hold takes over.
+  if ((state.mission_active || state.guided_active) && flags.failsafe) {
     if (state.rth_failsafe_active)
       nav_begin_return(time_millis());
     else if (state.failsafe_hold)
@@ -758,11 +850,121 @@ static void nav_update_request() {
   }
 }
 
+// The pilot grants ground station commands with the mission switch, unless
+// an RTH request or failsafe takes priority. Once guided flight owns the
+// controls the grant holds below the start altitude, so the ground station
+// can still stop or recall the vehicle. A navigation failure holds until it
+// gives up; commands cannot restart it.
+static bool nav_guided_ready() {
+  const bool failed = state.rth_state == RTH_STATE_NAV_FAILED || state.rth_state == RTH_STATE_HEADING_FAILED;
+  return nav.guided_granted && !nav.previous.rth_aux && !flags.failsafe && !failed &&
+         (state.rth_active || nav_guided_can_start());
+}
+
+// Take over the controls, or keep them when guided flight already owns them.
+static void nav_guided_take() {
+  if (!state.rth_active) {
+    nav_guided_start();
+    return;
+  }
+  nav_mission_leave();
+  rth.mission_complete = false;
+  rth.mission_return = false;
+  rth.hold_stopping = false;
+  state.mission_active = false;
+  state.guided_active = false;
+  state.mission_index = 0;
+}
+
+static void nav_guided_fly(const mission_waypoint_t &target) {
+  nav_guided_take();
+  state.guided_active = true;
+  nav_guided = target;
+  rth.target_altitude = target.altitude;
+  nav_update_target();
+}
+
+static nav_command_result_t nav_command_mission(uint8_t requested) {
+  const uint8_t index = requested == NAV_COMMAND_MISSION_RESUME ? nav_mission_resume_index() : requested;
+  if (index >= mission.count)
+    return NAV_RESULT_NO_MISSION;
+  if (!nav_mission_in_start_range(index))
+    return NAV_RESULT_TOO_FAR;
+  nav_guided_take();
+  state.mission_active = true;
+  nav_mission_select(index);
+  nav_begin_leg(time_millis());
+  return NAV_RESULT_OK;
+}
+
+nav_command_result_t nav_command_apply(const nav_command_t *cmd) {
+  if (profile.serial.gps == SERIAL_PORT_INVALID || !nav_guided_ready())
+    return NAV_RESULT_NO_AUTHORITY;
+  const uint32_t now_ms = time_millis();
+
+  switch (cmd->type) {
+  case NAV_COMMAND_GOTO: {
+    if (!mission_waypoint_valid(&cmd->waypoint))
+      return NAV_RESULT_INVALID;
+    if (!nav_in_start_range(cmd->waypoint.coord))
+      return NAV_RESULT_TOO_FAR;
+    const bool underway = state.rth_active && state.heading_confidence >= RTH_MIN_HEADING_CONFIDENCE &&
+                          (state.rth_state == RTH_STATE_NAVIGATE || state.rth_state == RTH_STATE_HOVER_HOME);
+    nav_guided_fly(cmd->waypoint);
+    if (underway)
+      nav_continue_leg(now_ms);
+    else
+      nav_begin_leg(now_ms);
+    return NAV_RESULT_OK;
+  }
+  case NAV_COMMAND_HOLD:
+    nav_guided_fly({.coord = state.gps_coord, .altitude = state.altitude});
+    // Position hold steers in the earth frame: learn an untrusted heading
+    // first, then return to the hold point, as on any leg.
+    if (state.heading_confidence < RTH_MIN_HEADING_CONFIDENCE) {
+      nav_begin_leg(now_ms);
+      return NAV_RESULT_OK;
+    }
+    // Brake and hover in place without turning toward the target first.
+    rth.hold_stopping = true;
+    state.rth_state = RTH_STATE_HOVER_HOME;
+    rth.progress.updated_ms = now_ms;
+    return NAV_RESULT_OK;
+  case NAV_COMMAND_SET_ALT: {
+    if (!state.guided_active)
+      return NAV_RESULT_INVALID;
+    mission_waypoint_t target = nav_guided;
+    target.altitude = cmd->waypoint.altitude;
+    if (!mission_waypoint_valid(&target))
+      return NAV_RESULT_INVALID;
+    nav_guided.altitude = rth.target_altitude = target.altitude;
+    // A climb supervises progress toward its target altitude: measure it anew.
+    if (state.rth_state == RTH_STATE_CLIMB) {
+      rth.progress.best_error = fabsf(rth.target_altitude - state.altitude);
+      rth.progress.updated_ms = now_ms;
+    }
+    return NAV_RESULT_OK;
+  }
+  case NAV_COMMAND_RTH:
+    if (!state.rth_active)
+      nav_guided_start();
+    nav_begin_return(now_ms);
+    // Like the return after a mission, turning the mission switch off ends it.
+    rth.mission_return = true;
+    return NAV_RESULT_OK;
+  case NAV_COMMAND_MISSION:
+    return nav_command_mission(cmd->index);
+  default:
+    return NAV_RESULT_INVALID;
+  }
+}
+
 static void nav_update_rth() {
   if (!flags.arm_state) {
     nav_rth_stop();
     nav.mission_resume = 0;
     nav.previous.rth_aux = nav.previous.failsafe = 0;
+    nav.guided_granted = false;
     // A mission needs a switch edge after arming.
     nav.previous.mission_aux = rx_aux_on(AUX_MISSION);
   } else {
@@ -772,6 +974,8 @@ static void nav_update_rth() {
   if (state.rth_active) {
     nav_update_rth_control();
   }
+  // After control, which can fail or abort guided flight.
+  state.guided_ready = nav_guided_ready();
   // Navigation debug: 0 heading, 1 GPS course, 2 altitude (dm), 3 confidence.
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 4, (int16_t)(state.rth_state));
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 5, (int16_t)(state.nav_target_distance)); // meters
@@ -800,6 +1004,8 @@ void nav_update_multi(float dt, bool gps_valid, bool home_valid) {
   nav_update_hover(dt);
   if (profile.serial.gps != SERIAL_PORT_INVALID) {
     nav_update_rth();
+  } else {
+    state.guided_ready = false;
   }
   nav_update_failsafe_hold(dt);
   // Publish applied requests in every phase, including acquisition and failure.

@@ -1,4 +1,5 @@
 #include <math.h>
+#include <string.h>
 #include <unity.h>
 
 #include "control/control.h"
@@ -11,6 +12,7 @@
 #include "driver/motor.h"
 #include "driver/time.h"
 #include "io/gps.h"
+#include "io/quic_rt.h"
 #include "util/util.h"
 
 extern void imu_test_attitude_init();
@@ -1055,6 +1057,120 @@ static void test_mission_gps_loss_returns_at_rth_altitude() {
   TEST_ASSERT_TRUE(state.mission_active);
 }
 
+// Ground station commands over the QUIC_RT link, delivered to Flight by nav_update().
+static void send_command(nav_command_type_t type, const void *args = nullptr, uint8_t size = 0) {
+  static uint8_t id = 0;
+  uint8_t frame[4 + sizeof(quic_rt_goto_t)] = {QUIC_RT_VERSION, QUIC_RT_COMMAND, (uint8_t)type, ++id};
+  if (size)
+    memcpy(frame + 4, args, size);
+  quic_rt_receive(0x10, frame, 4 + size);
+  step();
+}
+
+static void send_goto(float north, float east, float altitude) {
+  const float lon_scale = METERS_PER_DEGREE_LAT * cosf(ORIGIN.lat * 1e-7f * DEGTORAD);
+  const quic_rt_goto_t msg = {
+      .lat = ORIGIN.lat + (int32_t)lrintf(north / METERS_PER_DEGREE_LAT * 1e7f),
+      .lon = ORIGIN.lon + (int32_t)lrintf(east / lon_scale * 1e7f),
+      .altitude_cm = (int32_t)(altitude * 100.0f),
+  };
+  send_command(NAV_COMMAND_GOTO, &msg, sizeof(msg));
+}
+
+static quic_rt_status_t link_status() {
+  step(200);
+  uint8_t payload[QUIC_RT_STATUS_SIZE];
+  uint8_t destination;
+  TEST_ASSERT_EQUAL_UINT8(QUIC_RT_STATUS_SIZE, quic_rt_status(payload, &destination));
+  TEST_ASSERT_EQUAL_HEX8(0x10, destination);
+  quic_rt_status_t status;
+  memcpy(&status, payload + 2, sizeof(status));
+  return status;
+}
+
+static uint8_t link_result() {
+  return link_status().result_index >> QUIC_RT_RESULT_SHIFT;
+}
+
+static void test_guided_flies_to_target_and_circles_it() {
+  mission = {};
+  fly(0);
+  // Without the mission switch the ground station has no authority.
+  send_goto(300.0f, 0.0f, 50.0f);
+  TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_NO_AUTHORITY, link_result());
+  TEST_ASSERT_EQUAL(WING_NAV_INACTIVE, state.wing_nav_state);
+
+  // The switch grants it, even without a stored mission to fly.
+  state.aux_active |= 1U << AUX_MISSION;
+  step();
+  TEST_ASSERT_TRUE(state.guided_ready);
+  TEST_ASSERT_EQUAL(WING_NAV_LOITER, state.wing_nav_state);
+  send_goto(300.0f, 0.0f, 50.0f);
+  const quic_rt_status_t status = link_status();
+  TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_OK, status.result_index >> QUIC_RT_RESULT_SHIFT);
+  TEST_ASSERT_TRUE(status.flags & QUIC_RT_FLAG_NAVIGATING);
+  TEST_ASSERT_TRUE(status.flags & QUIC_RT_FLAG_GUIDED);
+  TEST_ASSERT_TRUE(state.guided_active);
+  TEST_ASSERT_FALSE(state.mission_active);
+  TEST_ASSERT_EQUAL_STRING("GUIDED", control_flight_mode_name());
+  // Flying east with the target to the north: turn left.
+  step(1000);
+  TEST_ASSERT_FLOAT_WITHIN(1.0f, 0.0f, state.nav_target_bearing);
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, -profile.navigation.max_bank_angle, roll_command_deg());
+
+  fly_track(0.0f, 0.0f, 300.0f, 0.0f);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION_HOLD, state.wing_nav_state);
+  TEST_ASSERT_TRUE(state.guided_active);
+
+  // HOLD circles where the aircraft is now, even while already circling.
+  fly_track(300.0f, 0.0f, 300.0f, 200.0f);
+  send_command(NAV_COMMAND_HOLD);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION_HOLD, state.wing_nav_state);
+  TEST_ASSERT_FLOAT_WITHIN(1.0f, 0.0f, state.nav_target_distance);
+
+  // Switching the mission off hands control back and forgets the target.
+  state.aux_active &= ~(1U << AUX_MISSION);
+  step();
+  TEST_ASSERT_EQUAL(WING_NAV_INACTIVE, state.wing_nav_state);
+  TEST_ASSERT_FALSE(state.guided_active || state.guided_ready);
+  state.aux_active |= 1U << AUX_MISSION;
+  step();
+  TEST_ASSERT_EQUAL(WING_NAV_LOITER, state.wing_nav_state);
+  TEST_ASSERT_FALSE(state.guided_active);
+}
+
+static void test_guided_resumes_the_mission_and_returns_home() {
+  mission_route(MISSION_END_HOLD);
+  fly_mission();
+  fly_track(0.0f, 0.0f, 300.0f, 0.0f);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+
+  send_goto(0.0f, 0.0f, 50.0f);
+  TEST_ASSERT_TRUE(state.guided_active);
+  TEST_ASSERT_FALSE(state.mission_active);
+
+  // The mission continues toward the waypoint it was flying to.
+  const quic_rt_mission_t resume = {.index = NAV_COMMAND_MISSION_RESUME};
+  send_command(NAV_COMMAND_MISSION, &resume, sizeof(resume));
+  step();
+  TEST_ASSERT_TRUE(state.mission_active);
+  TEST_ASSERT_FALSE(state.guided_active);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  const quic_rt_mission_t missing = {.index = 2};
+  send_command(NAV_COMMAND_MISSION, &missing, sizeof(missing));
+  TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_NO_MISSION, link_result());
+
+  // RTH flies home; the mission switch still ends it.
+  fly_track(300.0f, 0.0f, 300.0f, 100.0f);
+  send_command(NAV_COMMAND_RTH);
+  TEST_ASSERT_EQUAL(WING_NAV_RTH_RETURN, state.wing_nav_state);
+  TEST_ASSERT_FALSE(state.mission_active || state.guided_active);
+  TEST_ASSERT_EQUAL_STRING("RTH", control_flight_mode_name());
+  state.aux_active &= ~(1U << AUX_MISSION);
+  step();
+  TEST_ASSERT_EQUAL(WING_NAV_INACTIVE, state.wing_nav_state);
+}
+
 void run_wing_navigation_tests() {
   RUN_TEST(test_loiter_requires_switch_and_flight);
   RUN_TEST(test_loiter_enters_tangentially_on_turn_side);
@@ -1106,4 +1222,6 @@ void run_wing_navigation_tests() {
   RUN_TEST(test_mission_needs_switch_edge_after_arming);
   RUN_TEST(test_mission_starts_once_gps_recovers);
   RUN_TEST(test_mission_gps_loss_returns_at_rth_altitude);
+  RUN_TEST(test_guided_flies_to_target_and_circles_it);
+  RUN_TEST(test_guided_resumes_the_mission_and_returns_home);
 }
