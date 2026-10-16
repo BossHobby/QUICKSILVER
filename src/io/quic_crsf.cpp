@@ -253,7 +253,7 @@ void quic_crsf_update() {
         continue;
       }
       if (request_size == total) {
-        if (quic_crsf_supported(request[1]))
+        if (quic_crsf_supported(request[1] & QUIC_HEADER_CMD_MASK))
           quic_process(&quic, request, request_size);
         else
           quic_send_str(&quic, (quic_command)request[1], QUIC_FLAG_ERROR, "UNSUPPORTED OVER CRSF");

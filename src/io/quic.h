@@ -10,6 +10,7 @@
 
 // QUIC protocol changelog (protocol compatibility):
 // 0.2.10: blackbox: add GPS/home coordinates and navigation altitude (0.1 m), move Debug to field 16.
+//         quic: add QUIC_HEADER_COMPRESSED; requests carrying it accept LZSS replies.
 //         state: add RTH heading acquisition and heading-failed phases; reorder RTH phase values.
 //         profile: add GPS constellation selection.
 // 0.2.9 (30cde6a5e): profile: move bind and vtx settings into profile.
@@ -76,6 +77,14 @@ typedef enum {
   QUIC_FLAG_EXIT,
 } __attribute__((__packed__)) quic_flag;
 
+// Header byte 1 holds the command in bits 0-4, the quic_flag in bits 5-6 and
+// QUIC_HEADER_COMPRESSED in bit 7. A request carrying QUIC_HEADER_COMPRESSED
+// accepts an LZSS payload in reply; a reply carries it when its payload is.
+static constexpr uint8_t QUIC_HEADER_CMD_MASK = 0x1f;
+static constexpr uint8_t QUIC_HEADER_FLAG_SHIFT = 5;
+static constexpr uint8_t QUIC_HEADER_FLAG_MASK = 0x3 << QUIC_HEADER_FLAG_SHIFT;
+static constexpr uint8_t QUIC_HEADER_COMPRESSED = 1 << 7;
+
 typedef enum {
   QUIC_VAL_INVALID,
   QUIC_VAL_INFO,
@@ -98,6 +107,7 @@ typedef void (*quic_send_fn_t)(uint8_t *data, uint32_t len, void *priv);
 typedef struct {
   void *priv_data;
   quic_send_fn_t send;
+  bool compress; // set per request by quic_process()
 } quic_t;
 
 cbor_result_t quic_send_str(quic_t *quic, quic_command cmd, quic_flag flag, const char *str);
