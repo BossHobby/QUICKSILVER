@@ -198,15 +198,21 @@ static void crsf_quic_send(uint8_t *data, uint32_t len, void *priv) {
   }
 }
 
-static bool quic_crsf_supported(uint8_t cmd) {
-  switch (cmd) {
+static bool quic_crsf_supported() {
+  switch (request[1] & QUIC_HEADER_CMD_MASK) {
   case QUIC_CMD_GET:
   case QUIC_CMD_SET:
   case QUIC_CMD_CAL_IMU:
   case QUIC_CMD_CAL_STICKS:
     return true;
+  case QUIC_CMD_BLACKBOX: {
+    // Listing and erasing are small; downloads stay on USB. The subcommand
+    // is a CBOR integer below 24, encoded as a single byte.
+    const uint8_t subcommand = request_size > QUIC_HEADER_LEN ? request[QUIC_HEADER_LEN] : QUIC_BLACKBOX_GET;
+    return subcommand == QUIC_BLACKBOX_RESET || subcommand == QUIC_BLACKBOX_LIST;
+  }
   default:
-    // Motor tests, passthrough, blackbox and OSD font transfers stay on USB.
+    // Motor tests, passthrough and OSD font transfers stay on USB.
     return false;
   }
 }
@@ -253,7 +259,7 @@ void quic_crsf_update() {
         continue;
       }
       if (request_size == total) {
-        if (quic_crsf_supported(request[1] & QUIC_HEADER_CMD_MASK))
+        if (quic_crsf_supported())
           quic_process(&quic, request, request_size);
         else
           quic_send_str(&quic, (quic_command)request[1], QUIC_FLAG_ERROR, "UNSUPPORTED OVER CRSF");
