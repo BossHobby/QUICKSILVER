@@ -27,8 +27,12 @@
 #include "osd/render.h"
 #include "rx/unified_serial.h"
 #include "util/cbor_helper.h"
+#include "util/lzss.h"
 
 #define ENCODE_BUFFER_SIZE 4096
+
+// Short replies do not gain enough to be worth compressing.
+static constexpr uint32_t QUIC_COMPRESS_MIN = 64;
 
 #define quic_errorf(cmd, args...) quic_send_strf(quic, cmd, QUIC_FLAG_ERROR, args)
 
@@ -55,26 +59,74 @@ static cbor_result_t cbor_encode_motor_test_t(cbor_value_t *enc, const motor_tes
   return res;
 }
 
-static void quic_send_header(quic_t *quic, quic_command cmd, quic_flag flag, uint32_t len) {
+static void quic_write_header(quic_command cmd, quic_flag flag, uint32_t len, bool compressed = false) {
   frame_encode_buffer[0] = QUIC_MAGIC;
-  frame_encode_buffer[1] = (cmd & (0xff >> 3)) | (flag & (0xff >> 5)) << 5;
+  frame_encode_buffer[1] = (cmd & QUIC_HEADER_CMD_MASK) |
+                           ((flag << QUIC_HEADER_FLAG_SHIFT) & QUIC_HEADER_FLAG_MASK) |
+                           (compressed ? QUIC_HEADER_COMPRESSED : 0);
   frame_encode_buffer[2] = (len >> 8) & 0xFF;
   frame_encode_buffer[3] = len & 0xFF;
+}
+
+static void quic_send_header(quic_t *quic, quic_command cmd, quic_flag flag, uint32_t len, bool compressed = false) {
+  quic_write_header(cmd, flag, len, compressed);
 
   if (quic->send) {
     quic->send(frame_encode_buffer, QUIC_HEADER_LEN, quic->priv_data);
   }
 }
 
+// Compressed output is batched before reaching the transport. Only the USB
+// thread, or the fault loop in its place, sends QUIC replies.
+static struct {
+  quic_t *quic;
+  uint32_t size;
+  uint8_t data[64];
+} compress_chunk;
+
+static void quic_compress_flush() {
+  if (compress_chunk.size && compress_chunk.quic->send)
+    compress_chunk.quic->send(compress_chunk.data, compress_chunk.size, compress_chunk.quic->priv_data);
+  compress_chunk.size = 0;
+}
+
+static void quic_compress_emit(const uint8_t *data, uint32_t len, void *) {
+  if (compress_chunk.size + len > sizeof(compress_chunk.data))
+    quic_compress_flush();
+  memcpy(compress_chunk.data + compress_chunk.size, data, len);
+  compress_chunk.size += len;
+}
+
+// Sends the reply compressed when the requester accepts it and compression
+// saves space. The first pass sizes the stream for the header, the second
+// streams it, so no output buffer is needed.
+static bool quic_send_compressed(quic_t *quic, quic_command cmd, quic_flag flag, const uint8_t *data, uint32_t len) {
+  if (!quic->compress || flag != QUIC_FLAG_NONE || len <= QUIC_COMPRESS_MIN)
+    return false;
+
+  uint16_t *table = (uint16_t *)malloc(LZSS_HASH_SIZE * sizeof(uint16_t));
+  if (table == NULL)
+    return false;
+
+  const uint32_t size = lzss_encode(data, len, table, NULL, NULL);
+  if (size < len) {
+    quic_send_header(quic, cmd, flag, size, true);
+    compress_chunk.quic = quic;
+    lzss_encode(data, len, table, quic_compress_emit, NULL);
+    quic_compress_flush();
+  }
+  free(table);
+  return size < len;
+}
+
 static void quic_send(quic_t *quic, quic_command cmd, quic_flag flag, uint8_t *data, uint32_t len) {
-  frame_encode_buffer[0] = QUIC_MAGIC;
-  frame_encode_buffer[1] = (cmd & (0xff >> 3)) | (flag & (0xff >> 5)) << 5;
-  frame_encode_buffer[2] = (len >> 8) & 0xFF;
-  frame_encode_buffer[3] = len & 0xFF;
+  if (quic_send_compressed(quic, cmd, flag, data, len))
+    return;
 
   if ((frame_encode_buffer + QUIC_HEADER_LEN) != data) {
     memcpy(frame_encode_buffer + QUIC_HEADER_LEN, data, len);
   }
+  quic_write_header(cmd, flag, len);
 
   if (quic->send) {
     quic->send(frame_encode_buffer, QUIC_HEADER_LEN + len, quic->priv_data);
@@ -649,7 +701,7 @@ SLOW_FLASH bool quic_process(quic_t *quic, uint8_t *data, uint32_t size, bool fa
     return true;
   }
 
-  const uint8_t cmd = data[1];
+  const uint8_t cmd = data[1] & QUIC_HEADER_CMD_MASK;
   if (cmd == QUIC_CMD_INVALID) {
     quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);
     return true;
@@ -668,6 +720,9 @@ SLOW_FLASH bool quic_process(quic_t *quic, uint8_t *data, uint32_t size, bool fa
 
   cbor_value_t dec;
   cbor_decoder_init(&dec, data + QUIC_HEADER_LEN, payload_size);
+
+  // Only replies to this request may be compressed, not later log messages.
+  quic->compress = data[1] & QUIC_HEADER_COMPRESSED;
 
   switch (cmd) {
   case QUIC_CMD_GET:
@@ -708,5 +763,6 @@ SLOW_FLASH bool quic_process(quic_t *quic, uint8_t *data, uint32_t size, bool fa
     break;
   }
 
+  quic->compress = false;
   return true;
 }
