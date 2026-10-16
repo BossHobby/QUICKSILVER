@@ -65,7 +65,7 @@ static quic_t quic = {
 };
 
 bool quic_crsf_active() {
-  return active_seen && (time_millis() - active_time) < QUIC_CRSF_ACTIVE_MS;
+  return !flags.arm_state && active_seen && (time_millis() - active_time) < QUIC_CRSF_ACTIVE_MS;
 }
 
 void quic_crsf_receive(uint8_t origin, const uint8_t *payload, uint8_t size) {
@@ -125,6 +125,13 @@ void quic_crsf_receive(uint8_t origin, const uint8_t *payload, uint8_t size) {
 }
 
 uint32_t quic_crsf_frame(uint8_t *buf) {
+  // The session exists only on the ground. Arming ends it; after disarming,
+  // only a new RESET opens the next one, with cleared streams.
+  if (flags.arm_state) {
+    link.open = false;
+    return 0;
+  }
+
   if (!link.open) {
     if (reset_done != reset_request || link.applied_reset == reset_done)
       return 0;
@@ -204,6 +211,8 @@ static bool quic_crsf_supported() {
   case QUIC_CMD_SET:
   case QUIC_CMD_CAL_IMU:
   case QUIC_CMD_CAL_STICKS:
+  // A full mission is well under QUIC_CRSF_REQUEST_SIZE.
+  case QUIC_CMD_MISSION:
     return true;
   case QUIC_CMD_BLACKBOX: {
     // Listing and erasing are small; downloads stay on USB. The subcommand

@@ -158,6 +158,11 @@ static const char *osd_mission_message(const char *action) {
   strcpy(p, action);
   return text;
 }
+
+// The mission switch also grants ground station commands without a stored mission.
+static const char *osd_no_mission_message() {
+  return state.guided_ready ? "GUIDED READY" : "NO MISSION";
+}
 #endif
 
 #ifdef VEHICLE_WING
@@ -236,16 +241,16 @@ static const char *osd_wing_nav_message(void) {
   switch (state.wing_nav_state) {
   case WING_NAV_LOITER:
     if (mission_unavailable)
-      return mission.count ? "MISSION: UNAVAILABLE" : "NO MISSION";
+      return mission.count ? "MISSION: UNAVAILABLE" : osd_no_mission_message();
     return rth ? "RTH: NO HOME" : NULL;
   case WING_NAV_LOITER_BANK:
     if (mission_unavailable)
       return "MISSION: NO GPS";
     return rth ? "RTH: NO GPS" : "LOITER: NO GPS";
   case WING_NAV_MISSION:
-    return osd_mission_message("FLY");
+    return state.guided_active ? "GUIDED FLY" : osd_mission_message("FLY");
   case WING_NAV_MISSION_HOLD:
-    return osd_mission_message("CIRCLE");
+    return state.guided_active ? "GUIDED CIRCLE" : osd_mission_message("CIRCLE");
   case WING_NAV_RTH_RETURN:
     return "RETURN HOME";
   case WING_NAV_RTH_HOME:
@@ -300,6 +305,21 @@ static const char *osd_rth_message() {
     return "ABORTED";
   }
 
+  if (state.guided_active) {
+    switch (state.rth_state) {
+    case RTH_STATE_CLIMB:
+      return "GUIDED CLIMB";
+    case RTH_STATE_TURN:
+      return "GUIDED TURN";
+    case RTH_STATE_NAVIGATE:
+      return "GUIDED FLY";
+    case RTH_STATE_HOVER_HOME:
+      return "GUIDED HOLD";
+    default:
+      break;
+    }
+  }
+
   if (state.mission_active) {
     switch (state.rth_state) {
     case RTH_STATE_CLIMB:
@@ -350,7 +370,7 @@ static const char *osd_rth_message() {
   }
 
   if (rx_aux_on(AUX_MISSION)) {
-    if (mission.count == 0) return "NO MISSION";
+    if (mission.count == 0) return osd_no_mission_message();
     // Starting needs a switch edge in flight, clear of the ground.
     return flags.arm_state ? "MISSION: TOGGLE IN AIR" : "ARM FIRST";
   }

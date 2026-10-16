@@ -13,6 +13,7 @@
 #include "io/gps.h"
 #include "io/msp.h"
 #include "io/quic_crsf.h"
+#include "io/quic_rt.h"
 #include "rx/crsf.h"
 #include "util/crc.h"
 #include "util/ring_buffer.h"
@@ -33,6 +34,13 @@
 #define CRSF_TELEMETRY_INTERVAL_US 2000
 #define CRSF_BAUDRATE_CHANGE_DELAY_US 4000
 #define CRSF_BAUDRATE_ERROR_FALLBACK_COUNT 200
+
+// While a configurator session holds the downlink, its idle slots still carry
+// one standard telemetry frame per interval: the ground station takes
+// position and battery from them.
+static constexpr uint32_t CRSF_SESSION_TELEMETRY_INTERVAL_US = 200000;
+
+static_assert(QUIC_RT_STATUS_SIZE <= CRSF_PAYLOAD_SIZE_MAX - CRSF_FRAME_ORIGIN_DEST_SIZE, "QUIC_RT link STATUS must fit one frame");
 
 typedef enum {
   RATE_LORA_4HZ = 0,
@@ -366,6 +374,15 @@ static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
     break;
   }
 
+  case CRSF_FRAMETYPE_QUIC_RT: {
+    const crsf_extended_header_t *extended = (const crsf_extended_header_t *)&rx_data[1];
+    if (payload_length < CRSF_FRAME_ORIGIN_DEST_SIZE || extended->destination != CRSF_ADDRESS_FLIGHT_CONTROLLER)
+      break;
+
+    quic_rt_receive(extended->origin, (const uint8_t *)(extended + 1), payload_length - CRSF_FRAME_ORIGIN_DEST_SIZE);
+    break;
+  }
+
   case CRSF_FRAMETYPE_DEVICE_PING: {
     const crsf_extended_header_t *extended = (const crsf_extended_header_t *)&rx_data[1];
     const uint8_t destination = payload_length >= CRSF_FRAME_ORIGIN_DEST_SIZE ? extended->origin : CRSF_ADDRESS_RADIO_TRANSMITTER;
@@ -493,6 +510,21 @@ static void rx_serial_send_crsf_telemetry() {
   if ((now - telemetry_time) < CRSF_TELEMETRY_INTERVAL_US)
     return;
 
+  // Ground station status is small and periodic; it also flows while armed
+  // and during a configurator session.
+  if (serial_bytes_free(&serial_rx) >= CRSF_FRAME_SIZE_MAX) {
+    uint8_t payload[QUIC_RT_STATUS_SIZE];
+    uint8_t destination;
+    const uint8_t payload_size = quic_rt_status(payload, &destination);
+    if (payload_size) {
+      const uint32_t nav_size = crsf_frame_quic_rt(crsf_telemetry_packet, destination, payload, payload_size);
+      if (rx_serial_crsf_queue_frame(crsf_telemetry_packet, nav_size)) {
+        telemetry_time = now;
+        return;
+      }
+    }
+  }
+
   // Give the configurator the downlink while its session is active.
   if (serial_bytes_free(&serial_rx) >= CRSF_FRAME_SIZE_MAX) {
     const uint32_t configurator_size = quic_crsf_frame(crsf_telemetry_packet);
@@ -502,7 +534,8 @@ static void rx_serial_send_crsf_telemetry() {
     }
   }
 
-  if (quic_crsf_active())
+  static uint32_t session_telemetry_time = 0;
+  if (quic_crsf_active() && (now - session_telemetry_time) < CRSF_SESSION_TELEMETRY_INTERVAL_US)
     return;
 
   uint32_t telemetry_size = 0;
@@ -541,7 +574,7 @@ static void rx_serial_send_crsf_telemetry() {
     telemetry_size = crsf_tlm_frame_battery_sensor(crsf_telemetry_packet);
 
   if (rx_serial_crsf_queue_frame(crsf_telemetry_packet, telemetry_size))
-    telemetry_time = now;
+    telemetry_time = session_telemetry_time = now;
 }
 
 packet_status_t rx_serial_process_crsf() {

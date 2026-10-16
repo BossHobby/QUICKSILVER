@@ -55,7 +55,7 @@ static cbor_result_t cbor_decode_mission_waypoint_t(cbor_value_t *dec, mission_w
   return res;
 }
 
-static bool mission_waypoint_valid(const mission_waypoint_t *wp) {
+bool mission_waypoint_valid(const mission_waypoint_t *wp) {
   const gps_coord_t coord = wp->coord;
   // 0/0 is the coordinate of an unset waypoint, never a planned one.
   if (coord.lat == 0 && coord.lon == 0)

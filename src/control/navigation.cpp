@@ -16,6 +16,7 @@
 #include "driver/time.h"
 #include "io/blackbox.h"
 #include "io/gps.h"
+#include "io/quic_rt.h"
 #include "util/util.h"
 #include "util/vector.h"
 
@@ -63,6 +64,8 @@ static struct {
   uint32_t accel_count;
   float accel; // bias-corrected, smoothed earth-vertical acceleration, m/s^2 up
 } vertical;
+
+mission_waypoint_t nav_guided;
 
 // Last GPS velocity sample; the derived acceleration is published in state.
 static struct {
@@ -210,18 +213,30 @@ static float nav_distance_between(gps_coord_t start, gps_coord_t end) {
   return sqrtf(north * north + east * east);
 }
 
+bool nav_in_start_range(gps_coord_t target) {
+  return nav_distance_between(state.gps_coord, target) <= MISSION_START_MAX_DISTANCE;
+}
+
 bool nav_mission_in_start_range(uint8_t index) {
-  return nav_distance_between(state.gps_coord, mission.waypoints[index].coord) <= MISSION_START_MAX_DISTANCE;
+  return nav_in_start_range(mission.waypoints[index].coord);
+}
+
+gps_coord_t nav_target_coord() {
+  if (state.guided_active)
+    return nav_guided.coord;
+  if (state.mission_active)
+    return mission.waypoints[state.mission_index].coord;
+  return state.gps_home;
 }
 
 void nav_update_target() {
-  if (!state.mission_active) {
+  if (!state.guided_active && !state.mission_active) {
     state.nav_target_distance = state.home_distance;
     state.nav_target_bearing = state.home_bearing;
     return;
   }
   float north, east;
-  nav_position_delta(state.gps_coord, mission.waypoints[state.mission_index].coord, &north, &east);
+  nav_position_delta(state.gps_coord, nav_target_coord(), &north, &east);
   state.nav_target_distance = sqrtf(north * north + east * east);
   state.nav_target_bearing = normalize_rad(atan2f(east, north)) * RADTODEG;
 }
@@ -305,6 +320,19 @@ static void nav_update_home(bool arming) {
   }
 }
 
+#ifdef VEHICLE_ROVER
+nav_command_result_t nav_command_apply(const nav_command_t *cmd) {
+  return NAV_RESULT_UNSUPPORTED;
+}
+#endif
+
+// Apply the latest ground station command before the vehicle update.
+static void nav_update_command() {
+  nav_command_t cmd;
+  if (quic_rt_take(&cmd))
+    quic_rt_complete(cmd.id, nav_command_apply(&cmd));
+}
+
 void nav_init() {
   nav = {.last_update_us = time_micros()};
   baro = {};
@@ -336,6 +364,7 @@ void nav_update() {
   const bool gps_configured = profile.serial.gps != SERIAL_PORT_INVALID;
   if (gps_configured)
     nav_update_home(arming);
+  nav_update_command();
 #ifdef VEHICLE_MULTI
   nav_update_multi(dt, gps.valid, gps.home_valid);
 #endif

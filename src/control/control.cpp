@@ -8,7 +8,6 @@
 #include "control/sixaxis.h"
 #include "driver/motor.h"
 #include "driver/time.h"
-#include "io/quic_crsf.h"
 #include "util/cbor_helper.h"
 
 FAST_RAM control_flags_t flags = {
@@ -103,6 +102,8 @@ const char *control_flight_mode_name(void) {
     return "FS LEVEL";
   if (state.mission_active)
     return "MISSION";
+  if (state.guided_active)
+    return "GUIDED";
   switch (state.wing_nav_state) {
   case WING_NAV_LOITER:
   case WING_NAV_LOITER_BANK:
@@ -130,6 +131,8 @@ const char *control_flight_mode_name(void) {
     return "FS HOLD";
   if (state.mission_active)
     return "MISSION";
+  if (state.guided_active)
+    return "GUIDED";
   if (state.rth_active || rx_aux_on(AUX_RETURN_TO_HOME))
     return "RTH";
   if (!rx_aux_on(AUX_LEVELMODE))
@@ -416,10 +419,13 @@ void control_update_arming() {
     flags.arming_disabled_flags |= ARMING_DISABLED_FAILSAFE;
   }
 
-  const bool configurator_active = flags.usb_active || quic_crsf_active();
+  // A CRSF ground session does not hold off arming: arming ends it, and the
+  // ground station keeps the QUIC_RT link. Flight holds profile_mutex
+  // through this decision, so no configurator command is half applied.
+  const bool configurator_active = flags.usb_active;
   if (configurator_active) {
-    // Configurator access excludes normal arming; motor testing has its own
-    // output override and does not bypass this arming gate.
+    // USB configurator access excludes normal arming; motor testing has its
+    // own output override and does not bypass this arming gate.
     flags.arming_disabled_flags |= ARMING_DISABLED_CONFIGURATOR;
   }
 

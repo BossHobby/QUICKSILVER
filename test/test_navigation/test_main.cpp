@@ -14,6 +14,7 @@
 #include "core/profile.h"
 #include "driver/time.h"
 #include "driver/baro/baro.h"
+#include "io/quic_rt.h"
 #include "mock_helpers.h"
 
 extern void imu_test_attitude_init();
@@ -1684,6 +1685,331 @@ void test_navigation_mission_resumes_at_the_interrupted_waypoint(void) {
   TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
 }
 
+static nav_command_result_t guided_command(nav_command_type_t type, mission_waypoint_t waypoint = {}, uint8_t index = 0) {
+  const nav_command_t cmd = {.type = (uint8_t)type, .waypoint = waypoint, .index = index};
+  return nav_command_apply(&cmd);
+}
+
+// Ground station targets need the mission switch, even without a stored mission.
+void test_navigation_guided_needs_the_mission_switch(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  const mission_waypoint_t north = {.coord = {.lon = 0, .lat = 2 * GPS_DEG_10M}, .altitude = 15};
+  mission_test_airborne(12);
+  mission.count = 0;
+  mission_step();
+  TEST_ASSERT_FALSE(state.guided_ready);
+  TEST_ASSERT_EQUAL(NAV_RESULT_NO_AUTHORITY, guided_command(NAV_COMMAND_GOTO, north));
+
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_TRUE(state.guided_ready);
+  TEST_ASSERT_FALSE(state.rth_active);
+
+  // Rejected targets leave the vehicle with the pilot.
+  mission_waypoint_t low = north;
+  low.altitude = 1;
+  TEST_ASSERT_EQUAL(NAV_RESULT_INVALID, guided_command(NAV_COMMAND_GOTO, low));
+  mission_waypoint_t far = north;
+  far.coord.lat = 300 * GPS_DEG_10M;
+  TEST_ASSERT_EQUAL(NAV_RESULT_TOO_FAR, guided_command(NAV_COMMAND_GOTO, far));
+  TEST_ASSERT_EQUAL(NAV_RESULT_INVALID, guided_command(NAV_COMMAND_SET_ALT, {.altitude = 20}));
+  TEST_ASSERT_FALSE(state.rth_active || flags.controls_override);
+
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_GOTO, north));
+  TEST_ASSERT_TRUE(state.guided_active && state.rth_active && flags.controls_override);
+  TEST_ASSERT_FALSE(state.mission_active);
+  // The target is higher: climb in place first.
+  TEST_ASSERT_EQUAL(RTH_STATE_CLIMB, state.rth_state);
+  TEST_ASSERT_EQUAL_STRING("GUIDED", control_flight_mode_name());
+  mission_step();
+  TEST_ASSERT_FLOAT_WITHIN(0.5f, 20, state.nav_target_distance);
+
+  // Arriving holds the target.
+  state.altitude = 15;
+  mission_step();
+  TEST_ASSERT_EQUAL(RTH_STATE_TURN, state.rth_state);
+  state.gps_coord = north.coord;
+  mission_step();
+  TEST_ASSERT_EQUAL(RTH_STATE_HOVER_HOME, state.rth_state);
+  TEST_ASSERT_TRUE(state.guided_active);
+
+  // Switching the mission off hands control back.
+  state.aux_active = 0;
+  mission_step();
+  TEST_ASSERT_FALSE(state.guided_active || state.rth_active || flags.controls_override || state.guided_ready);
+}
+
+void test_navigation_guided_commands_retarget_without_releasing_control(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  const mission_waypoint_t east = {.coord = {.lon = 2 * GPS_DEG_10M, .lat = 0}, .altitude = 12};
+  mission_test_airborne(12);
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_TRUE(state.mission_active);
+  state.gps_coord = mission.waypoints[0].coord;
+  mission_step();
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+
+  // HOLD stops at once, without turning toward a target.
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_HOLD));
+  TEST_ASSERT_TRUE(state.guided_active && state.rth_active);
+  TEST_ASSERT_FALSE(state.mission_active);
+  TEST_ASSERT_EQUAL(RTH_STATE_HOVER_HOME, state.rth_state);
+  mission_step();
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, 0, state.nav_target_distance);
+
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_SET_ALT, {.altitude = 20}));
+  TEST_ASSERT_EQUAL_FLOAT(20, nav_guided.altitude);
+  TEST_ASSERT_EQUAL(NAV_RESULT_INVALID, guided_command(NAV_COMMAND_SET_ALT, {.altitude = 6000}));
+
+  // The mission resumes at the waypoint it was flying to.
+  TEST_ASSERT_EQUAL(NAV_RESULT_NO_MISSION, guided_command(NAV_COMMAND_MISSION, {}, 2));
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_MISSION, {}, NAV_COMMAND_MISSION_RESUME));
+  TEST_ASSERT_TRUE(state.mission_active && state.rth_active);
+  TEST_ASSERT_FALSE(state.guided_active);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_GOTO, east));
+  TEST_ASSERT_TRUE(state.guided_active);
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_MISSION, {}, 0));
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+
+  // RTH flies home; the mission switch still ends it.
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_RTH));
+  TEST_ASSERT_FALSE(state.mission_active || state.guided_active);
+  TEST_ASSERT_TRUE(state.rth_active);
+  TEST_ASSERT_EQUAL(RTH_STATE_CLIMB, state.rth_state);
+  TEST_ASSERT_EQUAL_STRING("RTH", control_flight_mode_name());
+  state.aux_active = 0;
+  mission_step();
+  TEST_ASSERT_FALSE(state.rth_active || flags.controls_override);
+}
+
+void test_navigation_guided_yields_to_rth_and_failsafe(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  const uint32_t rth_switch = 1U << AUX_RETURN_TO_HOME;
+  mission_test_airborne(12);
+  mission.count = 0;
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_HOLD));
+
+  // The RTH switch retargets home and locks the ground station out.
+  state.aux_active = mission_switch | rth_switch;
+  mission_step();
+  TEST_ASSERT_FALSE(state.guided_active || state.guided_ready);
+  TEST_ASSERT_TRUE(state.rth_active);
+  TEST_ASSERT_EQUAL(NAV_RESULT_NO_AUTHORITY, guided_command(NAV_COMMAND_HOLD));
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_FALSE(state.rth_active);
+
+  // Failsafe never continues away from the pilot.
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_HOLD));
+  flags.failsafe_signal_lost = 1;
+  flags.failsafe = 1;
+  state.rth_failsafe_active = true;
+  mission_step();
+  TEST_ASSERT_FALSE(state.guided_active || state.guided_ready);
+  TEST_ASSERT_TRUE(state.rth_active);
+  TEST_ASSERT_EQUAL(NAV_RESULT_NO_AUTHORITY, guided_command(NAV_COMMAND_HOLD));
+  flags.failsafe = 0;
+  flags.failsafe_signal_lost = 0;
+}
+
+// As for a mission, a switch left on through takeoff grants nothing until
+// it is turned on in flight.
+void test_navigation_guided_needs_a_switch_edge_in_flight(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  mission_test_airborne(0);
+  mission.count = 0;
+  state.aux_active = mission_switch;
+  mission_step();
+  state.altitude = 12;
+  mission_step();
+  TEST_ASSERT_FALSE(state.guided_ready);
+  TEST_ASSERT_EQUAL(NAV_RESULT_NO_AUTHORITY, guided_command(NAV_COMMAND_HOLD));
+
+  state.aux_active = 0;
+  mission_step();
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_TRUE(state.guided_ready);
+}
+
+// Guided flight keeps its authority below the start altitude, so the ground
+// station can still stop or recall the vehicle.
+void test_navigation_guided_keeps_authority_below_the_start_altitude(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  mission_test_airborne(12);
+  mission.count = 0;
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_HOLD));
+
+  state.altitude = 1;
+  mission_step();
+  TEST_ASSERT_TRUE(state.guided_ready);
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_RTH));
+  TEST_ASSERT_TRUE(state.rth_active);
+
+  // Without guided flight owning the controls, low flight grants nothing.
+  state.aux_active = 0;
+  mission_step();
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_FALSE(state.guided_ready || state.rth_active);
+}
+
+// HOLD steers in the earth frame, so an untrusted heading is learned first.
+void test_navigation_guided_hold_acquires_an_untrusted_heading(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  mission_test_airborne(12);
+  mission.count = 0;
+  state.aux_active = mission_switch;
+  mission_step();
+  state.heading_confidence = 0.5f * RTH_MIN_HEADING_CONFIDENCE;
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_HOLD));
+  TEST_ASSERT_TRUE(state.guided_active);
+  TEST_ASSERT_EQUAL(RTH_STATE_ACQUIRE_HEADING, state.rth_state);
+
+  // A failed acquisition holds until it gives up; commands cannot restart it.
+  time_test_advance_us(16000000); // past the 15 s acquisition timeout
+  mission_step();
+  TEST_ASSERT_EQUAL(RTH_STATE_HEADING_FAILED, state.rth_state);
+  TEST_ASSERT_FALSE(state.guided_ready);
+  TEST_ASSERT_EQUAL(NAV_RESULT_NO_AUTHORITY, guided_command(NAV_COMMAND_HOLD));
+  TEST_ASSERT_EQUAL(RTH_STATE_HEADING_FAILED, state.rth_state);
+}
+
+// Raising the target during a climb is progress toward the new altitude, not a stall.
+void test_navigation_guided_raised_climb_continues(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  const mission_waypoint_t north = {.coord = {.lon = 0, .lat = 2 * GPS_DEG_10M}, .altitude = 15};
+  mission_test_airborne(12);
+  mission.count = 0;
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_GOTO, north));
+  TEST_ASSERT_EQUAL(RTH_STATE_CLIMB, state.rth_state);
+  state.altitude = 14;
+  mission_step();
+
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_SET_ALT, {.altitude = 40}));
+  for (int i = 0; i < 12; i++) {
+    state.altitude += 1;
+    time_test_advance_us(990000);
+    mission_step();
+  }
+  TEST_ASSERT_TRUE(state.rth_active && state.guided_active);
+  TEST_ASSERT_EQUAL(RTH_STATE_CLIMB, state.rth_state);
+}
+
+// A new target while flying or holding keeps flying: no level turn, no climb in place.
+void test_navigation_guided_retarget_continues_the_leg(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  const mission_waypoint_t north = {.coord = {.lon = 0, .lat = 2 * GPS_DEG_10M}, .altitude = 12};
+  const mission_waypoint_t east = {.coord = {.lon = 2 * GPS_DEG_10M, .lat = 0}, .altitude = 12};
+  mission_test_airborne(12);
+  mission.count = 0;
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_HOLD));
+  TEST_ASSERT_EQUAL(RTH_STATE_HOVER_HOME, state.rth_state);
+
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_GOTO, north));
+  TEST_ASSERT_EQUAL(RTH_STATE_NAVIGATE, state.rth_state);
+  mission_step();
+  TEST_ASSERT_EQUAL(RTH_STATE_NAVIGATE, state.rth_state);
+
+  mission_waypoint_t higher = north;
+  higher.altitude = 30;
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_GOTO, higher));
+  mission_step();
+  TEST_ASSERT_EQUAL(RTH_STATE_NAVIGATE, state.rth_state);
+
+  // A sharp change of direction still realigns first.
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_GOTO, east));
+  mission_step();
+  TEST_ASSERT_EQUAL(RTH_STATE_TURN, state.rth_state);
+}
+
+static void guided_nav_update(void) {
+  time_test_advance_us(10000);
+  set_altitude_source(true, time_millis());
+  state.gps_last_update_ms = time_millis();
+  // Arming re-zeroes altitude on the barometer, which has no samples here.
+  const float altitude = state.altitude;
+  nav_update();
+  state.altitude = altitude;
+}
+
+static uint8_t guided_status(quic_rt_status_t *status) {
+  uint8_t payload[QUIC_RT_STATUS_SIZE];
+  uint8_t destination = 0;
+  time_test_advance_us(200000);
+  if (!quic_rt_status(payload, &destination))
+    return 0;
+  memcpy(status, payload + 2, sizeof(*status));
+  return destination;
+}
+
+// A resent command is acknowledged with its first result, not applied again.
+void test_navigation_guided_link_acknowledges_resends_once(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  mission_test_airborne(12);
+  mission.count = 0;
+  // The first update latches arming; the switch then comes on in flight.
+  guided_nav_update();
+  state.aux_active = mission_switch;
+  guided_nav_update();
+  TEST_ASSERT_TRUE(state.guided_ready);
+
+  const uint8_t hold[] = {QUIC_RT_VERSION, QUIC_RT_COMMAND, NAV_COMMAND_HOLD, 42};
+  quic_rt_receive(0x10, hold, sizeof(hold));
+  guided_nav_update();
+  TEST_ASSERT_TRUE(state.guided_active);
+  const gps_coord_t held = nav_guided.coord;
+
+  quic_rt_status_t status;
+  TEST_ASSERT_EQUAL_HEX8(0x10, guided_status(&status));
+  TEST_ASSERT_EQUAL_UINT8(42, status.command_id);
+  TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_OK, status.command_result);
+  TEST_ASSERT_TRUE(status.flags & QUIC_RT_FLAG_GUIDED);
+  TEST_ASSERT_TRUE(status.flags & QUIC_RT_FLAG_GUIDED_READY);
+  TEST_ASSERT_EQUAL_UINT8(QUIC_RT_VEHICLE_MULTI, status.vehicle);
+  TEST_ASSERT_EQUAL_UINT8(RTH_STATE_HOVER_HOME, status.nav_state);
+  // Absolute coordinates, independent of when the GPS frame arrives.
+  TEST_ASSERT_EQUAL_INT32(held.lat, status.target_lat);
+  TEST_ASSERT_EQUAL_INT32(held.lon, status.target_lon);
+  TEST_ASSERT_EQUAL_INT32(state.gps_home.lat, status.home_lat);
+  TEST_ASSERT_EQUAL_INT32(state.gps_home.lon, status.home_lon);
+
+  // The ack was lost: the same HOLD again must not move the hold point.
+  state.gps_coord.lat += GPS_DEG_10M;
+  quic_rt_receive(0x10, hold, sizeof(hold));
+  guided_nav_update();
+  TEST_ASSERT_EQUAL_INT32(held.lat, nav_guided.coord.lat);
+
+  const uint8_t next[] = {QUIC_RT_VERSION, QUIC_RT_COMMAND, NAV_COMMAND_HOLD, 43};
+  quic_rt_receive(0x10, next, sizeof(next));
+  guided_nav_update();
+  TEST_ASSERT_EQUAL_INT32(state.gps_coord.lat, nav_guided.coord.lat);
+
+  // A restarted ground station reuses ids: after silence its first command is
+  // neither acknowledged early nor suppressed.
+  time_test_advance_us(3100000);
+  state.gps_coord.lat += GPS_DEG_10M;
+  quic_rt_receive(0x10, next, sizeof(next));
+  TEST_ASSERT_EQUAL_HEX8(0x10, guided_status(&status));
+  TEST_ASSERT_EQUAL_UINT8(QUIC_RT_RESULT_NONE, status.command_result);
+  guided_nav_update();
+  TEST_ASSERT_EQUAL_INT32(state.gps_coord.lat, nav_guided.coord.lat);
+  guided_status(&status);
+  TEST_ASSERT_EQUAL_UINT8(43, status.command_id);
+  TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_OK, status.command_result);
+}
+
 extern void test_navigation_motor_loop_nominal();
 extern void test_navigation_plant_specific_force_and_motor_signs();
 extern void test_navigation_motor_loop_delayed_gps_and_wind();
@@ -1749,6 +2075,15 @@ int main() {
   RUN_TEST(test_navigation_mission_switch_ends_the_final_return);
   RUN_TEST(test_navigation_mission_link_loss_holds_altitude_with_low_stick);
   RUN_TEST(test_navigation_mission_resumes_at_the_interrupted_waypoint);
+  RUN_TEST(test_navigation_guided_needs_the_mission_switch);
+  RUN_TEST(test_navigation_guided_commands_retarget_without_releasing_control);
+  RUN_TEST(test_navigation_guided_yields_to_rth_and_failsafe);
+  RUN_TEST(test_navigation_guided_link_acknowledges_resends_once);
+  RUN_TEST(test_navigation_guided_needs_a_switch_edge_in_flight);
+  RUN_TEST(test_navigation_guided_keeps_authority_below_the_start_altitude);
+  RUN_TEST(test_navigation_guided_hold_acquires_an_untrusted_heading);
+  RUN_TEST(test_navigation_guided_raised_climb_continues);
+  RUN_TEST(test_navigation_guided_retarget_continues_the_leg);
   RUN_TEST(test_navigation_hover_learning);
   RUN_TEST(test_navigation_learned_hover_trims_rth);
   RUN_TEST(test_navigation_vertical_speed_fusion);

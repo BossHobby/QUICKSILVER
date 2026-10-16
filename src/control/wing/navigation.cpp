@@ -60,6 +60,8 @@ static struct {
   uint32_t descend_ms;  // start of the failsafe glide
   float speed;          // latest valid GPS ground speed, m/s
   bool mission_held;    // mission switch on since before navigation was available
+  bool mission_requested; // the switches requested the mission in the latest update
+  bool gps_valid;         // GPS in the latest update
 } nav;
 
 static struct {
@@ -92,6 +94,16 @@ static struct {
   bool complete;  // circling the last waypoint
   bool returning; // finished with MISSION_END_RTH
 } route;
+
+// Ground station target in nav_guided, flown in place of the route while the
+// mission switch requests it. The request ending clears it.
+static struct {
+  bool active;
+  bool arrived;           // circling the target
+  bool recenter;          // HOLD moved the target while already circling
+  bool returning;         // RTH command
+  gps_coord_t leg_origin; // where the leg to the target started
+} guided;
 
 static float nav_slew(float current, float target, float step) {
   return constrain(target, current - step, current + step);
@@ -152,6 +164,8 @@ static nav_request_t nav_mission_request(nav_request_t request, bool gps_valid) 
   if (!flags.arm_state)
     route = {};
   const bool requested = request == NAV_REQUEST_MISSION;
+  if (!requested)
+    guided = {};
   if (requested && !route.requested) {
     const uint8_t resume = route.complete || route.returning ? 0 : route.index;
     route = {.index = resume};
@@ -159,6 +173,10 @@ static nav_request_t nav_mission_request(nav_request_t request, bool gps_valid) 
   route.requested = requested;
   if (!requested)
     return request;
+  if (guided.returning)
+    return NAV_REQUEST_RTH;
+  if (guided.active)
+    return gps_valid ? NAV_REQUEST_MISSION : NAV_REQUEST_RTH;
   if (!route.valid) {
     // Checked until the route can be flown, so a brief GPS dropout at the
     // switch edge does not leave the aircraft loitering.
@@ -172,13 +190,23 @@ static nav_request_t nav_mission_request(nav_request_t request, bool gps_valid) 
   return route.returning || !gps_valid ? NAV_REQUEST_RTH : NAV_REQUEST_MISSION;
 }
 
+// The ground station target, or the active waypoint of the stored route.
+static const mission_waypoint_t &route_waypoint() {
+  return guided.active ? nav_guided : mission.waypoints[route.index];
+}
+
+static bool route_holding() {
+  return guided.active ? guided.arrived : route.complete;
+}
+
 // Beyond the line through the waypoint square to the leg. Turning toward a
 // point inside the turn circle, or with wind stretching it, can otherwise
 // orbit just outside the arrival radius.
 static bool nav_mission_passed() {
-  const gps_coord_t waypoint = mission.waypoints[route.index].coord;
+  const gps_coord_t waypoint = route_waypoint().coord;
+  const gps_coord_t leg_origin = guided.active ? guided.leg_origin : route.leg_origin;
   float leg_north, leg_east, north, east;
-  nav_position_delta(route.leg_origin, waypoint, &leg_north, &leg_east);
+  nav_position_delta(leg_origin, waypoint, &leg_north, &leg_east);
   nav_position_delta(waypoint, state.gps_coord, &north, &east);
   return leg_north * north + leg_east * east > 0.0f;
 }
@@ -189,7 +217,9 @@ static void nav_mission_advance(float max_bank) {
                                  MISSION_ARRIVAL_MIN_RADIUS, MISSION_ARRIVAL_MAX_RADIUS);
   if (state.nav_target_distance > radius && !nav_mission_passed())
     return;
-  if (route.index + 1 < mission.count) {
+  if (guided.active) {
+    guided.arrived = true;
+  } else if (route.index + 1 < mission.count) {
     route.leg_origin = mission.waypoints[route.index].coord;
     route.index++;
     state.mission_index = route.index;
@@ -215,7 +245,7 @@ static wing_nav_state_t nav_next_state(nav_request_t request, bool gps_valid, bo
   const bool returning = request != NAV_REQUEST_LOITER && home_valid;
   if (gps_valid) {
     if (request == NAV_REQUEST_MISSION)
-      return route.complete ? WING_NAV_MISSION_HOLD : WING_NAV_MISSION;
+      return route_holding() ? WING_NAV_MISSION_HOLD : WING_NAV_MISSION;
     if (returning) {
       if (previous == WING_NAV_RTH_HOME || state.home_distance <= profile.navigation.loiter_radius)
         return WING_NAV_RTH_HOME;
@@ -406,14 +436,82 @@ static float cruise_climb_angle(float dt) {
   return stick * (stick > 0.0f ? ALT_MAX_CLIMB_ANGLE : ALT_MAX_DIVE_ANGLE);
 }
 
+// The pilot grants ground station commands with the mission switch, which
+// RTH and failsafe requests override.
+static bool nav_guided_ready() {
+  return nav.mission_requested && nav.gps_valid;
+}
+
+static nav_command_result_t nav_command_mission(uint8_t requested) {
+  const uint8_t resume = route.complete || route.returning ? 0 : route.index;
+  const uint8_t index = requested == NAV_COMMAND_MISSION_RESUME ? resume : requested;
+  if (index >= mission.count)
+    return NAV_RESULT_NO_MISSION;
+  if (!nav_mission_in_start_range(index))
+    return NAV_RESULT_TOO_FAR;
+  guided = {};
+  // Validated again, with a new leg origin, on the next update.
+  route = {.requested = true, .index = index};
+  altitude.target_valid = false;
+  return NAV_RESULT_OK;
+}
+
+nav_command_result_t nav_command_apply(const nav_command_t *cmd) {
+  if (!nav_guided_ready())
+    return NAV_RESULT_NO_AUTHORITY;
+
+  switch (cmd->type) {
+  case NAV_COMMAND_GOTO: {
+    if (!mission_waypoint_valid(&cmd->waypoint))
+      return NAV_RESULT_INVALID;
+    if (!nav_in_start_range(cmd->waypoint.coord))
+      return NAV_RESULT_TOO_FAR;
+    nav_guided = cmd->waypoint;
+    guided = {.active = true, .leg_origin = state.gps_coord};
+    altitude.target_valid = false;
+    return NAV_RESULT_OK;
+  }
+  case NAV_COMMAND_HOLD:
+    nav_guided = {.coord = state.gps_coord, .altitude = state.altitude};
+    guided = {.active = true, .arrived = true, .recenter = true, .leg_origin = state.gps_coord};
+    altitude.target_valid = false;
+    return NAV_RESULT_OK;
+  case NAV_COMMAND_SET_ALT: {
+    if (!guided.active)
+      return NAV_RESULT_INVALID;
+    mission_waypoint_t target = nav_guided;
+    target.altitude = cmd->waypoint.altitude;
+    if (!mission_waypoint_valid(&target))
+      return NAV_RESULT_INVALID;
+    nav_guided.altitude = target.altitude;
+    if (altitude.target_valid)
+      altitude.target = target.altitude;
+    return NAV_RESULT_OK;
+  }
+  case NAV_COMMAND_RTH:
+    // Like the return after a mission, turning the mission switch off ends it.
+    guided = {.returning = true};
+    return NAV_RESULT_OK;
+  case NAV_COMMAND_MISSION:
+    return nav_command_mission(cmd->index);
+  default:
+    return NAV_RESULT_INVALID;
+  }
+}
+
 void nav_update_wing(bool gps_valid, bool home_valid) {
   const uint32_t now = time_micros();
   const uint32_t now_ms = time_millis();
   const float dt = constrain((now - nav.updated_us) * 1e-6f, 0.0f, 0.1f);
   nav.updated_us = now;
 
-  const nav_request_t request = nav_mission_request(nav_request(), gps_valid);
-  state.mission_active = request == NAV_REQUEST_MISSION;
+  const nav_request_t requested = nav_request();
+  nav.mission_requested = requested == NAV_REQUEST_MISSION;
+  nav.gps_valid = gps_valid;
+  state.guided_ready = nav_guided_ready();
+  const nav_request_t request = nav_mission_request(requested, gps_valid);
+  state.guided_active = request == NAV_REQUEST_MISSION && guided.active;
+  state.mission_active = request == NAV_REQUEST_MISSION && !guided.active;
   // route.index survives interruptions, but is published only while flown.
   state.mission_index = state.mission_active ? route.index : 0;
   nav_update_target();
@@ -443,7 +541,7 @@ void nav_update_wing(bool gps_valid, bool home_valid) {
   if (gps_valid)
     nav.speed = hypotf(state.gps_vel_north, state.gps_vel_east);
 
-  if (request == NAV_REQUEST_MISSION && gps_valid && !route.complete)
+  if (request == NAV_REQUEST_MISSION && gps_valid && !route_holding())
     nav_mission_advance(max_bank);
   const wing_nav_state_t next = nav_next_state(request, gps_valid, home_valid, now_ms);
   state.wing_nav_state = next;
@@ -451,8 +549,9 @@ void nav_update_wing(bool gps_valid, bool home_valid) {
     circle_place_ahead();
   if (next == WING_NAV_RTH_HOME && previous != WING_NAV_RTH_HOME)
     circle_place_at(state.gps_home);
-  if (next == WING_NAV_MISSION_HOLD && previous != WING_NAV_MISSION_HOLD)
-    circle_place_at(mission.waypoints[route.index].coord);
+  if (next == WING_NAV_MISSION_HOLD && (previous != WING_NAV_MISSION_HOLD || guided.recenter))
+    circle_place_at(route_waypoint().coord);
+  guided.recenter = false;
   if (next == WING_NAV_DESCEND && previous != WING_NAV_DESCEND)
     nav.descend_ms = now_ms;
   if (next == WING_NAV_CRUISE && previous != WING_NAV_CRUISE)
@@ -494,7 +593,7 @@ void nav_update_wing(bool gps_valid, bool home_valid) {
   const bool returning = request != NAV_REQUEST_LOITER && home_valid;
   float entry_target = state.altitude + (returning ? MAX(profile.navigation.rth_altitude, 0.0f) : 0.0f);
   if (request == NAV_REQUEST_MISSION)
-    entry_target = mission.waypoints[route.index].altitude;
+    entry_target = route_waypoint().altitude;
   const bool descend = next == WING_NAV_DESCEND;
   float climb_angle;
   if (descend) {

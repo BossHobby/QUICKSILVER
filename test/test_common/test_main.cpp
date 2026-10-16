@@ -256,6 +256,8 @@ extern void test_crsf_serial_telemetry_schedules_attitude(void);
 extern void test_crsf_serial_telemetry_schedules_baro_altitude_with_barometer(void);
 extern void test_crsf_msp_request_queues_response_immediately(void);
 extern void test_crsf_quic_session_serves_configurator_requests(void);
+extern void test_crsf_quic_session_paces_standard_telemetry(void);
+extern void test_crsf_quic_rt_serves_the_ground_station_while_armed(void);
 extern void test_crsf_link_statistics_updates_collected_stats(void);
 extern void test_crsf_tx_link_statistics_updates_direct_lqi(void);
 extern void test_crsf_rx_link_statistics_updates_direct_lqi_and_downlink_stats(void);
@@ -554,6 +556,8 @@ int main(int argc, char **argv) {
   RUN_TEST(test_crsf_serial_telemetry_schedules_baro_altitude_with_barometer);
   RUN_TEST(test_crsf_msp_request_queues_response_immediately);
   RUN_TEST(test_crsf_quic_session_serves_configurator_requests);
+  RUN_TEST(test_crsf_quic_session_paces_standard_telemetry);
+  RUN_TEST(test_crsf_quic_rt_serves_the_ground_station_while_armed);
   RUN_TEST(test_crsf_link_statistics_updates_collected_stats);
   RUN_TEST(test_crsf_tx_link_statistics_updates_direct_lqi);
   RUN_TEST(test_crsf_rx_link_statistics_updates_direct_lqi_and_downlink_stats);
