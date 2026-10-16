@@ -17,13 +17,43 @@ SemaphoreHandle_t profile_mutex;
 // ignore -Wmissing-braces here, gcc bug with nested structs
 #pragma GCC diagnostic ignored "-Wmissing-braces"
 
-#define DEFAULT_BLACKBOX_PRESET 0
+#define DEFAULT_BLACKBOX_PRESET 2 // all fields at 1000 Hz
 const blackbox_preset_t blackbox_presets[] = {
+    {
+        .field_flags = ((1 << BBOX_FIELD_MAX) - 1), // Set all bits
+        .sample_rate_hz = 250,
+        .name = "All fields, Sample Rate=250",
+        .name_osd = "ALL, HZ=250",
+    },
+    {
+        .field_flags = ((1 << BBOX_FIELD_MAX) - 1), // Set all bits
+        .sample_rate_hz = 500,
+        .name = "All fields, Sample Rate=500",
+        .name_osd = "ALL, HZ=500",
+    },
     {
         .field_flags = ((1 << BBOX_FIELD_MAX) - 1), // Set all bits
         .sample_rate_hz = 1000,
         .name = "All fields, Sample Rate=1000",
         .name_osd = "ALL, HZ=1000",
+    },
+    {
+        .field_flags = ((1 << BBOX_FIELD_MAX) - 1), // Set all bits
+        .sample_rate_hz = 2000,
+        .name = "All fields, Sample Rate=2000",
+        .name_osd = "ALL, HZ=2000",
+    },
+    {
+        .field_flags = ((1 << BBOX_FIELD_MAX) - 1), // Set all bits
+        .sample_rate_hz = 4000,
+        .name = "All fields, Sample Rate=4000",
+        .name_osd = "ALL, HZ=4000",
+    },
+    {
+        .field_flags = ((1 << BBOX_FIELD_MAX) - 1), // Set all bits
+        .sample_rate_hz = 8000,
+        .name = "All fields, Sample Rate=8000",
+        .name_osd = "ALL, HZ=8000",
     },
     {
         .field_flags = (1 << BBOX_FIELD_GYRO_FILTER) | (1 << BBOX_FIELD_LOOP) | (1 << BBOX_FIELD_TIME),
