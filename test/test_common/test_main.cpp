@@ -158,6 +158,10 @@ extern void test_cbor_profile_servo_rate_roundtrip(void);
 extern void test_cbor_enum_wire_format(void);
 extern void test_cbor_failed_enum_decode_preserves_value(void);
 
+// LZSS tests
+extern void test_lzss_roundtrip(void);
+extern void test_quic_compresses_reply_only_when_requested(void);
+
 // SPI tests
 extern void test_spi_initial_state(void);
 extern void test_spi_init(void);
@@ -424,6 +428,10 @@ int main(int argc, char **argv) {
   RUN_TEST(test_cbor_profile_servo_rate_roundtrip);
   RUN_TEST(test_cbor_enum_wire_format);
   RUN_TEST(test_cbor_failed_enum_decode_preserves_value);
+
+  // LZSS tests
+  RUN_TEST(test_lzss_roundtrip);
+  RUN_TEST(test_quic_compresses_reply_only_when_requested);
 
   // SPI tests
   RUN_TEST(test_spi_initial_state);
