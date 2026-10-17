@@ -1032,6 +1032,37 @@ void test_crsf_gps_frame_units(void) {
   TEST_ASSERT_EQUAL_UINT8(14, frame[17]);
 }
 
+void test_crsf_baro_altitude_frame_packing(void) {
+  crsf_test_reset(8160000);
+  const struct {
+    float altitude;
+    float vertical_speed;
+    uint16_t altitude_packed;
+    int8_t vertical_speed_packed;
+  } cases[] = {
+      // dm with a 1000 m offset; vertical speed log(|v| / 100 + 1) / 0.026.
+      {0.0f, 0.0f, 10000, 0},
+      {12.3f, 1.0f, 10123, 27},
+      {-5.0f, -1.0f, 9950, -27},
+      // Whole meters with bit 15 set above 2276.7 m.
+      {3000.0f, 25.0f, 3000 | 0x8000, 125},
+      // Clamped at the ends of both ranges.
+      {-2000.0f, -100.0f, 0, -127},
+  };
+  for (const auto &test : cases) {
+    state.altitude = test.altitude;
+    state.vertical_speed = test.vertical_speed;
+    uint8_t frame[CRSF_FRAME_SIZE_MAX] = {0};
+    const uint8_t frame_size = crsf_tlm_frame_baro_altitude(frame);
+
+    crsf_test_assert_frame_crc(frame, frame_size);
+    TEST_ASSERT_EQUAL_UINT8(7U, frame_size);
+    TEST_ASSERT_EQUAL_UINT8(CRSF_FRAMETYPE_BARO_ALTITUDE, frame[2]);
+    TEST_ASSERT_EQUAL_UINT16(test.altitude_packed, (uint16_t)crsf_test_read_i16(frame + 3));
+    TEST_ASSERT_EQUAL_INT8(test.vertical_speed_packed, (int8_t)frame[5]);
+  }
+}
+
 void test_crsf_flight_mode_frame_reports_mode_text(void) {
   crsf_test_reset(8200000);
 #if defined(VEHICLE_ROVER)
@@ -1114,6 +1145,28 @@ void test_crsf_serial_telemetry_schedules_attitude(void) {
   }
   profile.serial.gps = saved_gps;
   state.attitude = saved_attitude;
+}
+
+void test_crsf_serial_telemetry_schedules_baro_altitude_with_barometer(void) {
+  crsf_test_reset(8400000);
+  const bool detected[] = {false, true};
+  for (const bool baro_detected : detected) {
+    state.baro_detected = baro_detected;
+    uint8_t baro_count = 0;
+    for (uint8_t slot = 0; slot < 8; slot++) {
+      ring_buffer_clear(serial_rx.tx_buffer);
+      serial_rx.tx_done = true;
+      time_test_advance_us(2000);
+      rx_serial_process_crsf();
+      uint8_t frame[CRSF_FRAME_SIZE_MAX] = {};
+      const uint8_t frame_size = crsf_test_read_tx_frame(frame);
+      crsf_test_assert_frame_crc(frame, frame_size);
+      if (frame[2] == CRSF_FRAMETYPE_BARO_ALTITUDE)
+        baro_count++;
+    }
+    TEST_ASSERT_EQUAL_UINT8(baro_detected ? 1U : 0U, baro_count);
+  }
+  state.baro_detected = false;
 }
 
 void test_crsf_msp_request_queues_response_immediately(void) {

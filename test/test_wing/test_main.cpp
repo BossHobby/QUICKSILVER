@@ -16,6 +16,7 @@
 #include "driver/motor.h"
 #include "driver/servo.h"
 #include "driver/time.h"
+#include "rx/crsf.h"
 #include "util/util.h"
 
 extern const profile_t default_profile;
@@ -178,6 +179,21 @@ static void test_speed_scale_estimates_airspeed_from_throttle_and_climb() {
   control();
   TEST_ASSERT_FALSE(flags.arm_state);
   TEST_ASSERT_EQUAL_FLOAT(1.0f, state.wing_speed_scale);
+}
+static uint16_t crsf_airspeed_reading() {
+  uint8_t frame[CRSF_FRAME_SIZE_MAX] = {};
+  TEST_ASSERT_EQUAL_UINT32(6U, crsf_tlm_frame_airspeed(frame));
+  TEST_ASSERT_EQUAL_UINT8(CRSF_FRAMETYPE_AIRSPEED, frame[2]);
+  return (uint16_t)(frame[3] << 8 | frame[4]);
+}
+static void test_crsf_airspeed_reports_the_estimate_in_flight() {
+  TEST_ASSERT_EQUAL_UINT16(0, crsf_airspeed_reading());
+
+  // 0.1 km/h of cruise speed over the speed scale, as on the OSD.
+  flags.in_air = 1;
+  profile.navigation.cruise_speed = 15.0f;
+  state.wing_speed_scale = 1.25f;
+  TEST_ASSERT_EQUAL_UINT16(432, crsf_airspeed_reading());
 }
 static vec3_t turn_setpoint_change(float roll) {
   state.attitude.roll = roll;
@@ -673,6 +689,7 @@ int main() {
   RUN_TEST(test_level_tilt_moves_disarmed_surfaces_without_integral);
   RUN_TEST(test_pid_gains_follow_speed_scale);
   RUN_TEST(test_speed_scale_estimates_airspeed_from_throttle_and_climb);
+  RUN_TEST(test_crsf_airspeed_reports_the_estimate_in_flight);
   RUN_TEST(test_level_turn_coordination_adds_turn_rates);
   RUN_TEST(test_turn_coordination_waits_for_flight);
   RUN_TEST(test_navigation_always_coordinates_turns);
