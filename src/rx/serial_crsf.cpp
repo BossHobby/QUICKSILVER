@@ -525,18 +525,19 @@ static void rx_serial_send_crsf_telemetry() {
                             (!gps_home_sent || (time_millis() - gps_home_sent_ms) >= CRSF_GPS_HOME_INTERVAL_MS);
   bool gps_home_frame = false;
 
+  // Battery fills every slot whose frame does not apply.
   switch (telemetry_counter++ % 8) {
   case 0:
     if (gps_enabled)
       telemetry_size = crsf_tlm_frame_gps(crsf_telemetry_packet);
-    else
-      telemetry_size = crsf_tlm_frame_battery_sensor(crsf_telemetry_packet);
     break;
   case 2:
     if (gps_enabled)
       telemetry_size = crsf_tlm_frame_gps_extended(crsf_telemetry_packet);
-    else
-      telemetry_size = crsf_tlm_frame_battery_sensor(crsf_telemetry_packet);
+    break;
+  case 3:
+    if (state.baro_detected)
+      telemetry_size = crsf_tlm_frame_baro_altitude(crsf_telemetry_packet);
     break;
   case 4:
     telemetry_size = crsf_tlm_frame_flight_mode(crsf_telemetry_packet);
@@ -544,6 +545,11 @@ static void rx_serial_send_crsf_telemetry() {
   case 6:
     telemetry_size = crsf_tlm_frame_attitude(crsf_telemetry_packet);
     break;
+#if defined(VEHICLE_WING)
+  case 7:
+    telemetry_size = crsf_tlm_frame_airspeed(crsf_telemetry_packet);
+    break;
+#endif
   default:
     if (gps_home_due) {
       telemetry_size = crsf_tlm_frame_gps_home(crsf_telemetry_packet);
@@ -553,10 +559,10 @@ static void rx_serial_send_crsf_telemetry() {
       telemetry_size = crsf_tlm_frame_gps_time(crsf_telemetry_packet);
       gps_time_frame = telemetry_size != 0;
     }
-    if (!gps_home_frame && !gps_time_frame)
-      telemetry_size = crsf_tlm_frame_battery_sensor(crsf_telemetry_packet);
     break;
   }
+  if (!telemetry_size)
+    telemetry_size = crsf_tlm_frame_battery_sensor(crsf_telemetry_packet);
 
   if (!rx_serial_crsf_queue_frame(crsf_telemetry_packet, telemetry_size))
     return;
