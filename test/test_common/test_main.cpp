@@ -252,6 +252,7 @@ extern void test_crsf_negotiated_baudrate_does_not_fallback_on_silence(void);
 extern void test_crsf_device_ping_queues_device_info_immediately(void);
 extern void test_crsf_device_ping_uses_ping_origin_as_device_info_destination(void);
 extern void test_crsf_gps_extended_frame_uses_gps_status(void);
+extern void test_crsf_gps_frame_units(void);
 extern void test_crsf_flight_mode_frame_reports_mode_text(void);
 extern void test_crsf_attitude_frame_units_order_and_crc(void);
 extern void test_crsf_serial_telemetry_schedules_attitude(void);
@@ -545,6 +546,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_crsf_device_ping_queues_device_info_immediately);
   RUN_TEST(test_crsf_device_ping_uses_ping_origin_as_device_info_destination);
   RUN_TEST(test_crsf_gps_extended_frame_uses_gps_status);
+  RUN_TEST(test_crsf_gps_frame_units);
   RUN_TEST(test_crsf_flight_mode_frame_reports_mode_text);
   RUN_TEST(test_crsf_attitude_frame_units_order_and_crc);
   RUN_TEST(test_crsf_serial_telemetry_schedules_attitude);
