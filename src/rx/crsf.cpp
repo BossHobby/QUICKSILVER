@@ -1,5 +1,6 @@
 #include "rx/crsf.h"
 
+#include <math.h>
 #include <string.h>
 
 #include "control/control.h"
@@ -155,6 +156,57 @@ uint32_t crsf_tlm_frame_battery_sensor(uint8_t *buf) {
   frame->payload.remaining = 100;
   return crsf_tlm_frame_finalize(buf, CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE);
 }
+
+// Spec packing: dm with a 1000 m offset up to 2276.7 m, then whole meters
+// with bit 15 set, capped at 0xFFFE which OpenTX reads as invalid beyond.
+static uint16_t crsf_altitude_packed(int32_t altitude_dm) {
+  static constexpr int32_t ALT_MIN_DM = 10000;
+  static constexpr int32_t ALT_THRESHOLD_DM = 0x8000 - ALT_MIN_DM;
+  static constexpr int32_t ALT_MAX_DM = 0x7ffe * 10 - 5;
+
+  if (altitude_dm < -ALT_MIN_DM)
+    return 0;
+  if (altitude_dm > ALT_MAX_DM)
+    return 0xfffe;
+  if (altitude_dm < ALT_THRESHOLD_DM)
+    return altitude_dm + ALT_MIN_DM;
+  return ((altitude_dm + 5) / 10) | 0x8000;
+}
+
+// Spec packing: log scale with 3 cm/s steps near zero and a +-25 m/s range.
+static int8_t crsf_vertical_speed_packed(float vertical_speed_cms) {
+  static constexpr float KL = 100.0f;
+  static constexpr float KR = 0.026f;
+
+  const float packed = logf(fabsf(vertical_speed_cms) / KL + 1.0f) / KR;
+  const int8_t magnitude = (int8_t)constrain(lrintf(packed), 0L, 127L);
+  return vertical_speed_cms < 0.0f ? -magnitude : magnitude;
+}
+
+// Barometer altitude above launch with the fused vertical speed; sent only
+// when a barometer was detected.
+uint32_t crsf_tlm_frame_baro_altitude(uint8_t *buf) {
+  crsf_baro_altitude_frame_t *frame = (crsf_baro_altitude_frame_t *)buf;
+  frame->header.type = CRSF_FRAMETYPE_BARO_ALTITUDE;
+
+  const int32_t altitude_dm = lrintf(constrain(state.altitude * 10.0f, -1.0e6f, 1.0e6f));
+  frame->payload.altitude = __builtin_bswap16(crsf_altitude_packed(altitude_dm));
+  frame->payload.vertical_speed = crsf_vertical_speed_packed(state.vertical_speed * 100.0f);
+  return crsf_tlm_frame_finalize(buf, CRSF_FRAME_BARO_ALTITUDE_PAYLOAD_SIZE);
+}
+
+#if defined(VEHICLE_WING)
+// Estimated airspeed without a sensor, as on the OSD; zero on the ground.
+uint32_t crsf_tlm_frame_airspeed(uint8_t *buf) {
+  crsf_airspeed_frame_t *frame = (crsf_airspeed_frame_t *)buf;
+  frame->header.type = CRSF_FRAMETYPE_AIRSPEED;
+
+  const float airspeed = flags.in_air ? profile.navigation.cruise_speed / state.wing_speed_scale : 0.0f;
+  // 0.1 km/h from m/s.
+  frame->payload.speed = __builtin_bswap16((uint16_t)constrain(airspeed * 36.0f, 0.0f, 65535.0f));
+  return crsf_tlm_frame_finalize(buf, CRSF_FRAME_AIRSPEED_PAYLOAD_SIZE);
+}
+#endif
 
 uint32_t crsf_tlm_frame_gps(uint8_t *buf) {
   crsf_gps_frame_t *frame = (crsf_gps_frame_t *)buf;

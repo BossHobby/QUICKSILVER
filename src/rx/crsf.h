@@ -46,6 +46,8 @@ enum {
   CRSF_FRAME_GPS_EXTENDED_PAYLOAD_SIZE = 20,
   CRSF_FRAME_GPS_HOME_PAYLOAD_SIZE = 10,
   CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = 8,
+  CRSF_FRAME_BARO_ALTITUDE_PAYLOAD_SIZE = 3,
+  CRSF_FRAME_AIRSPEED_PAYLOAD_SIZE = 2,
   CRSF_FRAME_LINK_STATISTICS_PAYLOAD_SIZE = 10,
   CRSF_FRAME_LINK_STATISTICS_RX_PAYLOAD_SIZE = 5,
   CRSF_FRAME_LINK_STATISTICS_TX_PAYLOAD_SIZE = 6,
@@ -69,6 +71,8 @@ typedef enum {
   CRSF_FRAMETYPE_GPS_TIME = 0x03,
   CRSF_FRAMETYPE_GPS_EXTENDED = 0x06,
   CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08,
+  CRSF_FRAMETYPE_BARO_ALTITUDE = 0x09,
+  CRSF_FRAMETYPE_AIRSPEED = 0x0A,
   CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
   CRSF_FRAMETYPE_RC_CHANNELS_PACKED = 0x16,
   CRSF_FRAMETYPE_RC_CHANNELS_SUBSET_PACKED = 0x17,
@@ -191,6 +195,15 @@ typedef struct {
 } __attribute__((__packed__)) crsf_battery_sensor_payload_t;
 
 typedef struct {
+  uint16_t altitude;     // packed, above launch: dm + 10000, or m with bit 15 set
+  int8_t vertical_speed; // log-packed cm/s, up
+} __attribute__((__packed__)) crsf_baro_altitude_payload_t;
+
+typedef struct {
+  uint16_t speed; // 0.1 km/h
+} __attribute__((__packed__)) crsf_airspeed_payload_t;
+
+typedef struct {
   uint32_t latitude;
   uint32_t longitude;
   uint16_t ground_speed;
@@ -250,6 +263,18 @@ typedef struct {
   crsf_battery_sensor_payload_t payload;
   uint8_t crc;
 } __attribute__((__packed__)) crsf_battery_sensor_frame_t;
+
+typedef struct {
+  crsf_frame_header_t header;
+  crsf_baro_altitude_payload_t payload;
+  uint8_t crc;
+} __attribute__((__packed__)) crsf_baro_altitude_frame_t;
+
+typedef struct {
+  crsf_frame_header_t header;
+  crsf_airspeed_payload_t payload;
+  uint8_t crc;
+} __attribute__((__packed__)) crsf_airspeed_frame_t;
 
 typedef struct {
   crsf_frame_header_t header;
@@ -388,6 +413,10 @@ uint8_t crsf_command_crc8(const uint8_t *data, uint8_t size);
 uint32_t crsf_frame_speed_response(uint8_t *buf, uint8_t destination, uint8_t port_id, bool response);
 uint32_t crsf_frame_bind(uint8_t *buf);
 uint32_t crsf_tlm_frame_battery_sensor(uint8_t *buf);
+uint32_t crsf_tlm_frame_baro_altitude(uint8_t *buf);
+#if defined(VEHICLE_WING)
+uint32_t crsf_tlm_frame_airspeed(uint8_t *buf);
+#endif
 uint32_t crsf_tlm_frame_gps(uint8_t *buf);
 uint32_t crsf_tlm_frame_gps_time(uint8_t *buf);
 uint32_t crsf_tlm_frame_gps_extended(uint8_t *buf);
