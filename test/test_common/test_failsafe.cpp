@@ -1011,6 +1011,28 @@ void test_crsf_gps_extended_frame_uses_gps_status(void) {
   TEST_ASSERT_EQUAL_UINT8(12U, frame[22]);
 }
 
+void test_crsf_gps_frame_units(void) {
+  crsf_test_reset(8150000);
+  state.gps_coord = {.lon = -1234567, .lat = 473456789};
+  state.gps_speed = 10.0f;
+  state.gps_heading = 123.5f;
+  state.gps_altitude = 512.0f;
+  state.gps_sats = 14;
+
+  uint8_t frame[CRSF_FRAME_SIZE_MAX] = {0};
+  const uint8_t frame_size = crsf_tlm_frame_gps(frame);
+
+  crsf_test_assert_frame_crc(frame, frame_size);
+  TEST_ASSERT_EQUAL_UINT8(CRSF_FRAMETYPE_GPS, frame[2]);
+  TEST_ASSERT_EQUAL_INT32(473456789, (int32_t)__builtin_bswap32(*(uint32_t *)(frame + 3)));
+  TEST_ASSERT_EQUAL_INT32(-1234567, (int32_t)__builtin_bswap32(*(uint32_t *)(frame + 7)));
+  // 10 m/s is 36.0 km/h, in 0.1 km/h.
+  TEST_ASSERT_EQUAL_UINT16(360, (uint16_t)crsf_test_read_i16(frame + 11));
+  TEST_ASSERT_EQUAL_UINT16(12350, (uint16_t)crsf_test_read_i16(frame + 13));
+  TEST_ASSERT_EQUAL_UINT16(1512, (uint16_t)crsf_test_read_i16(frame + 15));
+  TEST_ASSERT_EQUAL_UINT8(14, frame[17]);
+}
+
 void test_crsf_flight_mode_frame_reports_mode_text(void) {
   crsf_test_reset(8200000);
 #if defined(VEHICLE_ROVER)
