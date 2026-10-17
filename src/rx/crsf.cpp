@@ -161,7 +161,8 @@ uint32_t crsf_tlm_frame_gps(uint8_t *buf) {
   frame->payload.latitude = __builtin_bswap32((uint32_t)state.gps_coord.lat);
   frame->payload.longitude = __builtin_bswap32((uint32_t)state.gps_coord.lon);
 
-  frame->payload.ground_speed = __builtin_bswap16((uint16_t)(state.gps_speed * 3.6f * 100));
+  // 0.1 km/h from m/s.
+  frame->payload.ground_speed = __builtin_bswap16((uint16_t)constrain(state.gps_speed * 36.0f, 0.0f, 65535.0f));
   frame->payload.heading = __builtin_bswap16((uint16_t)(state.gps_heading * 100));
   frame->payload.altitude = __builtin_bswap16((uint16_t)(state.gps_altitude + 1000));
   frame->payload.satellites = state.gps_sats;
