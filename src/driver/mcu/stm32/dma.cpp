@@ -14,11 +14,6 @@
 #include "driver/spi.h"
 #endif
 
-#if defined(STM32F7) || defined(STM32H7)
-#define CACHE_LINE_SIZE 32
-#define CACHE_LINE_MASK (CACHE_LINE_SIZE - 1)
-#endif
-
 #if defined(STM32G4)
 #define DMA_STREAM(_port, _stream)                 \
   {                                                \
@@ -43,22 +38,6 @@ const dma_stream_def_t dma_stream_defs[DMA_STREAM_MAX] = {
     DMA_STREAMS
 };
 #undef DMA_STREAM
-
-void dma_prepare_tx_memory(void *addr, uint32_t size) {
-#if defined(STM32F7) || defined(STM32H7)
-  if (!WITHIN_DTCM_RAM(addr) && !WITHIN_DMA_RAM(addr)) {
-    SCB_CleanDCache_by_Addr((uint32_t *)((uint32_t)addr & ~CACHE_LINE_MASK), (size + CACHE_LINE_SIZE) & ~CACHE_LINE_MASK);
-  }
-#endif
-}
-
-void dma_prepare_rx_memory(void *addr, uint32_t size) {
-#if defined(STM32F7) || defined(STM32H7)
-  if (!WITHIN_DTCM_RAM(addr) && !WITHIN_DMA_RAM(addr)) {
-    SCB_CleanInvalidateDCache_by_Addr((uint32_t *)((uint32_t)addr & ~CACHE_LINE_MASK), (size + CACHE_LINE_SIZE) & ~CACHE_LINE_MASK);
-  }
-#endif
-}
 
 void dma_enable_rcc(const dma_stream_def_t *def) {
 #ifdef STM32G4
