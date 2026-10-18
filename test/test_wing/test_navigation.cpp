@@ -991,11 +991,97 @@ static void test_mission_yields_to_rth_and_failsafe() {
   TEST_ASSERT_TRUE(state.mission_active);
   TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
 
+  // Without mission_on_failsafe, failsafe RTH takes the link loss over.
+  profile.navigation.mission_on_failsafe = false;
   lose_link();
   step(2000);
   TEST_ASSERT_TRUE(state.wing_nav_failsafe);
   TEST_ASSERT_FALSE(state.mission_active);
   TEST_ASSERT_EQUAL(WING_NAV_RTH_RETURN, state.wing_nav_state);
+}
+
+static void test_mission_continues_through_link_loss() {
+  mission_route(MISSION_END_HOLD);
+  fly_mission();
+  fly_track(0.0f, 0.0f, 300.0f, 0.0f);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+
+  lose_link();
+  step(2000);
+  TEST_ASSERT_TRUE(state.mission_failsafe_active);
+  TEST_ASSERT_TRUE(flags.failsafe);
+  TEST_ASSERT_FALSE(flags.failsafe_outputs_blocked);
+  TEST_ASSERT_FALSE(state.wing_nav_failsafe);
+  TEST_ASSERT_TRUE(state.mission_active);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+  TEST_ASSERT_EQUAL_STRING("FS MISSION", control_flight_mode_name());
+
+  // It finishes and circles the last waypoint for as long as the link is lost.
+  fly_track(300.0f, 0.0f, 300.0f, 300.0f);
+  step(30000);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION_HOLD, state.wing_nav_state);
+  TEST_ASSERT_TRUE(state.mission_failsafe_active);
+  TEST_ASSERT_TRUE(flags.arm_state);
+
+  // The link returns with the mission switch off. The switches stay locked
+  // until a stick moves, which only unlocks them.
+  flags.failsafe_signal_lost = 0;
+  state.aux_active &= ~(1U << AUX_MISSION);
+  step(1000);
+  TEST_ASSERT_TRUE(state.mission_failsafe_active);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION_HOLD, state.wing_nav_state);
+  state.rx.roll = 0.5f;
+  step(20);
+  TEST_ASSERT_FALSE(state.mission_failsafe_active);
+  TEST_ASSERT_FALSE(flags.failsafe);
+  TEST_ASSERT_EQUAL(WING_NAV_INACTIVE, state.wing_nav_state);
+  state.rx.roll = 0.0f;
+}
+
+static void test_mission_link_recovery_keeps_the_mission_switch() {
+  mission_route(MISSION_END_HOLD);
+  fly_mission();
+  fly_track(0.0f, 0.0f, 200.0f, 0.0f);
+  lose_link();
+  step(2000);
+  TEST_ASSERT_TRUE(state.mission_failsafe_active);
+
+  // A switch left on keeps the mission flying once the sticks unlock it.
+  flags.failsafe_signal_lost = 0;
+  step(1000);
+  state.rx.pitch = -0.5f;
+  step(20);
+  TEST_ASSERT_FALSE(state.mission_failsafe_active);
+  TEST_ASSERT_FALSE(flags.failsafe);
+  TEST_ASSERT_TRUE(state.mission_active);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+  TEST_ASSERT_EQUAL_STRING("MISSION", control_flight_mode_name());
+  state.rx.pitch = 0.0f;
+}
+
+static void test_mission_link_loss_without_gps_hands_over_to_failsafe() {
+  mission_route(MISSION_END_HOLD);
+  fly_mission();
+  fly_track(0.0f, 0.0f, 200.0f, 0.0f);
+  lose_link();
+  step(2000);
+  TEST_ASSERT_TRUE(state.mission_failsafe_active);
+
+  // The IMU-heading return still belongs to the mission. Once it times out
+  // the route cannot be flown, and failsafe takes over without disarming.
+  state.heading_confidence = 1.0f;
+  state.heading = 90.0f;
+  state.gps_lock = false;
+  step(2000);
+  TEST_ASSERT_EQUAL(WING_NAV_RTH_HEADING, state.wing_nav_state);
+  TEST_ASSERT_TRUE(state.mission_failsafe_active);
+  step(10000);
+  TEST_ASSERT_FALSE(state.mission_failsafe_active);
+  TEST_ASSERT_TRUE(state.wing_nav_failsafe);
+  TEST_ASSERT_EQUAL(WING_NAV_DESCEND, state.wing_nav_state);
+  TEST_ASSERT_TRUE(flags.arm_state);
+  TEST_ASSERT_FALSE(flags.failsafe_outputs_blocked);
 }
 
 static void test_mission_needs_switch_edge_after_arming() {
@@ -1060,7 +1146,7 @@ static void test_mission_gps_loss_returns_at_rth_altitude() {
 // Ground station commands over the QUIC_RT link, delivered to Flight by nav_update().
 static void send_command(nav_command_type_t type, const void *args = nullptr, uint8_t size = 0) {
   static uint8_t id = 0;
-  uint8_t frame[4 + sizeof(quic_rt_goto_t)] = {QUIC_RT_VERSION, QUIC_RT_COMMAND, (uint8_t)type, ++id};
+  uint8_t frame[5 + NAV_COMMAND_ITEMS_MAX * sizeof(quic_rt_mission_item_t)] = {QUIC_RT_VERSION, QUIC_RT_COMMAND, (uint8_t)type, ++id};
   if (size)
     memcpy(frame + 4, args, size);
   quic_rt_receive(0x10, frame, 4 + size);
@@ -1171,6 +1257,132 @@ static void test_guided_resumes_the_mission_and_returns_home() {
   TEST_ASSERT_EQUAL(WING_NAV_INACTIVE, state.wing_nav_state);
 }
 
+static mission_waypoint_t route_point(float north, float east) {
+  const float lon_scale = METERS_PER_DEGREE_LAT * cosf(ORIGIN.lat * 1e-7f * DEGTORAD);
+  return {
+      .coord = {.lon = ORIGIN.lon + (int32_t)lrintf(east / lon_scale * 1e7f),
+                .lat = ORIGIN.lat + (int32_t)lrintf(north / METERS_PER_DEGREE_LAT * 1e7f)},
+      .altitude = 50.0f,
+      .speed = 0.0f,
+  };
+}
+
+static void send_mission(const mission_t &route) {
+  for (uint8_t index = 0; index < route.count; index += NAV_COMMAND_ITEMS_MAX) {
+    const uint8_t count = MIN(route.count - index, NAV_COMMAND_ITEMS_MAX);
+    uint8_t args[1 + NAV_COMMAND_ITEMS_MAX * sizeof(quic_rt_mission_item_t)] = {index};
+    for (uint8_t i = 0; i < count; i++) {
+      const mission_waypoint_t &wp = route.waypoints[index + i];
+      const quic_rt_mission_item_t item = {
+          .lat = wp.coord.lat,
+          .lon = wp.coord.lon,
+          .altitude_cm = (int32_t)lroundf(wp.altitude * 100.0f),
+          .speed_cms = (uint16_t)lroundf(wp.speed * 100.0f),
+      };
+      memcpy(args + 1 + i * sizeof(item), &item, sizeof(item));
+    }
+    send_command(NAV_COMMAND_MISSION_ITEMS, args, 1 + count * sizeof(quic_rt_mission_item_t));
+    TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_OK, link_result());
+  }
+  const quic_rt_mission_commit_t commit = {.count = route.count, .end_action = route.end_action, .crc = mission_crc(&route)};
+  send_command(NAV_COMMAND_MISSION_COMMIT, &commit, sizeof(commit));
+}
+
+// The route can change in flight, without the ground station taking over.
+static void test_mission_replaced_in_flight_keeps_the_waypoint() {
+  mission_route(MISSION_END_HOLD);
+  fly_mission();
+  step(1000);
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+
+  // Adding a waypoint after the active one keeps the leg.
+  mission_t route = mission;
+  route.count = 4;
+  route.waypoints[2] = route_point(0.0f, 300.0f);
+  route.waypoints[3] = route_point(0.0f, 600.0f);
+  send_mission(route);
+  quic_rt_status_t status = link_status();
+  TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_OK, status.result_index >> QUIC_RT_RESULT_SHIFT);
+  TEST_ASSERT_EQUAL_UINT8(4, status.mission_count);
+  TEST_ASSERT_EQUAL_HEX16(mission_crc(&route), status.mission_crc);
+  TEST_ASSERT_TRUE(state.mission_active);
+  TEST_ASSERT_FALSE(state.guided_active);
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+  TEST_ASSERT_FLOAT_WITHIN(1.0f, 0.0f, state.nav_target_bearing);
+
+  // Moving the active waypoint turns toward its new position.
+  route.waypoints[0] = route_point(0.0f, 300.0f);
+  send_mission(route);
+  TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_OK, link_result());
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+  TEST_ASSERT_FLOAT_WITHIN(1.0f, 90.0f, state.nav_target_bearing);
+
+  // A route shortened past the active waypoint ends at its new last one.
+  fly_track(0.0f, 0.0f, 0.0f, 300.0f);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  route.count = 1;
+  send_mission(route);
+  TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_OK, link_result());
+  step(1000);
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION_HOLD, state.wing_nav_state);
+
+  // An empty route cannot replace the flown one.
+  route.count = 0;
+  send_mission(route);
+  TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_NO_MISSION, link_result());
+  TEST_ASSERT_EQUAL_UINT8(1, mission.count);
+}
+
+// A GPS dropout returns on the IMU heading, but the route resumes without a
+// new check once GPS recovers, so a replacement is checked at once.
+static void test_mission_replaced_during_gps_loss_is_checked() {
+  mission_route(MISSION_END_HOLD);
+  fly_mission();
+  step(1000);
+  state.heading_confidence = 1.0f;
+  state.heading = 90.0f;
+  state.gps_lock = false;
+  step(1000);
+  TEST_ASSERT_EQUAL(WING_NAV_RTH_HEADING, state.wing_nav_state);
+  TEST_ASSERT_FALSE(state.mission_active);
+
+  mission_t route = mission;
+  route.count = 0;
+  send_mission(route);
+  TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_NO_MISSION, link_result());
+  route.count = 2;
+  route.waypoints[0] = route_point(3000.0f, 0.0f);
+  send_mission(route);
+  TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_TOO_FAR, link_result());
+  TEST_ASSERT_EQUAL_UINT8(2, mission.count);
+
+  set_gps(0.0f, 0.0f, 0.0f, 15.0f);
+  step(1000);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+  TEST_ASSERT_TRUE(state.mission_active);
+  TEST_ASSERT_FLOAT_WITHIN(1.0f, 300.0f, state.nav_target_distance);
+}
+
+// Moving the last waypoint of a completed route moves the circle with it.
+static void test_mission_completed_circle_follows_a_moved_waypoint() {
+  mission_route(MISSION_END_HOLD);
+  fly_mission();
+  fly_track(0.0f, 0.0f, 300.0f, 0.0f);
+  fly_track(300.0f, 0.0f, 300.0f, 300.0f);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION_HOLD, state.wing_nav_state);
+
+  mission_t route = mission;
+  route.waypoints[1] = route_point(300.0f, 900.0f);
+  send_mission(route);
+  TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_OK, link_result());
+  step(1000);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION_HOLD, state.wing_nav_state);
+  TEST_ASSERT_FLOAT_WITHIN(1.0f, 600.0f, state.nav_target_distance);
+  // Flying east straight at the far circle needs no bank.
+  TEST_ASSERT_FLOAT_WITHIN(5.0f, 0.0f, roll_command_deg());
+}
+
 void run_wing_navigation_tests() {
   RUN_TEST(test_loiter_requires_switch_and_flight);
   RUN_TEST(test_loiter_enters_tangentially_on_turn_side);
@@ -1219,9 +1431,15 @@ void run_wing_navigation_tests() {
   RUN_TEST(test_mission_end_returns_home);
   RUN_TEST(test_mission_without_route_loiters_in_place);
   RUN_TEST(test_mission_yields_to_rth_and_failsafe);
+  RUN_TEST(test_mission_continues_through_link_loss);
+  RUN_TEST(test_mission_link_recovery_keeps_the_mission_switch);
+  RUN_TEST(test_mission_link_loss_without_gps_hands_over_to_failsafe);
   RUN_TEST(test_mission_needs_switch_edge_after_arming);
   RUN_TEST(test_mission_starts_once_gps_recovers);
   RUN_TEST(test_mission_gps_loss_returns_at_rth_altitude);
   RUN_TEST(test_guided_flies_to_target_and_circles_it);
   RUN_TEST(test_guided_resumes_the_mission_and_returns_home);
+  RUN_TEST(test_mission_replaced_in_flight_keeps_the_waypoint);
+  RUN_TEST(test_mission_replaced_during_gps_loss_is_checked);
+  RUN_TEST(test_mission_completed_circle_follows_a_moved_waypoint);
 }

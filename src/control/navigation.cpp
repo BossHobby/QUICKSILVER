@@ -327,13 +327,30 @@ static void nav_update_home(bool arming) {
 nav_command_result_t nav_command_apply(const nav_command_t *cmd) {
   return NAV_RESULT_UNSUPPORTED;
 }
+
+nav_command_result_t nav_mission_replace(const mission_t *updated) {
+  mission = *updated;
+  return NAV_RESULT_OK;
+}
 #endif
 
-// Apply the latest ground station command before the vehicle update.
+// Apply the latest ground station command before the vehicle update. IO has
+// already staged and validated a mission commit; Flight only swaps it in.
 static void nav_update_command() {
   nav_command_t cmd;
-  if (quic_rt_take(&cmd))
-    quic_rt_complete(cmd.id, nav_command_apply(&cmd));
+  if (!quic_rt_take(&cmd))
+    return;
+  nav_command_result_t result;
+  if (cmd.type == NAV_COMMAND_MISSION_COMMIT) {
+    result = nav_mission_replace(quic_rt_staged());
+    if (result == NAV_RESULT_OK) {
+      mission_changed();
+      mission_save_later();
+    }
+  } else {
+    result = nav_command_apply(&cmd);
+  }
+  quic_rt_complete(cmd.id, result);
 }
 
 void nav_init() {

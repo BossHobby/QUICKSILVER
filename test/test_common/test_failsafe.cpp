@@ -394,15 +394,15 @@ void test_failsafe_rth_keeps_outputs_allowed_past_stage2_time(void) {
   TEST_ASSERT_FALSE(flags.failsafe_outputs_blocked);
 }
 
-void test_failsafe_mission_rides_out_a_brief_loss(void) {
+static void failsafe_navigation_rides_out_a_brief_loss(bool *active) {
   failsafe_reset(1000000);
   profile.navigation.rth_on_failsafe = true;
   // Clear failsafe RTH ownership left by earlier tests.
   control_failsafe_update();
   nav_test_set_rth_active(true);
-  state.mission_active = true;
+  *active = true;
 
-  // Within the hold-last window the mission keeps flying, as manual flight would.
+  // Within the hold-last window navigation keeps flying, as manual flight would.
   flags.failsafe_signal_lost = 1;
   time_test_set_us(1000000 + FAILSAFE_DETECT_TIME_US + 1000);
   control_failsafe_update();
@@ -424,7 +424,15 @@ void test_failsafe_mission_rides_out_a_brief_loss(void) {
   TEST_ASSERT_TRUE(state.rth_failsafe_active);
   TEST_ASSERT_TRUE(flags.failsafe);
   TEST_ASSERT_FALSE(flags.failsafe_outputs_blocked);
-  state.mission_active = false;
+  *active = false;
+}
+
+void test_failsafe_mission_rides_out_a_brief_loss(void) {
+  failsafe_navigation_rides_out_a_brief_loss(&state.mission_active);
+}
+
+void test_failsafe_guided_rides_out_a_brief_loss(void) {
+  failsafe_navigation_rides_out_a_brief_loss(&state.guided_active);
 }
 #endif
 

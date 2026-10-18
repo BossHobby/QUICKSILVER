@@ -62,23 +62,32 @@ STATE_MEMBERS
 static uint32_t failsafe_phase_start_us = 0;
 static bool failsafe_rearm_allows_prearm_hold = false;
 
+// Stick deflection the pilot must give to take control back from navigation
+// that flew through a link loss.
+#define FAILSAFE_STICK_THRESHOLD 0.3f
+
+static struct {
+  bool recovering;
+  uint32_t recovered_us;
+  bool handed_over; // the mission ended during the loss, which the failsafe procedure takes from here
+  uint32_t handover_us;
+} failsafe_mission;
+
 #ifdef VEHICLE_MULTI
 // Throttle must have been low this long before a link loss to treat the
 // vehicle as landed; a landed vehicle keeps the idle-then-disarm procedure.
 #define FAILSAFE_THROTTLE_LOW_TIME_US 10000000U
-// Stick deflection the pilot must give to take control back from failsafe RTH.
-#define FAILSAFE_RTH_STICK_THRESHOLD 0.3f
 // Navigation flies self-level, so a tilt beyond this held for the crash time
 // means the vehicle is down; failsafe RTH would otherwise run its motors on.
 #define FAILSAFE_CRASH_MIN_TILT 0.34f // cos(70 degrees)
 #define FAILSAFE_CRASH_TIME_US 1000000U
 
 static uint32_t failsafe_throttle_up_us = 0;
+static uint32_t failsafe_upright_us = 0; // last time navigation owning a loss was not tilted beyond the crash limit
 static struct {
   bool owns_link_loss; // RTH was flying when the link was (last) lost
   bool link_recovering;
   uint32_t link_recovered_us;
-  uint32_t upright_us; // last time failsafe RTH was not tilted beyond the crash limit
 } failsafe_rth;
 #endif
 
@@ -96,6 +105,8 @@ const char *control_flight_mode_name(void) {
     return "RATE ASST";
   return "MANUAL";
 #elif defined(VEHICLE_WING)
+  if (state.mission_failsafe_active)
+    return "FS MISSION";
   if (state.wing_nav_failsafe)
     return state.wing_nav_state == WING_NAV_DESCEND ? "FS DESCEND" : "FS RTH";
   if (state.failsafe_phase == FAILSAFE_PHASE_STAGE1_GUARD)
@@ -125,6 +136,8 @@ const char *control_flight_mode_name(void) {
     return "ACRO";
   return "MANUAL";
 #else
+  if (state.mission_failsafe_active)
+    return "FS MISSION";
   if (state.rth_failsafe_active)
     return "FS RTH";
   if (state.failsafe_hold)
@@ -178,29 +191,66 @@ static void failsafe_clear_stage1_fallback(void) {
   }
 }
 
+static bool failsafe_sticks_active(void) {
+  return fabsf(state.rx.roll) > FAILSAFE_STICK_THRESHOLD ||
+         fabsf(state.rx.pitch) > FAILSAFE_STICK_THRESHOLD ||
+         fabsf(state.rx.yaw) > FAILSAFE_STICK_THRESHOLD;
+}
+
+// A mission flying when the link was lost continues, as ArduPilot does in
+// AUTO, and keeps flying at its end. Like failsafe RTH it first rides out the
+// hold-last window and keeps the switches locked until the link has been
+// stable for the recovery time and the pilot moves a stick; the sticks only
+// unlock the switches, they never steer. A mission that can no longer be
+// flown hands the loss to the failsafe procedure.
+static void failsafe_update_mission(uint32_t now_us) {
+  if (!flags.failsafe_signal_lost)
+    failsafe_mission.handed_over = false;
+  if (!state.mission_failsafe_active) {
+    if (profile.navigation.mission_on_failsafe && state.mission_engaged && flags.arm_state && flags.rx_ready == 1 &&
+        flags.failsafe_signal_lost && !flags.failsafe && now_us - state.last_frame_time_us >= FAILSAFE_HOLD_TIME_US) {
+      state.mission_failsafe_active = true;
+      failsafe_mission = {};
+    }
+    return;
+  }
+  if (!state.mission_engaged || !flags.arm_state || flags.rx_ready != 1) {
+    state.mission_failsafe_active = false;
+    failsafe_mission = {};
+    if (flags.failsafe_signal_lost) {
+      failsafe_mission.handed_over = true;
+      failsafe_mission.handover_us = now_us;
+    }
+  } else if (flags.failsafe_signal_lost) {
+    failsafe_mission.recovering = false;
+  } else if (!failsafe_mission.recovering) {
+    failsafe_mission.recovering = true;
+    failsafe_mission.recovered_us = now_us;
+  } else if (now_us - failsafe_mission.recovered_us >= FAILSAFE_RECOVERY_TIME_US && failsafe_sticks_active()) {
+    state.mission_failsafe_active = false;
+  }
+}
+
 #ifdef VEHICLE_MULTI
 static bool failsafe_airborne(uint32_t now_us) {
   // Guided flight flies the throttle, so a low pilot stick says nothing then.
   return flags.arm_state && flags.in_air &&
-         (state.rth_active || (now_us - failsafe_throttle_up_us) < FAILSAFE_THROTTLE_LOW_TIME_US);
-}
-
-static bool failsafe_sticks_active(void) {
-  return fabsf(state.rx.roll) > FAILSAFE_RTH_STICK_THRESHOLD ||
-         fabsf(state.rx.pitch) > FAILSAFE_RTH_STICK_THRESHOLD ||
-         fabsf(state.rx.yaw) > FAILSAFE_RTH_STICK_THRESHOLD;
+         (state.rth_active || failsafe_mission.handed_over ||
+          (now_us - failsafe_throttle_up_us) < FAILSAFE_THROTTLE_LOW_TIME_US);
 }
 
 // RTH that flew through a link loss keeps control until the link has been
 // stable for the recovery time and the pilot moves the sticks. A flapping
 // link therefore never restarts or interrupts the return.
 static void failsafe_update_rth_ownership(uint32_t now_us) {
-  if (!state.rth_active || !profile.navigation.rth_on_failsafe || flags.rx_ready != 1 || !flags.arm_state) {
+  if (!state.rth_active || !profile.navigation.rth_on_failsafe || flags.rx_ready != 1 || !flags.arm_state ||
+      state.mission_failsafe_active) {
     failsafe_rth = {};
   } else if (flags.failsafe_signal_lost) {
-    // A mission rides out the hold-last window like manual flight, so a brief
-    // dropout neither ends it nor leaves failsafe owning the recovery.
-    if (!state.mission_active || now_us - state.last_frame_time_us >= FAILSAFE_HOLD_TIME_US) {
+    // A mission or ground station target rides out the hold-last window like
+    // manual flight, so a brief dropout neither ends it nor leaves failsafe
+    // owning the recovery.
+    if (!(state.mission_active || state.guided_active) || now_us - state.last_frame_time_us >= FAILSAFE_HOLD_TIME_US) {
       failsafe_rth.owns_link_loss = true;
       failsafe_rth.link_recovering = false;
     }
@@ -213,14 +263,16 @@ static void failsafe_update_rth_ownership(uint32_t now_us) {
       failsafe_rth = {};
     }
   }
-  if (!failsafe_rth.owns_link_loss || cosf(state.attitude.roll) * cosf(state.attitude.pitch) > FAILSAFE_CRASH_MIN_TILT) {
-    failsafe_rth.upright_us = now_us;
-  }
   state.rth_failsafe_active = failsafe_rth.owns_link_loss;
+  const bool owned = state.rth_failsafe_active || state.mission_failsafe_active;
+  if (!owned || cosf(state.attitude.roll) * cosf(state.attitude.pitch) > FAILSAFE_CRASH_MIN_TILT) {
+    failsafe_upright_us = now_us;
+  }
 }
 
-static bool failsafe_rth_crashed(uint32_t now_us) {
-  return state.rth_failsafe_active && (now_us - failsafe_rth.upright_us) >= FAILSAFE_CRASH_TIME_US;
+static bool failsafe_navigation_crashed(uint32_t now_us) {
+  return (state.rth_failsafe_active || state.mission_failsafe_active) &&
+         (now_us - failsafe_upright_us) >= FAILSAFE_CRASH_TIME_US;
 }
 #endif
 
@@ -285,8 +337,10 @@ void control_failsafe_disarm() {
 
 void control_failsafe_update() {
   const uint32_t now_us = time_micros();
+  // Receiver loss can change between navigation updates. A continuing
+  // mission owns the loss before failsafe RTH can.
+  failsafe_update_mission(now_us);
 #ifdef VEHICLE_MULTI
-  // Receiver loss can change between navigation updates.
   failsafe_update_rth_ownership(now_us);
   if (!flags.failsafe_signal_lost && state.failsafe_phase == FAILSAFE_PHASE_IDLE &&
       state.rx_filtered.throttle > THROTTLE_SAFETY) {
@@ -303,9 +357,11 @@ void control_failsafe_update() {
   }
 
 #ifdef VEHICLE_MULTI
-  if (failsafe_rth_crashed(now_us)) {
+  if (failsafe_navigation_crashed(now_us)) {
     failsafe_rth = {};
+    failsafe_mission = {};
     state.rth_failsafe_active = false;
+    state.mission_failsafe_active = false;
     flags.failsafe = 1;
     flags.failsafe_outputs_blocked = 1;
     failsafe_set_phase(FAILSAFE_PHASE_STAGE2_DROP, now_us);
@@ -313,8 +369,16 @@ void control_failsafe_update() {
     flags.arm_state = 0;
     return;
   }
+#endif
+  // Navigation flies through the loss until it gives up or the pilot takes over.
+  if (state.mission_failsafe_active) {
+    flags.failsafe = 1;
+    flags.failsafe_outputs_blocked = 0;
+    failsafe_set_phase(FAILSAFE_PHASE_STAGE1_GUARD, now_us);
+    return;
+  }
+#ifdef VEHICLE_MULTI
   if (state.rth_failsafe_active) {
-    // RTH flies through the loss until it gives up or the pilot takes over.
     flags.failsafe = 1;
     flags.failsafe_outputs_blocked = 0;
     failsafe_set_phase(FAILSAFE_PHASE_STAGE1_GUARD, now_us);
@@ -348,7 +412,9 @@ void control_failsafe_update() {
     }
 #endif
 
-    const uint32_t stage1_us = loss_us - FAILSAFE_HOLD_TIME_US;
+    // A mission that ended during the loss starts the procedure there.
+    const uint32_t stage1_us = failsafe_mission.handed_over ? now_us - failsafe_mission.handover_us
+                                                            : loss_us - FAILSAFE_HOLD_TIME_US;
     if (stage1_us < FAILSAFE_STAGE2_TIME_US) {
       flags.failsafe = 1;
       flags.failsafe_outputs_blocked = 0;

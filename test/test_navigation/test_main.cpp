@@ -84,6 +84,7 @@ static void navigation_test_setup(void) {
   profile.navigation.rth_throttle_max = 0.75f;
   profile.navigation.rth_altitude = 10.0f;
   profile.navigation.rth_on_failsafe = true;
+  profile.navigation.mission_on_failsafe = true;
   state.GEstG.yaw = 1;
   state.accel_raw = (vec3_t){{0, 0, 1}};
   imu_test_attitude_init();
@@ -1597,8 +1598,10 @@ void test_navigation_mission_switches_and_link_loss(void) {
   mission_step();
   TEST_ASSERT_FALSE(state.rth_active || flags.controls_override);
 
-  // A loss inside the hold-last window keeps the mission. Once failsafe
-  // engages, failsafe RTH returns home, otherwise failsafe takes over.
+  // Without mission_on_failsafe, a loss inside the hold-last window keeps the
+  // mission. Once failsafe engages, failsafe RTH returns home, otherwise
+  // failsafe takes over.
+  profile.navigation.mission_on_failsafe = false;
   const bool failsafe_rth[] = {true, false};
   for (bool rth_on_failsafe : failsafe_rth) {
     profile.navigation.rth_on_failsafe = rth_on_failsafe;
@@ -1662,6 +1665,7 @@ void test_navigation_mission_link_loss_holds_altitude_with_low_stick(void) {
   const uint32_t mission_switch = 1U << AUX_MISSION;
   mission_test_airborne(12);
   profile.navigation.rth_on_failsafe = false;
+  profile.navigation.mission_on_failsafe = false;
   state.last_frame_time_us = time_micros();
   control_failsafe_update();
   mission_step();
@@ -1689,6 +1693,119 @@ void test_navigation_mission_link_loss_holds_altitude_with_low_stick(void) {
   TEST_ASSERT_TRUE(state.failsafe_hold);
   TEST_ASSERT_TRUE(state.rx_override.throttle >= profile.navigation.rth_throttle_min);
   TEST_ASSERT_EQUAL_STRING("FS HOLD", control_flight_mode_name());
+  flags.failsafe_signal_lost = 0;
+}
+
+// Control and navigation as in the Flight loop, with the receiver frames
+// arriving unless the link is lost.
+static void mission_link_step(void) {
+  if (!flags.failsafe_signal_lost)
+    state.last_frame_time_us = time_micros();
+  control_failsafe_update();
+  mission_step();
+}
+
+static void mission_link_start(void) {
+  mission_test_airborne(12);
+  state.last_frame_time_us = time_micros();
+  control_failsafe_update();
+  mission_link_step();
+  state.aux_active = 1U << AUX_MISSION;
+  mission_link_step();
+  TEST_ASSERT_TRUE(state.mission_active);
+}
+
+void test_navigation_mission_continues_through_link_loss(void) {
+  mission_link_start();
+  flags.failsafe_signal_lost = 1;
+  for (int i = 0; i < 100; i++)
+    mission_link_step();
+  TEST_ASSERT_TRUE(state.mission_failsafe_active);
+  TEST_ASSERT_FALSE(state.rth_failsafe_active);
+  TEST_ASSERT_TRUE(flags.failsafe);
+  TEST_ASSERT_FALSE(flags.failsafe_outputs_blocked);
+  TEST_ASSERT_TRUE(state.mission_active);
+  TEST_ASSERT_EQUAL_STRING("FS MISSION", control_flight_mode_name());
+
+  // It finishes and holds the last waypoint for as long as the link is lost.
+  state.gps_coord = mission.waypoints[0].coord;
+  mission_link_step();
+  state.gps_coord = mission.waypoints[1].coord;
+  mission_link_step();
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  for (int i = 0; i < 3000; i++)
+    mission_link_step();
+  TEST_ASSERT_TRUE(state.mission_active);
+  TEST_ASSERT_EQUAL(RTH_STATE_HOVER_HOME, state.rth_state);
+  TEST_ASSERT_TRUE(state.mission_failsafe_active);
+  TEST_ASSERT_TRUE(flags.arm_state);
+
+  // The link returns with the mission switch off. The switches stay locked
+  // until a stick moves, which only unlocks them.
+  flags.failsafe_signal_lost = 0;
+  state.aux_active = 0;
+  for (int i = 0; i < 100; i++)
+    mission_link_step();
+  TEST_ASSERT_TRUE(state.mission_failsafe_active);
+  TEST_ASSERT_TRUE(state.mission_active);
+  state.rx.roll = 0.5f;
+  mission_link_step();
+  TEST_ASSERT_FALSE(state.mission_failsafe_active);
+  TEST_ASSERT_FALSE(flags.failsafe);
+  TEST_ASSERT_FALSE(state.rth_active || flags.controls_override);
+  state.rx.roll = 0.0f;
+}
+
+void test_navigation_mission_link_recovery_keeps_the_mission_switch(void) {
+  mission_link_start();
+  mission.end_action = MISSION_END_RTH;
+  flags.failsafe_signal_lost = 1;
+  for (int i = 0; i < 100; i++)
+    mission_link_step();
+  TEST_ASSERT_TRUE(state.mission_failsafe_active);
+
+  // The end action is part of the mission: the return keeps the loss.
+  state.gps_coord = mission.waypoints[0].coord;
+  mission_link_step();
+  state.gps_coord = mission.waypoints[1].coord;
+  mission_link_step();
+  TEST_ASSERT_FALSE(state.mission_active);
+  TEST_ASSERT_TRUE(state.rth_active);
+  TEST_ASSERT_TRUE(state.mission_failsafe_active);
+  TEST_ASSERT_FALSE(state.rth_failsafe_active);
+
+  // A switch left on keeps the return flying once the sticks unlock it.
+  flags.failsafe_signal_lost = 0;
+  for (int i = 0; i < 100; i++)
+    mission_link_step();
+  state.rx.yaw = -0.5f;
+  mission_link_step();
+  TEST_ASSERT_FALSE(state.mission_failsafe_active);
+  TEST_ASSERT_FALSE(flags.failsafe);
+  TEST_ASSERT_TRUE(state.rth_active);
+  TEST_ASSERT_TRUE(state.mission_engaged);
+  state.rx.yaw = 0.0f;
+
+  // Unlocked, the mission switch ends it as before.
+  state.aux_active = 0;
+  mission_link_step();
+  TEST_ASSERT_FALSE(state.rth_active || flags.controls_override);
+}
+
+void test_navigation_mission_link_loss_disarms_after_crash(void) {
+  mission_link_start();
+  flags.failsafe_signal_lost = 1;
+  for (int i = 0; i < 100; i++)
+    mission_link_step();
+  TEST_ASSERT_TRUE(state.mission_failsafe_active);
+
+  state.attitude.roll = 1.5f;
+  for (int i = 0; i < 101; i++)
+    mission_link_step();
+  TEST_ASSERT_FALSE(flags.arm_state);
+  TEST_ASSERT_TRUE(flags.failsafe_outputs_blocked);
+  TEST_ASSERT_FALSE(state.mission_failsafe_active);
+  state.attitude.roll = 0.0f;
   flags.failsafe_signal_lost = 0;
 }
 
@@ -1739,6 +1856,83 @@ void test_navigation_mission_resumes_at_the_interrupted_waypoint(void) {
   flags.arm_state = 1;
   state.gps_coord = {};
   toggle_mission();
+  TEST_ASSERT_TRUE(state.mission_active);
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+}
+
+// A route replaced in flight keeps the active waypoint index.
+void test_navigation_mission_replaced_in_flight_keeps_the_waypoint(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  mission_test_airborne(12);
+  state.heading_confidence = 1;
+  state.aux_active = mission_switch;
+  mission_step();
+  state.gps_coord = mission.waypoints[0].coord;
+  mission_step();
+  TEST_ASSERT_TRUE(state.mission_active);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  const uint8_t rth_state = state.rth_state;
+
+  // Edits elsewhere on the route leave the active leg alone.
+  mission_t updated = mission;
+  updated.count = 3;
+  updated.waypoints[0].altitude = 20;
+  updated.waypoints[2] = {.coord = {.lon = 4 * GPS_DEG_10M, .lat = 0}, .altitude = 10};
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, nav_mission_replace(&updated));
+  TEST_ASSERT_EQUAL_UINT8(3, mission.count);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  TEST_ASSERT_EQUAL(rth_state, state.rth_state);
+
+  // Moving the active waypoint flies to its new position and altitude.
+  updated.waypoints[1] = {.coord = {.lon = -2 * GPS_DEG_10M, .lat = 2 * GPS_DEG_10M}, .altitude = 20};
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, nav_mission_replace(&updated));
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  TEST_ASSERT_EQUAL_INT32(-2 * GPS_DEG_10M, nav_target_coord().lon);
+  TEST_ASSERT_EQUAL(RTH_STATE_CLIMB, state.rth_state);
+
+  // Rejected routes leave the flown one.
+  mission_t far = updated;
+  far.waypoints[1].coord.lat = 300 * GPS_DEG_10M;
+  TEST_ASSERT_EQUAL(NAV_RESULT_TOO_FAR, nav_mission_replace(&far));
+  const mission_t empty = {};
+  TEST_ASSERT_EQUAL(NAV_RESULT_NO_MISSION, nav_mission_replace(&empty));
+  TEST_ASSERT_EQUAL_UINT8(3, mission.count);
+  TEST_ASSERT_EQUAL_INT32(2 * GPS_DEG_10M, mission.waypoints[1].coord.lat);
+
+  // A route shortened past the active waypoint flies to its new end.
+  mission_t shorter = updated;
+  shorter.count = 1;
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, nav_mission_replace(&shorter));
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+  state.altitude = 20;
+  state.gps_coord = shorter.waypoints[0].coord;
+  for (int i = 0; i < 5; i++)
+    mission_step();
+  TEST_ASSERT_TRUE(state.mission_active);
+  TEST_ASSERT_EQUAL(RTH_STATE_HOVER_HOME, state.rth_state);
+
+  // A completed mission stays complete when the route grows.
+  updated.waypoints[0].altitude = 20;
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, nav_mission_replace(&updated));
+  mission_step();
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+  TEST_ASSERT_EQUAL(RTH_STATE_HOVER_HOME, state.rth_state);
+
+  // An interrupted mission resumes within the replaced route.
+  state.aux_active = 0;
+  mission_step();
+  state.aux_active = mission_switch;
+  mission_step();
+  for (int i = 0; i < 5 && state.mission_index == 0; i++)
+    mission_step();
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  state.aux_active = 0;
+  mission_step();
+  TEST_ASSERT_FALSE(state.mission_active);
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, nav_mission_replace(&shorter));
+  state.gps_coord = {};
+  state.aux_active = mission_switch;
+  mission_step();
   TEST_ASSERT_TRUE(state.mission_active);
   TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
 }
@@ -2134,9 +2328,13 @@ int main() {
   RUN_TEST(test_navigation_hold_wander_near_yaw_hold_radius_keeps_navigating);
   RUN_TEST(test_navigation_mission_end_returns_home);
   RUN_TEST(test_navigation_mission_switches_and_link_loss);
+  RUN_TEST(test_navigation_mission_continues_through_link_loss);
+  RUN_TEST(test_navigation_mission_link_recovery_keeps_the_mission_switch);
+  RUN_TEST(test_navigation_mission_link_loss_disarms_after_crash);
   RUN_TEST(test_navigation_mission_switch_ends_the_final_return);
   RUN_TEST(test_navigation_mission_link_loss_holds_altitude_with_low_stick);
   RUN_TEST(test_navigation_mission_resumes_at_the_interrupted_waypoint);
+  RUN_TEST(test_navigation_mission_replaced_in_flight_keeps_the_waypoint);
   RUN_TEST(test_navigation_guided_needs_the_mission_switch);
   RUN_TEST(test_navigation_guided_commands_retarget_without_releasing_control);
   RUN_TEST(test_navigation_guided_yields_to_rth_and_failsafe);

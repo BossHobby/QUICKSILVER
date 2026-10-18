@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "control/control.h"
+#include "control/mission.h"
 #include "core/debug.h"
 #include "core/profile.h"
 #include "core/project.h"
@@ -268,6 +269,7 @@ void usb_configurator_thread(void *) {
   while (true) {
     usb_configurator();
     quic_crsf_update();
+    mission_save_update();
     vTaskDelay(1);
   }
 }

@@ -151,6 +151,7 @@ extern void test_crc8_properties(void);
 extern void test_crc8_initial_values(void);
 extern void test_crc8_sequential_calculation(void);
 extern void test_crc8_known_values(void);
+extern void test_crc16_ccitt_check_value(void);
 
 // Ring buffer tests
 extern void test_ring_buffer_init(void);
@@ -178,6 +179,8 @@ extern void test_quic_compresses_reply_only_when_requested(void);
 extern void test_mission_full_route_roundtrip(void);
 extern void test_mission_rejects_oversized_and_out_of_range_routes(void);
 extern void test_mission_upload_persists_and_rejects_invalid_routes(void);
+extern void test_mission_crc_covers_the_sent_route(void);
+extern void test_mission_link_replaces_the_route_and_saves_it_on_the_ground(void);
 
 // SPI tests
 extern void test_spi_initial_state(void);
@@ -235,6 +238,7 @@ extern void test_failsafe_stage1_retains_idle_throttle_until_recovery_or_drop(vo
 extern void test_failsafe_stage2_drop_blocks_outputs_and_disarms(void);
 extern void test_failsafe_rth_keeps_outputs_allowed_past_stage2_time(void);
 extern void test_failsafe_mission_rides_out_a_brief_loss(void);
+extern void test_failsafe_guided_rides_out_a_brief_loss(void);
 extern void test_failsafe_recovery_clears_with_arm_switch_high_but_blocks_rearm(void);
 extern void test_failsafe_repeated_loss_keeps_outputs_blocked_after_stage2(void);
 extern void test_failsafe_blocks_new_arming_while_outputs_are_allowed(void);
@@ -439,6 +443,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_crc8_initial_values);
   RUN_TEST(test_crc8_sequential_calculation);
   RUN_TEST(test_crc8_known_values);
+  RUN_TEST(test_crc16_ccitt_check_value);
 
   // Ring buffer tests
   RUN_TEST(test_ring_buffer_init);
@@ -466,6 +471,8 @@ int main(int argc, char **argv) {
   RUN_TEST(test_mission_full_route_roundtrip);
   RUN_TEST(test_mission_rejects_oversized_and_out_of_range_routes);
   RUN_TEST(test_mission_upload_persists_and_rejects_invalid_routes);
+  RUN_TEST(test_mission_crc_covers_the_sent_route);
+  RUN_TEST(test_mission_link_replaces_the_route_and_saves_it_on_the_ground);
 
   // SPI tests
   RUN_TEST(test_spi_initial_state);
@@ -539,6 +546,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_failsafe_stage1_retains_idle_throttle_until_recovery_or_drop);
   RUN_TEST(test_failsafe_rth_keeps_outputs_allowed_past_stage2_time);
   RUN_TEST(test_failsafe_mission_rides_out_a_brief_loss);
+  RUN_TEST(test_failsafe_guided_rides_out_a_brief_loss);
 #endif
   RUN_TEST(test_failsafe_recovery_clears_with_arm_switch_high_but_blocks_rearm);
   RUN_TEST(test_failsafe_repeated_loss_keeps_outputs_blocked_after_stage2);

@@ -440,14 +440,14 @@ bool osd_status_update(osd_element_t *el) {
     // only show failsafe if rx was ready
 #ifdef VEHICLE_MULTI
     const char *rth_message = osd_rth_message();
-    if (rth_message && (state.rth_failsafe_active || state.rth_state == RTH_STATE_ABORTED)) {
+    if (rth_message && (state.mission_failsafe_active || state.rth_failsafe_active || state.rth_state == RTH_STATE_ABORTED)) {
       osd_status_show_text(MODE_HOLD, STATUS_RTH, rth_message);
       return osd_status_print(el);
     }
 #endif
 #ifdef VEHICLE_WING
     const char *nav_message = osd_wing_nav_message();
-    if (nav_message && state.wing_nav_failsafe) {
+    if (nav_message && (state.mission_failsafe_active || state.wing_nav_failsafe)) {
       osd_status_show_text(MODE_HOLD, STATUS_RTH, nav_message);
       return osd_status_print(el);
     }

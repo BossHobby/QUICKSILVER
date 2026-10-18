@@ -2,6 +2,7 @@
 
 #include <float.h>
 #include <math.h>
+#include <string.h>
 
 #include "control/control.h"
 #include "control/mission.h"
@@ -134,6 +135,10 @@ static nav_request_t nav_request() {
     return NAV_REQUEST_NONE;
   }
   nav.mission_held = nav.mission_held && mission_switch;
+  // A mission flying through a link loss locks the switches until the pilot
+  // unlocks them with the sticks.
+  if (state.mission_failsafe_active)
+    return NAV_REQUEST_MISSION;
   if (flags.failsafe)
     return profile.navigation.rth_on_failsafe ? NAV_REQUEST_FAILSAFE : NAV_REQUEST_NONE;
   if (rx_aux_on(AUX_RETURN_TO_HOME))
@@ -521,9 +526,10 @@ static float cruise_climb_angle(float dt) {
 }
 
 // The pilot grants ground station commands with the mission switch, which
-// RTH and failsafe requests override.
+// RTH and failsafe requests override, also while a mission continues
+// through a link loss.
 static bool nav_guided_ready() {
-  return nav.mission_requested && nav.gps_valid;
+  return nav.mission_requested && nav.gps_valid && !flags.failsafe;
 }
 
 static nav_command_result_t nav_command_mission(uint8_t requested) {
@@ -583,6 +589,39 @@ nav_command_result_t nav_command_apply(const nav_command_t *cmd) {
   }
 }
 
+nav_command_result_t nav_mission_replace(const mission_t *updated) {
+  // A valid route is flown, or resumes without a new check once a GPS dropout
+  // ends; a route still to be checked is checked with the new mission.
+  if (!route.valid || guided.active) {
+    mission = *updated;
+    route.index = MIN(route.index, MAX(updated->count, 1) - 1);
+    return NAV_RESULT_OK;
+  }
+  if (updated->count == 0)
+    return NAV_RESULT_NO_MISSION;
+
+  // A completed mission stays complete, circling its possibly moved waypoint.
+  const uint8_t index = MIN(route.index, updated->count - 1);
+  const mission_waypoint_t &target = updated->waypoints[index];
+  const bool retarget = index != route.index || memcmp(&target, &mission.waypoints[route.index], sizeof(target)) != 0;
+  if (retarget && !nav_in_start_range(target.coord))
+    return NAV_RESULT_TOO_FAR;
+  mission = *updated;
+  if (!retarget)
+    return NAV_RESULT_OK;
+
+  // A new leg from here, latching the waypoint's altitude again.
+  route.index = index;
+  route.leg_origin = state.gps_coord;
+  route.climbing = false;
+  altitude.target_valid = false;
+  if (route.complete)
+    circle_place_at(target.coord);
+  state.mission_index = index;
+  nav_update_target();
+  return NAV_RESULT_OK;
+}
+
 void nav_update_wing(bool gps_valid, bool home_valid) {
   const uint32_t now = time_micros();
   const uint32_t now_ms = time_millis();
@@ -607,6 +646,7 @@ void nav_update_wing(bool gps_valid, bool home_valid) {
     altitude.target_valid = false;
   nav.request = request;
   state.wing_nav_failsafe = request == NAV_REQUEST_FAILSAFE;
+  state.mission_engaged = false;
   if (request == NAV_REQUEST_NONE) {
     state.wing_nav_state = WING_NAV_INACTIVE;
     blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 4, state.wing_nav_state);
@@ -629,6 +669,11 @@ void nav_update_wing(bool gps_valid, bool home_valid) {
     nav_mission_advance(max_bank);
   const wing_nav_state_t next = nav_next_state(request, gps_valid, home_valid, now_ms);
   state.wing_nav_state = next;
+  // The route, its end action or a ground station return. Losing GPS on it
+  // returns on the IMU heading for a while; circling without GPS or without a
+  // home is no longer the mission.
+  state.mission_engaged = requested == NAV_REQUEST_MISSION && !guided.active && (route.valid || guided.returning) &&
+                          next != WING_NAV_LOITER && next != WING_NAV_LOITER_BANK;
   if (next == WING_NAV_LOITER && previous != WING_NAV_LOITER)
     circle_place_ahead();
   if (next == WING_NAV_RTH_HOME && previous != WING_NAV_RTH_HOME)

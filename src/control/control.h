@@ -239,6 +239,10 @@ typedef struct {
   uint8_t mission_index;     // active waypoint while mission_active
   bool guided_active;        // following the ground station target in nav_guided
   bool guided_ready;         // the pilot grants guided flight: ground station commands are accepted
+  bool mission_engaged;      // navigation flies the mission, its end action or a return the mission switch ends
+  // A mission continues through a receiver loss. The switches stay locked
+  // until the link is stable and the pilot moves a stick.
+  bool mission_failsafe_active;
   bool failsafe_hold; // airborne stage 1 failsafe: level and hold altitude instead of idling
   float rth_yaw_rate; // radians/s, independent of pilot rates
   // Horizontal acceleration from GPS velocity, m/s^2. Published by multirotor
@@ -350,6 +354,8 @@ typedef struct {
   MEMBER(mission_index, uint8_t)                       \
   MEMBER(guided_active, bool)                          \
   MEMBER(guided_ready, bool)                           \
+  MEMBER(mission_engaged, bool)                        \
+  MEMBER(mission_failsafe_active, bool)                \
   MEMBER(failsafe_hold, bool)                          \
   MEMBER(rth_yaw_rate, float)                          \
   MEMBER(setpoint, vec3_t)                             \

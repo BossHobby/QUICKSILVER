@@ -28,3 +28,12 @@ uint8_t crc8_dvb_s2_data(uint8_t crc, const uint8_t *data, const uint32_t size) 
   }
   return crc;
 }
+
+uint16_t crc16_ccitt_data(uint16_t crc, const uint8_t *data, const uint32_t size) {
+  for (uint32_t i = 0; i < size; i++) {
+    crc ^= (uint16_t)data[i] << 8;
+    for (uint32_t bit = 0; bit < 8; bit++)
+      crc = crc & 0x8000 ? (uint16_t)(crc << 1 ^ 0x1021) : (uint16_t)(crc << 1);
+  }
+  return crc;
+}

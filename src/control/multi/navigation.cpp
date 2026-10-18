@@ -1,6 +1,7 @@
 #include "navigation.h"
 
 #include <math.h>
+#include <string.h>
 
 #include "control/control.h"
 #include "control/mission.h"
@@ -504,6 +505,12 @@ static void nav_continue_leg(uint32_t now_ms) {
   rth.progress.updated_ms = now_ms;
 }
 
+// Flying or holding with a trusted heading: a new target continues the leg.
+static bool nav_leg_underway() {
+  return state.rth_active && state.heading_confidence >= RTH_MIN_HEADING_CONFIDENCE &&
+         (state.rth_state == RTH_STATE_NAVIGATE || state.rth_state == RTH_STATE_HOVER_HOME);
+}
+
 static void nav_mission_select(uint8_t index) {
   state.mission_index = index;
   rth.target_altitude = mission.waypoints[index].altitude;
@@ -799,6 +806,14 @@ static void nav_mission_hand_to_failsafe_hold() {
 }
 
 static void nav_update_request() {
+  // A mission flying through a link loss locks the switches until the pilot
+  // unlocks them with the sticks. Their previous positions are kept, so a
+  // switch moved meanwhile acts as an edge once unlocked.
+  if (state.mission_failsafe_active) {
+    nav.previous.failsafe = 0;
+    return;
+  }
+
   // Switches hold stale values while the link is lost; only act on them with a link.
   const bool link_lost = flags.failsafe_signal_lost;
   const uint8_t rth_aux = rx_aux_on(AUX_RETURN_TO_HOME);
@@ -824,9 +839,10 @@ static void nav_update_request() {
     nav.previous.mission_aux = mission_aux;
   }
 
-  // A mission or ground station target rides out the hold-last window, but
-  // never continues away from a pilot once failsafe engages: failsafe RTH
-  // returns, otherwise the failsafe hold takes over.
+  // A mission or ground station target rides out the hold-last window. Unless
+  // the mission continues through the loss, it never continues away from a
+  // pilot once failsafe engages: failsafe RTH returns, otherwise the failsafe
+  // hold takes over.
   if ((state.mission_active || state.guided_active) && flags.failsafe) {
     if (state.rth_failsafe_active)
       nav_begin_return(time_millis());
@@ -908,8 +924,7 @@ nav_command_result_t nav_command_apply(const nav_command_t *cmd) {
       return NAV_RESULT_INVALID;
     if (!nav_in_start_range(cmd->waypoint.coord))
       return NAV_RESULT_TOO_FAR;
-    const bool underway = state.rth_active && state.heading_confidence >= RTH_MIN_HEADING_CONFIDENCE &&
-                          (state.rth_state == RTH_STATE_NAVIGATE || state.rth_state == RTH_STATE_HOVER_HOME);
+    const bool underway = nav_leg_underway();
     nav_guided_fly(cmd->waypoint);
     if (underway)
       nav_continue_leg(now_ms);
@@ -959,6 +974,44 @@ nav_command_result_t nav_command_apply(const nav_command_t *cmd) {
   }
 }
 
+nav_command_result_t nav_mission_replace(const mission_t *updated) {
+  if (!state.mission_active) {
+    mission = *updated;
+    nav.mission_resume = MIN(nav.mission_resume, MAX(updated->count, 1) - 1);
+    return NAV_RESULT_OK;
+  }
+  if (updated->count == 0)
+    return NAV_RESULT_NO_MISSION;
+
+  // A completed mission stays complete, holding at its waypoint.
+  const uint8_t index = MIN(state.mission_index, updated->count - 1);
+  const mission_waypoint_t &target = updated->waypoints[index];
+  const mission_waypoint_t &flown = mission.waypoints[state.mission_index];
+  const bool retarget = index != state.mission_index || memcmp(&target, &flown, sizeof(target)) != 0;
+  if (retarget && !nav_in_start_range(target.coord))
+    return NAV_RESULT_TOO_FAR;
+  mission = *updated;
+  if (!retarget)
+    return NAV_RESULT_OK;
+
+  // A navigation failure keeps its latched hold until it gives up.
+  const bool failed = state.rth_state == RTH_STATE_NAV_FAILED || state.rth_state == RTH_STATE_HEADING_FAILED;
+  if (failed) {
+    state.mission_index = index;
+    nav_update_target();
+    return NAV_RESULT_OK;
+  }
+  // Retarget like a guided GOTO.
+  const uint32_t now_ms = time_millis();
+  const bool underway = nav_leg_underway();
+  nav_mission_select(index);
+  if (underway)
+    nav_continue_leg(now_ms);
+  else
+    nav_begin_leg(now_ms);
+  return NAV_RESULT_OK;
+}
+
 static void nav_update_rth() {
   if (!flags.arm_state) {
     nav_rth_stop();
@@ -976,6 +1029,7 @@ static void nav_update_rth() {
   }
   // After control, which can fail or abort guided flight.
   state.guided_ready = nav_guided_ready();
+  state.mission_engaged = state.rth_active && (state.mission_active || rth.mission_return);
   // Navigation debug: 0 heading, 1 GPS course, 2 altitude (dm), 3 confidence.
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 4, (int16_t)(state.rth_state));
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 5, (int16_t)(state.nav_target_distance)); // meters
@@ -1006,6 +1060,7 @@ void nav_update_multi(float dt, bool gps_valid, bool home_valid) {
     nav_update_rth();
   } else {
     state.guided_ready = false;
+    state.mission_engaged = false;
   }
   nav_update_failsafe_hold(dt);
   // Publish applied requests in every phase, including acquisition and failure.

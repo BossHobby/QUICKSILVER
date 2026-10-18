@@ -24,9 +24,19 @@
 // repeated id is acknowledged again, not applied again, so a rejected command
 // is retried under a new id. After 3 s of silence the next frame starts a new
 // session, which forgets the acknowledgement and accepts any id.
+//
+// The stored mission can be replaced at any time, in flight too, without a
+// ground session. MISSION_ITEMS commands stage waypoints into a copy of the
+// stored mission, so unchanged waypoints need not be sent again, and
+// MISSION_COMMIT swaps the copy in when its CRC matches; either result ends
+// staging, and the next MISSION_ITEMS starts from the stored mission again.
+// After MISMATCH the ground station stages every waypoint. STATUS reports
+// mission_crc() of the stored mission. IO stages and checks the edits; Flight
+// only swaps a checked mission in, and the USB thread saves it to flash once
+// the vehicle is disarmed and still.
 static constexpr uint8_t QUIC_RT_VERSION = 1;
 static constexpr uint8_t QUIC_RT_RESULT_NONE = 0x07; // no command applied yet
-static_assert(NAV_RESULT_UNSUPPORTED < QUIC_RT_RESULT_NONE, "command results must fit beside QUIC_RT_RESULT_NONE");
+static_assert(NAV_RESULT_MISMATCH < QUIC_RT_RESULT_NONE, "command results must fit beside QUIC_RT_RESULT_NONE");
 
 typedef enum {
   QUIC_RT_STATUS = 0x01,  // flight controller -> ground station: quic_rt_status_t
@@ -50,6 +60,21 @@ typedef struct {
   uint8_t index; // waypoint, or NAV_COMMAND_MISSION_RESUME
 } __attribute__((__packed__)) quic_rt_mission_t;
 
+// MISSION_ITEMS: <index> followed by 1 to NAV_COMMAND_ITEMS_MAX of these, for
+// the waypoints from index on.
+typedef struct {
+  int32_t lat;         // degrees * 1e7
+  int32_t lon;         // degrees * 1e7
+  int32_t altitude_cm; // above launch
+  uint16_t speed_cms;  // 0.01 m/s horizontal; zero uses navigation.rth_cruise_speed
+} __attribute__((__packed__)) quic_rt_mission_item_t;
+
+typedef struct {
+  uint8_t count;      // waypoints in the new mission
+  uint8_t end_action; // mission_end_action_t
+  uint16_t crc;       // mission_crc() of the new mission
+} __attribute__((__packed__)) quic_rt_mission_commit_t;
+
 typedef enum {
   QUIC_RT_FLAG_ARMED = 1 << 0,
   QUIC_RT_FLAG_IN_AIR = 1 << 1,
@@ -71,6 +96,7 @@ typedef struct {
   uint8_t flags;        // quic_rt_flags_t
   uint8_t result_index; // nav_command_result_t or QUIC_RT_RESULT_NONE, and the active waypoint while flying the mission
   uint8_t mission_count;
+  uint16_t mission_crc; // mission_crc() of the stored mission
   int32_t target_lat; // degrees * 1e7; guided target, mission waypoint or home
   int32_t target_lon; // degrees * 1e7
 } __attribute__((__packed__)) quic_rt_status_t;
@@ -87,5 +113,9 @@ uint8_t quic_rt_status(uint8_t *payload, uint8_t *destination);
 // Flight: the latest command not yet taken, unless it resends the applied
 // one; a newer command replaces an unread one.
 bool quic_rt_take(nav_command_t *cmd);
-// Flight: acknowledge an applied command in the next STATUS.
+// Flight: the validated mission of a taken MISSION_COMMIT, read until the
+// commit is completed. IO stages and checks it, so Flight only swaps it in.
+const mission_t *quic_rt_staged();
+// Acknowledge an applied command in the next STATUS: Flight for the commands it
+// takes, IO for mission edits it rejects or stages itself.
 void quic_rt_complete(uint8_t id, nav_command_result_t result);
