@@ -86,7 +86,7 @@ memory_section_init() {
   mpu_init.Size = MPU_REGION_SIZE_256KB;
   mpu_init.AccessPermission = MPU_REGION_FULL_ACCESS;
   mpu_init.IsBufferable = MPU_ACCESS_NOT_BUFFERABLE;
-  mpu_init.IsCacheable = MPU_ACCESS_CACHEABLE;
+  mpu_init.IsCacheable = MPU_ACCESS_NOT_CACHEABLE;
   mpu_init.IsShareable = MPU_ACCESS_SHAREABLE;
   mpu_init.Number = MPU_REGION_NUMBER0;
   mpu_init.TypeExtField = MPU_TEX_LEVEL1;

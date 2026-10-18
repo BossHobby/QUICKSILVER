@@ -29,7 +29,7 @@ typedef enum {
   ATTR_BLINK = 0x80,
 } displayport_attr_t;
 
-static uint8_t tx_data[512];
+static DMA_RAM uint8_t tx_data[512];
 static ring_buffer_t tx_buffer = {
     .buffer = tx_data,
     .head = 0,

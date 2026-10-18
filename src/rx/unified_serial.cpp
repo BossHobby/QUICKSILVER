@@ -24,7 +24,7 @@ rx_serial_protocol_t serial_rx_detected_protcol = RX_SERIAL_PROTOCOL_INVALID;
 
 #ifdef USE_RX_UNIFIED
 
-static uint8_t tx_buffer_data[512];
+static DMA_RAM uint8_t tx_buffer_data[512];
 static ring_buffer_t tx_buffer = {
     .buffer = tx_buffer_data,
     .head = 0,
