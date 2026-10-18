@@ -6,12 +6,12 @@ on:
 
 jobs:
   targets:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       targets: ${{ steps.set-targets.outputs.targets }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
       - id: set-targets
         run: |
           python - <<'PY' >> $GITHUB_OUTPUT
@@ -34,7 +34,7 @@ jobs:
 
   build:
     needs: targets
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       SKIP_TARGETS_CHECKOUT: "1"
     strategy:
@@ -42,24 +42,24 @@ jobs:
         target: ${{fromJSON(needs.targets.outputs.targets)}}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           submodules: 'true'
 
       - name: Cache pip
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-${{ matrix.target }}-pip
 
       - name: Cache platformio
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.platformio
           key: ${{ runner.os }}-${{ matrix.target }}-platformio
 
       - name: Setup python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v7
         with:
           python-version: '3.11'
 
@@ -74,20 +74,20 @@ jobs:
           cp .pio/build/${{ matrix.target }}/firmware.hex  .pio/build/quicksilver.${{ matrix.target }}.hex
 
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.target }}
           path: .pio/build/quicksilver.${{ matrix.target }}.hex
 
   upload:
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Download artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           path: output
 
@@ -103,7 +103,7 @@ jobs:
           ' tag="${{ github.ref_name }}" CHANGELOG.md > RELEASE.md
 
       - name: Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           body_path: RELEASE.md
