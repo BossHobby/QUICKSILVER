@@ -30,9 +30,6 @@ void dma_enable_rcc(const dma_stream_def_t *def) {
   }
 }
 
-void dma_prepare_tx_memory(void *addr, uint32_t size) {}
-void dma_prepare_rx_memory(void *addr, uint32_t size) {}
-
 extern void dshot_dma_isr(const dma_device_t);
 extern void spi_dma_isr(const dma_device_t);
 extern void rgb_dma_isr(const dma_device_t);
