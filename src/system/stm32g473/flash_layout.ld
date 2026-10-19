@@ -147,8 +147,11 @@ SECTIONS
     _heap_end = .;
     . = . + _Min_Heap_Size;
     . = ALIGN(4);
-    _heap_start = .;
   } >RAM
+
+  /* _sbrk grows the heap from _heap_end up to _heap_start, using all RAM left
+     below the stack; _Min_Heap_Size only guarantees a minimum at link time. */
+  _heap_start = ORIGIN(RAM) + LENGTH(RAM);
 
   ._user_stack :
   {
