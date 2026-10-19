@@ -28,6 +28,7 @@
 #include "driver/gyro/gyro.h"
 #include "driver/interrupt.h"
 #include "driver/motor.h"
+#include "driver/reset.h"
 #include "driver/rgb_led.h"
 #include "driver/servo.h"
 #include "driver/time.h"
@@ -289,6 +290,12 @@ void flight_thread(void *) {
   debug_pin_init();
   buzzer_init();
   usb_init();
+
+  // An interrupt-context failloop reset into this boot. Report it before
+  // repeating the initialization that may have faulted.
+  if (system_reset_failloop != FAILLOOP_NONE)
+    failloop((failloop_t)system_reset_failloop);
+
   target_init();
   pinio_init();
   simulator_init();
