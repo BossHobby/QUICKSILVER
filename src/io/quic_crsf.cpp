@@ -18,7 +18,6 @@
 // Stream buffer sizes must be powers of two; indices are free-running.
 #define QUIC_CRSF_RX_SIZE 512
 #define QUIC_CRSF_TX_SIZE 4096
-#define QUIC_CRSF_REQUEST_SIZE 4096
 #define QUIC_CRSF_RETRANSMIT_MS 2000
 #define QUIC_CRSF_ACTIVE_MS 3000
 
@@ -57,6 +56,7 @@ static volatile bool active_seen = false;
 // first session and kept, so IO never observes them being released.
 static uint8_t *request = NULL;
 static uint32_t request_size = 0;
+static uint32_t request_capacity = 0;
 
 static void crsf_quic_send(uint8_t *data, uint32_t len, void *priv);
 
@@ -224,7 +224,7 @@ static uint32_t quic_crsf_request_total() {
 static void quic_crsf_reset() {
   if (tx_buffer == NULL) {
     tx_buffer = (uint8_t *)malloc(QUIC_CRSF_TX_SIZE);
-    request = (uint8_t *)malloc(QUIC_CRSF_REQUEST_SIZE);
+    request = (uint8_t *)malloc(QUIC_HEADER_LEN);
     if (tx_buffer == NULL || request == NULL) {
       free(tx_buffer);
       free(request);
@@ -232,6 +232,7 @@ static void quic_crsf_reset() {
       request = NULL;
       return;
     }
+    request_capacity = QUIC_HEADER_LEN;
   }
 
   const uint32_t session = reset_request;
@@ -253,10 +254,15 @@ void quic_crsf_update() {
   while (true) {
     if (request_size >= QUIC_HEADER_LEN) {
       const uint32_t total = quic_crsf_request_total();
-      if (total > QUIC_CRSF_REQUEST_SIZE) {
-        quic_send_str(&quic, QUIC_CMD_INVALID, QUIC_FLAG_ERROR, "EOF");
-        request_size = 0;
-        continue;
+      if (total > request_capacity) {
+        uint8_t *grown = (uint8_t *)realloc(request, total);
+        if (grown == NULL) {
+          quic_send_str(&quic, QUIC_CMD_INVALID, QUIC_FLAG_ERROR, "EOF");
+          request_size = 0;
+          continue;
+        }
+        request = grown;
+        request_capacity = total;
       }
       if (request_size == total) {
         if (quic_crsf_supported())

@@ -229,14 +229,24 @@ void usb_configurator(bool fault_mode) {
   }
   case USB_MAGIC_QUIC: {
 
+    uint32_t buffer_capacity = BUFFER_SIZE;
+
     uint8_t data = 0;
     while (true) {
-      if (buffer_size == BUFFER_SIZE) {
-        quic_send_str(&quic, QUIC_CMD_INVALID, QUIC_FLAG_ERROR, "EOF");
-        break;
-      }
       if (quic_process(&quic, buffer, buffer_size, fault_mode)) {
         break;
+      }
+      if (buffer_size == buffer_capacity) {
+        // An incomplete request has a valid header announcing more payload
+        // than fits, e.g. a profile; grow to the full request.
+        const uint32_t total = QUIC_HEADER_LEN + ((uint32_t)buffer[2] << 8 | buffer[3]);
+        uint8_t *grown = (uint8_t *)realloc(buffer, total);
+        if (grown == NULL) {
+          quic_send_str(&quic, QUIC_CMD_INVALID, QUIC_FLAG_ERROR, "EOF");
+          break;
+        }
+        buffer = grown;
+        buffer_capacity = total;
       }
       if (!usb_read_byte(&data, fault_mode)) {
         break;
