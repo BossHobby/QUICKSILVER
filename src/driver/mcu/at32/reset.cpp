@@ -21,6 +21,11 @@ void system_reset_to_bootloader() {
   system_reset();
 }
 
+void system_reset_to_failloop(uint8_t code) {
+  backup_register_write(RESET_FAILLOOP_MAGIC | code);
+  system_reset();
+}
+
 static inline void wait_for_flash() {
   while (FLASH->sts_bit.obf != RESET)
     ;
@@ -62,6 +67,11 @@ extern "C" __attribute__((__used__)) void system_check_for_bootloader() {
   }
 
   const uint32_t magic = ertc_bpr_data_read(BKP_INDEX);
+  if ((magic & ~RESET_FAILLOOP_CODE_MASK) == RESET_FAILLOOP_MAGIC) {
+    system_reset_failloop = magic & RESET_FAILLOOP_CODE_MASK;
+    backup_register_write(RESET_FIRMWARE_MAGIC);
+    return;
+  }
 
   switch (magic) {
   case RESET_BOOTLOADER_MAGIC: {

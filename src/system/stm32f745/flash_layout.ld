@@ -14,7 +14,7 @@ ENTRY(Reset_Handler)
 _estack = ORIGIN(RAM) + LENGTH(RAM); /* end of "RAM" Ram type memory */
 
 _Min_Heap_Size = 0x4000; /* required amount of heap */
-_Min_Stack_Size = 0x4000; /* required amount of stack */
+_Min_Stack_Size = 0x1000; /* interrupts only; failloop resets out of handler mode */
 
 /* Memories definition */
 MEMORY

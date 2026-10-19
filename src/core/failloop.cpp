@@ -4,6 +4,7 @@
 #include <task.h>
 
 #include "control/control.h"
+#include "core/project.h"
 #include "driver/motor.h"
 #include "driver/reset.h"
 #include "driver/time.h"
@@ -39,6 +40,14 @@ const char *failloop_string(failloop_t val) {
 }
 
 void failloop(failloop_t val) {
+#ifndef SIMULATOR
+  // Interrupt and fault handlers run on the main stack, which is only sized
+  // for interrupts, and mask the USB and SysTick interrupts this loop needs.
+  // Reset instead; Flight enters the loop on its own stack after usb_init().
+  if (__get_IPSR() != 0)
+    system_reset_to_failloop(val);
+#endif
+
   // Callers from the flash write path reach here with interrupts masked;
   // the blink pattern and USB fault log need SysTick and USB interrupts.
   __enable_irq();

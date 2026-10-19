@@ -39,8 +39,18 @@ void system_reset_to_bootloader() {
   system_reset();
 }
 
+void system_reset_to_failloop(uint8_t code) {
+  backup_register_write(RESET_FAILLOOP_MAGIC | code);
+  system_reset();
+}
+
 extern "C" __attribute__((__used__)) void system_check_for_bootloader() {
   const uint32_t magic = LL_RTC_BAK_GetRegister(RTC, BKP_INDEX);
+  if ((magic & ~RESET_FAILLOOP_CODE_MASK) == RESET_FAILLOOP_MAGIC) {
+    system_reset_failloop = magic & RESET_FAILLOOP_CODE_MASK;
+    backup_register_write(RESET_FIRMWARE_MAGIC);
+    return;
+  }
 
   switch (magic) {
   case RESET_BOOTLOADER_MAGIC: {

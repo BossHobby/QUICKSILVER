@@ -39,7 +39,7 @@ _estack = ORIGIN(FAST_RAM) + LENGTH(FAST_RAM);    /* end of 64K CCM-RAM */
 
 /* Generate a link error if heap and stack don't fit into RAM */
 _Min_Heap_Size = 0x4000;      /* required amount of heap  */
-_Min_Stack_Size = 0x4000; /* required amount of stack */
+_Min_Stack_Size = 0x1000; /* interrupts only; failloop resets out of handler mode */
 
 /* Specify the memory areas */
 /*
