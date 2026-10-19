@@ -29,15 +29,18 @@
 #include "util/cbor_helper.h"
 #include "util/lzss.h"
 
-#define ENCODE_BUFFER_SIZE 4096
+#define ENCODE_BUFFER_SIZE 8192
 
 // Short replies do not gain enough to be worth compressing.
 static constexpr uint32_t QUIC_COMPRESS_MIN = 64;
 
 #define quic_errorf(cmd, args...) quic_send_strf(quic, cmd, QUIC_FLAG_ERROR, args)
 
-static uint8_t frame_encode_buffer[ENCODE_BUFFER_SIZE + QUIC_HEADER_LEN];
-static uint8_t *encode_buffer = frame_encode_buffer + QUIC_HEADER_LEN;
+// Replies are framed here: the header precedes the encoded payload so each
+// frame is sent in one call. quic_process() allocates it for the duration of
+// one request, so it costs no RAM between configurator sessions.
+static uint8_t *frame_encode_buffer = NULL;
+static uint8_t *encode_buffer = NULL;
 
 #define check_cbor_error(cmd)               \
   if (res < CBOR_OK) {                      \
@@ -59,20 +62,21 @@ static cbor_result_t cbor_encode_motor_test_t(cbor_value_t *enc, const motor_tes
   return res;
 }
 
-static void quic_write_header(quic_command cmd, quic_flag flag, uint32_t len, bool compressed = false) {
-  frame_encode_buffer[0] = QUIC_MAGIC;
-  frame_encode_buffer[1] = (cmd & QUIC_HEADER_CMD_MASK) |
-                           ((flag << QUIC_HEADER_FLAG_SHIFT) & QUIC_HEADER_FLAG_MASK) |
-                           (compressed ? QUIC_HEADER_COMPRESSED : 0);
-  frame_encode_buffer[2] = (len >> 8) & 0xFF;
-  frame_encode_buffer[3] = len & 0xFF;
+static void quic_write_header(uint8_t *frame, quic_command cmd, quic_flag flag, uint32_t len, bool compressed = false) {
+  frame[0] = QUIC_MAGIC;
+  frame[1] = (cmd & QUIC_HEADER_CMD_MASK) |
+             ((flag << QUIC_HEADER_FLAG_SHIFT) & QUIC_HEADER_FLAG_MASK) |
+             (compressed ? QUIC_HEADER_COMPRESSED : 0);
+  frame[2] = (len >> 8) & 0xFF;
+  frame[3] = len & 0xFF;
 }
 
 static void quic_send_header(quic_t *quic, quic_command cmd, quic_flag flag, uint32_t len, bool compressed = false) {
-  quic_write_header(cmd, flag, len, compressed);
+  uint8_t header[QUIC_HEADER_LEN];
+  quic_write_header(header, cmd, flag, len, compressed);
 
   if (quic->send) {
-    quic->send(frame_encode_buffer, QUIC_HEADER_LEN, quic->priv_data);
+    quic->send(header, QUIC_HEADER_LEN, quic->priv_data);
   }
 }
 
@@ -119,23 +123,28 @@ static bool quic_send_compressed(quic_t *quic, quic_command cmd, quic_flag flag,
   return size < len;
 }
 
+// A payload must be preceded by QUIC_HEADER_LEN writable bytes, as
+// encode_buffer and quic_send_str() provide.
 static void quic_send(quic_t *quic, quic_command cmd, quic_flag flag, uint8_t *data, uint32_t len) {
+  if (len == 0) {
+    quic_send_header(quic, cmd, flag, 0);
+    return;
+  }
   if (quic_send_compressed(quic, cmd, flag, data, len))
     return;
 
-  if ((frame_encode_buffer + QUIC_HEADER_LEN) != data) {
-    memcpy(frame_encode_buffer + QUIC_HEADER_LEN, data, len);
-  }
-  quic_write_header(cmd, flag, len);
+  uint8_t *frame = data - QUIC_HEADER_LEN;
+  quic_write_header(frame, cmd, flag, len);
 
   if (quic->send) {
-    quic->send(frame_encode_buffer, QUIC_HEADER_LEN + len, quic->priv_data);
+    quic->send(frame, QUIC_HEADER_LEN + len, quic->priv_data);
   }
 }
 
 cbor_result_t quic_send_str(quic_t *quic, quic_command cmd, quic_flag flag, const char *str) {
   const uint32_t size = strlen(str) + 128;
-  uint8_t buffer[size];
+  uint8_t frame[QUIC_HEADER_LEN + size];
+  uint8_t *buffer = frame + QUIC_HEADER_LEN;
 
   cbor_value_t enc;
   cbor_encoder_init(&enc, buffer, size);
@@ -718,6 +727,13 @@ SLOW_FLASH bool quic_process(quic_t *quic, uint8_t *data, uint32_t size, bool fa
   mutex_guard_t configuration(profile_mutex, !fault_mode);
   flight_reset_runtime();
 
+  frame_encode_buffer = (uint8_t *)malloc(QUIC_HEADER_LEN + ENCODE_BUFFER_SIZE);
+  if (frame_encode_buffer == NULL) {
+    quic_errorf((quic_command)cmd, "ENCODE BUFFER ALLOC FAILED");
+    return true;
+  }
+  encode_buffer = frame_encode_buffer + QUIC_HEADER_LEN;
+
   cbor_value_t dec;
   cbor_decoder_init(&dec, data + QUIC_HEADER_LEN, payload_size);
 
@@ -762,6 +778,10 @@ SLOW_FLASH bool quic_process(quic_t *quic, uint8_t *data, uint32_t size, bool fa
     quic_errorf(QUIC_CMD_INVALID, "INVALID CMD %d", cmd);
     break;
   }
+
+  free(frame_encode_buffer);
+  frame_encode_buffer = NULL;
+  encode_buffer = NULL;
 
   quic->compress = false;
   return true;
