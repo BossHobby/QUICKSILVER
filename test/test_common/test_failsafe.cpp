@@ -14,6 +14,7 @@
 #include "rx/rx.h"
 #include "rx/unified_serial.h"
 #include "util/crc.h"
+#include "util/datetime.h"
 #include "util/ring_buffer.h"
 #include "util/util.h"
 
@@ -1059,6 +1060,59 @@ void test_crsf_serial_telemetry_schedules_attitude(void) {
   }
   profile.serial.gps = saved_gps;
   state.attitude = saved_attitude;
+}
+
+void test_crsf_gps_time_frame_follows_clock(void) {
+  uint8_t frame[CRSF_FRAME_SIZE_MAX] = {};
+  datetime_test_reset();
+  TEST_ASSERT_EQUAL_UINT32(0U, crsf_tlm_frame_gps_time(frame));
+
+  const datetime_t utc = {2026, 10, 21, 13, 37, 42, 500};
+  datetime_set_epoch_ms(datetime_to_epoch_ms(&utc));
+  time_test_advance_us(250000);
+
+  const uint8_t frame_size = crsf_tlm_frame_gps_time(frame);
+  TEST_ASSERT_EQUAL_UINT8(13U, frame_size);
+  TEST_ASSERT_EQUAL_UINT8(CRSF_FRAMETYPE_GPS_TIME, frame[2]);
+  crsf_test_assert_frame_crc(frame, frame_size);
+  TEST_ASSERT_EQUAL_INT16(2026, crsf_test_read_i16(frame + 3));
+  const uint8_t expected[] = {10, 21, 13, 37, 42};
+  TEST_ASSERT_EQUAL_UINT8_ARRAY(expected, frame + 5, sizeof(expected));
+  TEST_ASSERT_EQUAL_INT16(750, crsf_test_read_i16(frame + 10));
+  datetime_test_reset();
+}
+
+static uint8_t crsf_test_count_gps_time_frames(uint8_t slots) {
+  uint8_t count = 0;
+  for (uint8_t slot = 0; slot < slots; slot++) {
+    ring_buffer_clear(serial_rx.tx_buffer);
+    serial_rx.tx_done = true;
+    time_test_advance_us(2000);
+    rx_serial_process_crsf();
+    uint8_t frame[CRSF_FRAME_SIZE_MAX] = {};
+    const uint8_t frame_size = crsf_test_read_tx_frame(frame);
+    crsf_test_assert_frame_crc(frame, frame_size);
+    if (frame[2] == CRSF_FRAMETYPE_GPS_TIME)
+      count++;
+  }
+  return count;
+}
+
+void test_crsf_serial_telemetry_rate_limits_gps_time(void) {
+  crsf_test_reset(8500000);
+  datetime_test_reset();
+  TEST_ASSERT_EQUAL_UINT8(0U, crsf_test_count_gps_time_frames(16));
+
+  const datetime_t utc = {2026, 10, 21, 13, 37, 42, 0};
+  datetime_set_epoch_ms(datetime_to_epoch_ms(&utc));
+  // Clear any earlier send from the rate limit.
+  time_test_advance_us(30000000);
+  TEST_ASSERT_EQUAL_UINT8(1U, crsf_test_count_gps_time_frames(16));
+  TEST_ASSERT_EQUAL_UINT8(0U, crsf_test_count_gps_time_frames(16));
+
+  time_test_advance_us(30000000);
+  TEST_ASSERT_EQUAL_UINT8(1U, crsf_test_count_gps_time_frames(16));
+  datetime_test_reset();
 }
 
 void test_crsf_msp_request_queues_response_immediately(void) {

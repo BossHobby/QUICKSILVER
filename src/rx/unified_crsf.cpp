@@ -31,6 +31,8 @@
 #define CRSF_SUBSET_DIGITAL_SWITCH_FLAG 0x80
 #define CRSF_SUBSET_DIGITAL_SWITCH_BITS 10
 #define CRSF_TELEMETRY_INTERVAL_US 2000
+// Receivers only need the occasional resync, so keep the downlink for live data.
+#define CRSF_GPS_TIME_INTERVAL_MS 30000
 #define CRSF_BAUDRATE_CHANGE_DELAY_US 4000
 #define CRSF_BAUDRATE_ERROR_FALLBACK_COUNT 200
 
@@ -508,6 +510,10 @@ static void rx_serial_send_crsf_telemetry() {
   uint32_t telemetry_size = 0;
   static uint8_t telemetry_counter = 0;
   const bool gps_enabled = profile.serial.gps != SERIAL_PORT_INVALID;
+  static bool gps_time_sent = false;
+  static uint32_t gps_time_sent_ms = 0;
+  const bool gps_time_due = !gps_time_sent || (time_millis() - gps_time_sent_ms) >= CRSF_GPS_TIME_INTERVAL_MS;
+  bool gps_time_frame = false;
 
   switch (telemetry_counter++ % 8) {
   case 0:
@@ -529,12 +535,23 @@ static void rx_serial_send_crsf_telemetry() {
     telemetry_size = crsf_tlm_frame_attitude(crsf_telemetry_packet);
     break;
   default:
-    telemetry_size = crsf_tlm_frame_battery_sensor(crsf_telemetry_packet);
+    if (gps_time_due) {
+      telemetry_size = crsf_tlm_frame_gps_time(crsf_telemetry_packet);
+      gps_time_frame = telemetry_size != 0;
+    }
+    if (!gps_time_frame)
+      telemetry_size = crsf_tlm_frame_battery_sensor(crsf_telemetry_packet);
     break;
   }
 
-  if (rx_serial_crsf_queue_frame(crsf_telemetry_packet, telemetry_size))
-    telemetry_time = now;
+  if (!rx_serial_crsf_queue_frame(crsf_telemetry_packet, telemetry_size))
+    return;
+
+  telemetry_time = now;
+  if (gps_time_frame) {
+    gps_time_sent = true;
+    gps_time_sent_ms = time_millis();
+  }
 }
 
 packet_status_t rx_serial_process_crsf() {

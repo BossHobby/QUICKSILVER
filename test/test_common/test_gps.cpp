@@ -6,6 +6,7 @@
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "io/gps.h"
+#include "util/datetime.h"
 
 extern serial_port_t serial_gps;
 
@@ -228,4 +229,73 @@ void test_gps_satellite_and_fix_loss_remain_visible_armed() {
   profile.serial.gps = SERIAL_PORT_INVALID;
   gps_init();
   flags.arm_state = false;
+}
+
+void test_datetime_epoch_conversion() {
+  const struct {
+    datetime_t dt;
+    int64_t epoch_ms;
+  } cases[] = {
+      {{1970, 1, 1, 0, 0, 0, 0}, 0},
+      {{2000, 2, 29, 12, 34, 56, 789}, 951827696789LL},
+      {{2024, 12, 31, 23, 59, 59, 999}, 1735689599999LL},
+      {{2100, 3, 1, 0, 0, 0, 0}, 4107542400000LL},
+  };
+  for (const auto &test : cases) {
+    TEST_ASSERT_EQUAL_INT64(test.epoch_ms, datetime_to_epoch_ms(&test.dt));
+    datetime_t decoded = {};
+    datetime_from_epoch_ms(test.epoch_ms, &decoded);
+    TEST_ASSERT_EQUAL_MEMORY(&test.dt, &decoded, sizeof(decoded));
+  }
+}
+
+static void gps_test_feed_time(uint8_t valid, int32_t nano) {
+  uint8_t pvt[100] = {0xb5, 0x62, 1, 7, 92, 0};
+  uint8_t *payload = pvt + 6;
+  payload[4] = 2026 & 0xff;
+  payload[5] = 2026 >> 8;
+  payload[6] = 10;
+  payload[7] = 21;
+  payload[8] = 23;
+  payload[9] = 59;
+  payload[10] = 59;
+  payload[11] = valid;
+  memcpy(payload + 16, &nano, sizeof(nano));
+  uint8_t a = 0, b = 0;
+  for (unsigned i = 2; i < sizeof(pvt) - 2; i++) {
+    a += pvt[i];
+    b += a;
+  }
+  pvt[98] = a;
+  pvt[99] = b;
+  ring_buffer_write_multi(serial_gps.rx_buffer, pvt, sizeof(pvt));
+  gps_task();
+}
+
+void test_gps_time_sets_free_running_clock() {
+  gps_test_reset(0x000A0000U);
+  datetime_test_reset();
+  time_test_set_us(1000000);
+
+  // Date and time without full resolution may still be off by whole seconds.
+  gps_test_feed_time(0x03, 0);
+  TEST_ASSERT_FALSE(datetime_valid());
+
+  gps_test_feed_time(0x07, 250000000);
+  datetime_t now = {};
+  TEST_ASSERT_TRUE(datetime_now(&now));
+  const datetime_t expected = {2026, 10, 21, 23, 59, 59, 250};
+  TEST_ASSERT_EQUAL_MEMORY(&expected, &now, sizeof(now));
+
+  // Keeps counting from the last anchor once GPS goes quiet, across midnight.
+  time_test_advance_us(1500000);
+  TEST_ASSERT_TRUE(datetime_now(&now));
+  const datetime_t later = {2026, 10, 22, 0, 0, 0, 750};
+  TEST_ASSERT_EQUAL_MEMORY(&later, &now, sizeof(now));
+
+  // Negative nano belongs to the rounded-up second.
+  gps_test_feed_time(0x07, -100000000);
+  TEST_ASSERT_TRUE(datetime_now(&now));
+  const datetime_t rounded = {2026, 10, 21, 23, 59, 58, 900};
+  TEST_ASSERT_EQUAL_MEMORY(&rounded, &now, sizeof(now));
 }

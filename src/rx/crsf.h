@@ -42,6 +42,7 @@
 
 enum {
   CRSF_FRAME_GPS_PAYLOAD_SIZE = 15,
+  CRSF_FRAME_GPS_TIME_PAYLOAD_SIZE = 9,
   CRSF_FRAME_GPS_EXTENDED_PAYLOAD_SIZE = 20,
   CRSF_FRAME_BATTERY_SENSOR_PAYLOAD_SIZE = 8,
   CRSF_FRAME_LINK_STATISTICS_PAYLOAD_SIZE = 10,
@@ -64,6 +65,7 @@ enum {
 
 typedef enum {
   CRSF_FRAMETYPE_GPS = 0x02,
+  CRSF_FRAMETYPE_GPS_TIME = 0x03,
   CRSF_FRAMETYPE_GPS_EXTENDED = 0x06,
   CRSF_FRAMETYPE_BATTERY_SENSOR = 0x08,
   CRSF_FRAMETYPE_LINK_STATISTICS = 0x14,
@@ -196,6 +198,16 @@ typedef struct {
 } __attribute__((__packed__)) crsf_gps_payload_t;
 
 typedef struct {
+  int16_t year;
+  uint8_t month;
+  uint8_t day;
+  uint8_t hour;
+  uint8_t minute;
+  uint8_t second;
+  uint16_t millisecond;
+} __attribute__((__packed__)) crsf_gps_time_payload_t;
+
+typedef struct {
   uint8_t fix_type;
   uint16_t n_speed;
   uint16_t e_speed;
@@ -236,6 +248,12 @@ typedef struct {
   crsf_gps_payload_t payload;
   uint8_t crc;
 } __attribute__((__packed__)) crsf_gps_frame_t;
+
+typedef struct {
+  crsf_frame_header_t header;
+  crsf_gps_time_payload_t payload;
+  uint8_t crc;
+} __attribute__((__packed__)) crsf_gps_time_frame_t;
 
 typedef struct {
   crsf_frame_header_t header;
@@ -357,6 +375,7 @@ uint32_t crsf_frame_speed_response(uint8_t *buf, uint8_t destination, uint8_t po
 uint32_t crsf_frame_bind(uint8_t *buf);
 uint32_t crsf_tlm_frame_battery_sensor(uint8_t *buf);
 uint32_t crsf_tlm_frame_gps(uint8_t *buf);
+uint32_t crsf_tlm_frame_gps_time(uint8_t *buf);
 uint32_t crsf_tlm_frame_gps_extended(uint8_t *buf);
 uint32_t crsf_tlm_frame_flight_mode(uint8_t *buf);
 uint32_t crsf_tlm_frame_attitude(uint8_t *buf);

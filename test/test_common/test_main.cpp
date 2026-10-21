@@ -15,6 +15,10 @@ extern void test_vbat_filtered_warning_has_hysteresis();
 extern void test_vbat_detects_cell_count_across_charge();
 extern void test_vbat_redetects_cells_when_battery_connects();
 extern void test_crsf_battery_current_units();
+extern void test_crsf_gps_time_frame_follows_clock();
+extern void test_crsf_serial_telemetry_rate_limits_gps_time();
+extern void test_datetime_epoch_conversion();
+extern void test_gps_time_sets_free_running_clock();
 extern void test_rx_transport_leaves_conditioning_to_flight();
 extern void test_rx_mailbox_coalesces_complete_frames();
 extern void test_io_worker_publishes_rx_without_configuration_wait();
@@ -532,6 +536,8 @@ int main(int argc, char **argv) {
   RUN_TEST(test_crsf_flight_mode_frame_reports_mode_text);
   RUN_TEST(test_crsf_attitude_frame_units_order_and_crc);
   RUN_TEST(test_crsf_serial_telemetry_schedules_attitude);
+  RUN_TEST(test_crsf_gps_time_frame_follows_clock);
+  RUN_TEST(test_crsf_serial_telemetry_rate_limits_gps_time);
   RUN_TEST(test_crsf_msp_request_queues_response_immediately);
   RUN_TEST(test_crsf_quic_session_serves_configurator_requests);
   RUN_TEST(test_crsf_link_statistics_updates_collected_stats);
@@ -564,6 +570,8 @@ int main(int argc, char **argv) {
   RUN_TEST(test_gps_burst_resumes_partial_packet);
   RUN_TEST(test_gps_ground_and_airborne_configuration);
   RUN_TEST(test_gps_satellite_and_fix_loss_remain_visible_armed);
+  RUN_TEST(test_datetime_epoch_conversion);
+  RUN_TEST(test_gps_time_sets_free_running_clock);
   RUN_TEST(test_attitude_gps_reacquisition_does_not_snap_yaw);
   RUN_TEST(test_attitude_rth_sideways_motion_does_not_correct_heading);
   RUN_TEST(test_attitude_rth_large_heading_error_can_recover);
