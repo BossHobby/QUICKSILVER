@@ -15,6 +15,10 @@ void nav_position_delta(gps_coord_t start, gps_coord_t end, float *north, float 
 void nav_init();
 void nav_update();
 
+// Home latched on arming from a sane GPS position; invalid while disarmed.
+bool nav_home_valid();
+float nav_home_altitude();
+
 // Smoothed earth-vertical acceleration, m/s^2 up.
 float nav_vertical_accel();
 

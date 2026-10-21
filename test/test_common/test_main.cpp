@@ -17,6 +17,8 @@ extern void test_vbat_redetects_cells_when_battery_connects();
 extern void test_crsf_battery_current_units();
 extern void test_crsf_gps_time_frame_follows_clock();
 extern void test_crsf_serial_telemetry_rate_limits_gps_time();
+extern void test_crsf_gps_home_frame_follows_home();
+extern void test_crsf_serial_telemetry_rate_limits_gps_home();
 extern void test_datetime_epoch_conversion();
 extern void test_gps_time_sets_free_running_clock();
 extern void test_rx_transport_leaves_conditioning_to_flight();
@@ -538,6 +540,8 @@ int main(int argc, char **argv) {
   RUN_TEST(test_crsf_serial_telemetry_schedules_attitude);
   RUN_TEST(test_crsf_gps_time_frame_follows_clock);
   RUN_TEST(test_crsf_serial_telemetry_rate_limits_gps_time);
+  RUN_TEST(test_crsf_gps_home_frame_follows_home);
+  RUN_TEST(test_crsf_serial_telemetry_rate_limits_gps_home);
   RUN_TEST(test_crsf_msp_request_queues_response_immediately);
   RUN_TEST(test_crsf_quic_session_serves_configurator_requests);
   RUN_TEST(test_crsf_link_statistics_updates_collected_stats);
