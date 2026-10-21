@@ -12,7 +12,7 @@
 #include "io/quic_crsf.h"
 #include "rx/crsf.h"
 #include "rx/rx.h"
-#include "rx/unified_serial.h"
+#include "rx/rx_serial.h"
 #include "util/crc.h"
 #include "util/datetime.h"
 #include "util/ring_buffer.h"
@@ -84,7 +84,7 @@ static void failsafe_use_prearm_switch(void) {
   profile.receiver.aux[AUX_PREARM] = (aux_function_map_t){RX_CHANNEL_5, 1, AUX_VALUE_MAX};
 }
 
-static void serial_test_reset(uint32_t now_us, rx_serial_protocol_t protocol, uint32_t baudrate, serial_direction_t direction, serial_stop_bits_t stop_bits) {
+static void serial_test_reset(uint32_t now_us, rx_protocol_t protocol, uint32_t baudrate, serial_direction_t direction, serial_stop_bits_t stop_bits) {
   failsafe_reset(now_us);
 
   ring_buffer_clear(serial_rx.rx_buffer);
@@ -108,12 +108,12 @@ static void serial_test_reset(uint32_t now_us, rx_serial_protocol_t protocol, ui
   serial_rx.rx_error_count = 0;
   profile.serial.rx = SERIAL_PORT1;
   profile.serial.smart_audio = SERIAL_PORT_INVALID;
-  serial_rx_detected_protcol = protocol;
+  state.rx_protocol = protocol;
   state.rx_rssi = 0.0f;
 }
 
 static void crsf_test_reset(uint32_t now_us) {
-  serial_test_reset(now_us, RX_SERIAL_PROTOCOL_CRSF, 420000, SERIAL_DIR_TX_RX, SERIAL_STOP_BITS_1);
+  serial_test_reset(now_us, RX_PROTOCOL_CRSF, 420000, SERIAL_DIR_TX_RX, SERIAL_STOP_BITS_1);
   memset(rx_channels, 0, sizeof(rx_channels));
   memset(&crsf_stats, 0, sizeof(crsf_stats));
 }
@@ -629,7 +629,7 @@ void test_failsafe_rearm_allows_held_prearm_after_drop(void) {
 }
 
 void test_sbus_failsafe_frame_does_not_refresh_last_frame_time(void) {
-  serial_test_reset(1000000, RX_SERIAL_PROTOCOL_SBUS, 100000, SERIAL_DIR_RX, SERIAL_STOP_BITS_2);
+  serial_test_reset(1000000, RX_PROTOCOL_SBUS, 100000, SERIAL_DIR_RX, SERIAL_STOP_BITS_2);
 
   sbus_test_write_frame(1U << 3);
   time_test_advance_us(5000);
@@ -684,7 +684,7 @@ void test_crsf_drains_queued_frames_and_preserves_partial_frame(void) {
 }
 
 void test_sbus_drain_keeps_last_valid_channels(void) {
-  serial_test_reset(1000000, RX_SERIAL_PROTOCOL_SBUS, 100000, SERIAL_DIR_RX, SERIAL_STOP_BITS_2);
+  serial_test_reset(1000000, RX_PROTOCOL_SBUS, 100000, SERIAL_DIR_RX, SERIAL_STOP_BITS_2);
   uint8_t frame[25] = {};
   frame[0] = 0x0f;
   frame[1] = 0x13;

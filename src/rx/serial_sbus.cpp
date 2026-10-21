@@ -1,4 +1,4 @@
-#include "rx/unified_serial.h"
+#include "rx/rx_serial.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -9,7 +9,7 @@
 #include "driver/time.h"
 #include "util/util.h"
 
-#ifdef USE_RX_UNIFIED
+#ifdef USE_RX_SERIAL
 
 #define SBUS_PACKET_SIZE 25
 #define FPORT_TELEMETRY_PACKET_SIZE 10
@@ -274,8 +274,7 @@ static void rx_serial_send_fport_telemetry() {
 
 packet_status_t rx_serial_process_fport() {
   const packet_status_t status = rx_serial_process_fport_frame_stream();
-  if (serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_FPORT ||
-      serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_FPORT_INVERTED)
+  if (state.rx_protocol == RX_PROTOCOL_FPORT)
     rx_serial_send_fport_telemetry();
   return status;
 }

@@ -43,8 +43,7 @@ void test_target_defaults_cbor_decode() {
   TEST_ASSERT_EQUAL(RX_PROTOCOL_CRSF, decoded.defaults.receiver.protocol);
   TEST_ASSERT_EQUAL(VTX_PROTOCOL_SMART_AUDIO, decoded.defaults.vtx.protocol);
 
-  // The other explicit serial provider decodes to its top-level protocol
-  // value; target_defaults_apply maps it onto the unified serial bind union.
+  // The other explicit serial provider decodes to its receiver protocol.
   uint8_t sbus[] = {
       0xa1, 0x68, 'd', 'e', 'f', 'a', 'u', 'l', 't', 's', 0xa1,
       0x68, 'r', 'e', 'c', 'e', 'i', 'v', 'e', 'r', 0xa1,
@@ -127,9 +126,7 @@ void test_target_defaults_apply() {
 
   profile_t resolved = {};
 
-  // An explicit serial provider selects the unified serial decoder via the
-  // bind union; the top-level protocol stays unified serial and the selection
-  // is saved.
+  // An explicit serial provider is selected directly, without bind data.
   target.defaults.receiver.protocol = RX_PROTOCOL_CRSF;
   memset(&resolved, 0, sizeof(profile_t));
   profile_set_defaults(&resolved);
@@ -141,9 +138,7 @@ void test_target_defaults_apply() {
   TEST_ASSERT_EQUAL(SERIAL_PORT_INVALID, resolved.serial.hdzero);
   TEST_ASSERT_EQUAL(SERIAL_SOFT_PORT1, resolved.serial.gps);
 
-  TEST_ASSERT_EQUAL(RX_PROTOCOL_UNIFIED_SERIAL, resolved.receiver.protocol);
-  TEST_ASSERT_EQUAL(RX_SERIAL_PROTOCOL_CRSF, resolved.receiver.bind.unified.protocol);
-  TEST_ASSERT_EQUAL_UINT8(1, resolved.receiver.bind.bind_saved);
+  TEST_ASSERT_EQUAL(RX_PROTOCOL_CRSF, resolved.receiver.protocol);
 
   TEST_ASSERT_EQUAL(VTX_PROTOCOL_SMART_AUDIO, resolved.vtx.protocol);
 
@@ -152,32 +147,17 @@ void test_target_defaults_apply() {
   profile_set_defaults(&resolved);
   target_defaults_apply(&resolved);
 
-  TEST_ASSERT_EQUAL(RX_PROTOCOL_UNIFIED_SERIAL, resolved.receiver.protocol);
-  TEST_ASSERT_EQUAL(RX_SERIAL_PROTOCOL_SBUS, resolved.receiver.bind.unified.protocol);
-  TEST_ASSERT_EQUAL_UINT8(1, resolved.receiver.bind.bind_saved);
+  TEST_ASSERT_EQUAL(RX_PROTOCOL_SBUS, resolved.receiver.protocol);
 
-  // The legacy unified_serial value no longer carries a default: apply
-  // leaves autodetection untouched, matching an absent receiver block.
-  target.defaults.receiver.protocol = RX_PROTOCOL_UNIFIED_SERIAL;
-  memset(&resolved, 0, sizeof(profile_t));
-  profile_set_defaults(&resolved);
-  target_defaults_apply(&resolved);
-
-  TEST_ASSERT_EQUAL(RX_PROTOCOL_UNIFIED_SERIAL, resolved.receiver.protocol);
-  TEST_ASSERT_EQUAL(RX_SERIAL_PROTOCOL_INVALID, resolved.receiver.bind.unified.protocol);
-  TEST_ASSERT_EQUAL_UINT8(0, resolved.receiver.bind.bind_saved);
-
-  // An absent default leaves the generic defaults in place: unified serial
-  // with autodetection (empty bind union) and no VTX protocol.
+  // An absent default leaves the generic defaults in place: serial
+  // autodetection and no VTX protocol.
   target.defaults.receiver = {};
   target.defaults.vtx = {};
   memset(&resolved, 0, sizeof(profile_t));
   profile_set_defaults(&resolved);
   target_defaults_apply(&resolved);
 
-  TEST_ASSERT_EQUAL(RX_PROTOCOL_UNIFIED_SERIAL, resolved.receiver.protocol);
-  TEST_ASSERT_EQUAL(RX_SERIAL_PROTOCOL_INVALID, resolved.receiver.bind.unified.protocol);
-  TEST_ASSERT_EQUAL_UINT8(0, resolved.receiver.bind.bind_saved);
+  TEST_ASSERT_EQUAL(RX_PROTOCOL_SERIAL_AUTO, resolved.receiver.protocol);
   TEST_ASSERT_EQUAL(VTX_PROTOCOL_INVALID, resolved.vtx.protocol);
 
   target = backup;

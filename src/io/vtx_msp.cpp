@@ -2,13 +2,13 @@
 
 #include <string.h>
 
+#include "control/control.h"
 #include "core/profile.h"
 #include "driver/interrupt.h"
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "driver/vtx.h"
 #include "io/msp.h"
-#include "rx/unified_serial.h"
 #include "util/crc.h"
 
 #ifdef USE_VTX
@@ -167,7 +167,7 @@ static void msp_vtx_init() {
   }
 
   if (profile.serial.smart_audio == profile.serial.rx &&
-      serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
+      state.rx_protocol == RX_PROTOCOL_CRSF) {
     msp_vtx = &crsf_msp;
     return;
   }
@@ -199,7 +199,7 @@ static bool msp_vtx_feed_parser() {
   }
   if (profile.serial.smart_audio != SERIAL_PORT_INVALID &&
       profile.serial.smart_audio == profile.serial.rx &&
-      serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
+      state.rx_protocol == RX_PROTOCOL_CRSF) {
     // handled by telemetry
     return false;
   }

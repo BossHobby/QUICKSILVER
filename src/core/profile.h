@@ -22,6 +22,9 @@
 //        navigation: encode for wings; add wing cruise throttle, GPS-refined cruise speed, bank and loiter settings.
 //        wing: add loiter switch, RTH and failsafe RTH.
 //        wing: add Cruise mode.
+//        rx: select serial protocols directly in receiver.protocol and renumber it,
+//            retiring unified serial (now serial autodetect) and Bayang; add receiver.invert.
+//        rx: drop receiver.bind.bind_saved; bind data is kept as-is and DSM bind is requested in it.
 // 0.3.0 (1e5b55c3): feat: add full 16-bit aux channel resolution with range-based function mapping.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
@@ -320,10 +323,6 @@ typedef struct {
 } profile_receiver_bind_frsky_t;
 
 typedef struct {
-  uint8_t protocol;
-} profile_receiver_bind_unified_t;
-
-typedef struct {
   uint8_t is_set;
   uint8_t uid[6];
   uint8_t magic;
@@ -337,24 +336,27 @@ typedef struct {
 } profile_receiver_bind_flysky_t;
 
 typedef struct {
-  uint8_t bind_saved;
-  union {
-    profile_receiver_bind_frsky_t frsky;
-    profile_receiver_bind_unified_t unified;
-    profile_receiver_bind_elrs_t elrs;
-    profile_receiver_bind_flysky_t flysky;
-    uint8_t raw[BIND_RAW_STORAGE_SIZE];
-  };
+  // set to send Spektrum bind pulses at the next power-up, which consumes it
+  uint8_t bind_request;
+} profile_receiver_bind_dsm_t;
+
+// Per-protocol bind data; all zero means unbound.
+typedef union {
+  profile_receiver_bind_frsky_t frsky;
+  profile_receiver_bind_elrs_t elrs;
+  profile_receiver_bind_flysky_t flysky;
+  profile_receiver_bind_dsm_t dsm;
+  uint8_t raw[BIND_RAW_STORAGE_SIZE];
 } profile_receiver_bind_t;
 
 #define PROFILE_RECEIVER_BIND_MEMBERS           \
   START_STRUCT(profile_receiver_bind_t)         \
-  MEMBER(bind_saved, uint8_t)                   \
   BSTR_MEMBER(raw, BIND_RAW_STORAGE_SIZE)       \
   END_STRUCT()
 
 typedef struct {
   rx_protocol_t protocol;
+  uint8_t invert; // serial receivers: invert the RX line
   profile_receiver_bind_t bind;
   aux_function_map_t aux[AUX_FUNCTION_MAX];
   rx_role_map_t role_map[RX_ROLE_MAX];
@@ -379,6 +381,7 @@ typedef struct {
 #define RECEIVER_MEMBERS                                  \
   START_STRUCT(profile_receiver_t)                        \
   MEMBER(protocol, uint8_t)                               \
+  MEMBER(invert, uint8_t)                                 \
   MEMBER(bind, profile_receiver_bind_t)                   \
   ARRAY_MEMBER(aux, AUX_FUNCTION_MAX, aux_function_map_t) \
   MEMBER(lqi_source, uint8_t)                             \

@@ -68,7 +68,7 @@ static gesture_command_t shortcut_command() {
   if (sequence[0] == DIRECTION_DOWN && sequence[1] == DIRECTION_DOWN && sequence[2] == DIRECTION_DOWN)
     return GESTURE_CALIBRATE_SAVE;
   if (sequence[0] == DIRECTION_UP && sequence[1] == DIRECTION_UP && sequence[2] == DIRECTION_UP)
-    return GESTURE_TOGGLE_BIND;
+    return GESTURE_RESET_BIND;
   if (sequence[0] == DIRECTION_RIGHT && sequence[1] == DIRECTION_RIGHT && sequence[2] == DIRECTION_RIGHT)
     return GESTURE_OPEN_MENU;
   if (sequence[0] == DIRECTION_LEFT && sequence[1] == DIRECTION_RIGHT && sequence[2] == DIRECTION_LEFT)

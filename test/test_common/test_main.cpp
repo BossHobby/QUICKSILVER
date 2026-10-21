@@ -21,6 +21,9 @@ extern void test_crsf_gps_home_frame_follows_home();
 extern void test_crsf_serial_telemetry_rate_limits_gps_home();
 extern void test_datetime_epoch_conversion();
 extern void test_gps_time_sets_free_running_clock();
+extern void test_rx_serial_protocol_selects_port_configuration();
+extern void test_rx_serial_autodetect_selects_protocol_in_profile();
+extern void test_rx_reset_bind_clears_data_and_requests_dsm_bind();
 extern void test_rx_transport_leaves_conditioning_to_flight();
 extern void test_rx_mailbox_coalesces_complete_frames();
 extern void test_io_worker_publishes_rx_without_configuration_wait();
@@ -304,6 +307,9 @@ void tearDown(void) {
 // Main test runner
 int main(int argc, char **argv) {
   UNITY_BEGIN();
+  RUN_TEST(test_rx_serial_protocol_selects_port_configuration);
+  RUN_TEST(test_rx_serial_autodetect_selects_protocol_in_profile);
+  RUN_TEST(test_rx_reset_bind_clears_data_and_requests_dsm_bind);
   RUN_TEST(test_rx_transport_leaves_conditioning_to_flight);
   RUN_TEST(test_vbat_integrates_current_over_elapsed_time);
   RUN_TEST(test_vbat_runs_on_fixed_period);

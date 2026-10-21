@@ -1,17 +1,22 @@
 #include <unity.h>
 
 #include <signal.h>
+#include <string.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
 #include "control/control.h"
 #include "core/profile.h"
+#include "core/target.h"
 #include "core/tasks.h"
 #include "driver/adc.h"
+#include "driver/serial.h"
 #include "driver/time.h"
 #include "io/vbat.h"
 #include "rx/crsf.h"
 #include "rx/rx.h"
+#include "rx/rx_serial.h"
+#include "util/ring_buffer.h"
 
 extern uint16_t adc_set_raw_value(adc_chan_t chan, uint16_t value);
 
@@ -31,6 +36,118 @@ void test_crsf_battery_current_units() {
     TEST_ASSERT_EQUAL_UINT16(test.encoded_current, (frame[5] << 8) | frame[6]);
   }
   state = saved_state;
+}
+
+static void rx_serial_test_port() {
+  target.serial_ports[SERIAL_PORT1] = (target_serial_port_t){
+      .index = 1,
+      .rx = PIN_A10,
+      .tx = PIN_A9,
+      .inverter = PIN_NONE,
+  };
+  serial_rx.config.port = SERIAL_PORT_INVALID;
+  profile.serial.rx = SERIAL_PORT1;
+}
+
+void test_rx_serial_protocol_selects_port_configuration() {
+  const auto saved_state = state;
+  const auto saved_profile = profile;
+  const auto saved_target = target;
+  rx_serial_test_port();
+
+  profile.receiver.protocol = RX_PROTOCOL_SBUS;
+  profile.receiver.invert = 1;
+  rx_init();
+  TEST_ASSERT_EQUAL(RX_PROTOCOL_SBUS, state.rx_protocol);
+  TEST_ASSERT_EQUAL(SERIAL_PORT1, serial_rx.config.port);
+  TEST_ASSERT_EQUAL_UINT32(100000, serial_rx.config.baudrate);
+  TEST_ASSERT_EQUAL(SERIAL_STOP_BITS_2, serial_rx.config.stop_bits);
+  TEST_ASSERT_TRUE(serial_rx.config.invert);
+
+  // Inverted FPort runs full duplex, plain FPort half duplex.
+  profile.receiver.protocol = RX_PROTOCOL_FPORT;
+  rx_init();
+  TEST_ASSERT_EQUAL_UINT32(115200, serial_rx.config.baudrate);
+  TEST_ASSERT_TRUE(serial_rx.config.invert);
+  TEST_ASSERT_FALSE(serial_rx.config.half_duplex);
+  profile.receiver.invert = 0;
+  rx_init();
+  TEST_ASSERT_FALSE(serial_rx.config.invert);
+  TEST_ASSERT_TRUE(serial_rx.config.half_duplex);
+
+  // Protocols the build does not advertise, here an SPI radio without detected
+  // hardware, are rejected.
+  profile.receiver.protocol = static_cast<rx_protocol_t>(9);
+  rx_init();
+  TEST_ASSERT_EQUAL(RX_PROTOCOL_INVALID, profile.receiver.protocol);
+  TEST_ASSERT_EQUAL(RX_PROTOCOL_INVALID, state.rx_protocol);
+
+  state = saved_state;
+  profile = saved_profile;
+  target = saved_target;
+}
+
+void test_rx_serial_autodetect_selects_protocol_in_profile() {
+  const auto saved_state = state;
+  const auto saved_flags = flags;
+  const auto saved_profile = profile;
+  const auto saved_target = target;
+  rx_serial_test_port();
+  flags = {};
+
+  profile.receiver.protocol = RX_PROTOCOL_SERIAL_AUTO;
+  profile.receiver.invert = 0;
+  rx_init();
+  TEST_ASSERT_EQUAL(RX_PROTOCOL_SERIAL_AUTO, state.rx_protocol);
+
+  // Cycle the candidates until plain SBUS is on the port.
+  bool sbus_candidate = false;
+  for (uint32_t i = 0; i < 20 && !sbus_candidate; i++) {
+    time_test_advance_us(1001000);
+    rx_serial_check();
+    sbus_candidate = serial_rx.config.baudrate == 100000 && !serial_rx.config.invert;
+  }
+  TEST_ASSERT_TRUE(sbus_candidate);
+
+  uint8_t frame[25] = {};
+  frame[0] = 0x0f;
+  for (uint32_t i = 0; i < 41; i++) {
+    ring_buffer_write_multi(serial_rx.rx_buffer, frame, sizeof(frame));
+    rx_serial_check();
+  }
+
+  TEST_ASSERT_EQUAL(RX_PROTOCOL_SBUS, state.rx_protocol);
+  TEST_ASSERT_EQUAL(RX_PROTOCOL_SBUS, profile.receiver.protocol);
+  TEST_ASSERT_EQUAL_UINT8(0, profile.receiver.invert);
+  TEST_ASSERT_TRUE(flags.rx_ready);
+
+  // Once locked, frames decode as the selected protocol.
+  ring_buffer_write_multi(serial_rx.rx_buffer, frame, sizeof(frame));
+  TEST_ASSERT_TRUE(rx_serial_check());
+
+  state = saved_state;
+  flags = saved_flags;
+  profile = saved_profile;
+  target = saved_target;
+}
+
+void test_rx_reset_bind_clears_data_and_requests_dsm_bind() {
+  const auto saved_profile = profile;
+
+  profile.receiver.protocol = RX_PROTOCOL_CRSF;
+  memset(profile.receiver.bind.raw, 0xAA, BIND_RAW_STORAGE_SIZE);
+  rx_reset_bind();
+  for (uint32_t i = 0; i < BIND_RAW_STORAGE_SIZE; i++)
+    TEST_ASSERT_EQUAL_UINT8(0, profile.receiver.bind.raw[i]);
+
+  profile.receiver.protocol = RX_PROTOCOL_DSM;
+  memset(profile.receiver.bind.raw, 0xAA, BIND_RAW_STORAGE_SIZE);
+  rx_reset_bind();
+  TEST_ASSERT_EQUAL_UINT8(1, profile.receiver.bind.dsm.bind_request);
+  for (uint32_t i = sizeof(profile_receiver_bind_dsm_t); i < BIND_RAW_STORAGE_SIZE; i++)
+    TEST_ASSERT_EQUAL_UINT8(0, profile.receiver.bind.raw[i]);
+
+  profile = saved_profile;
 }
 
 void test_rx_transport_leaves_conditioning_to_flight() {

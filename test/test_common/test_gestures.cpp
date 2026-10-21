@@ -46,7 +46,7 @@ static gesture_command_t tap_gesture(char direction) {
 
 void test_gestures_shortcuts_and_clock_wrap() {
   const char *sequences[] = {"DDD", "UUU", "RRR", "LRL"};
-  const gesture_command_t commands[] = {GESTURE_CALIBRATE_SAVE, GESTURE_TOGGLE_BIND, GESTURE_OPEN_MENU, GESTURE_RESET_OSD};
+  const gesture_command_t commands[] = {GESTURE_CALIBRATE_SAVE, GESTURE_RESET_BIND, GESTURE_OPEN_MENU, GESTURE_RESET_OSD};
   const uint32_t starts[] = {0U, UINT32_MAX - 800000U};
   for (uint32_t start : starts) {
     for (uint32_t i = 0; i < 4; i++) {
@@ -100,7 +100,7 @@ void test_gestures_threshold_crossing_and_long_shortcut_press() {
     TEST_ASSERT_EQUAL(GESTURE_NONE, hold_gesture('?', 10000));
     TEST_ASSERT_EQUAL(GESTURE_NONE, hold_gesture('U', 60000));
     TEST_ASSERT_EQUAL(GESTURE_NONE, hold_gesture('?', 10000));
-    TEST_ASSERT_EQUAL(i == 2 ? GESTURE_TOGGLE_BIND : GESTURE_NONE, hold_gesture('C', 60000));
+    TEST_ASSERT_EQUAL(i == 2 ? GESTURE_RESET_BIND : GESTURE_NONE, hold_gesture('C', 60000));
   }
   begin_gestures(false);
   TEST_ASSERT_EQUAL(GESTURE_NONE, tap_gesture('D'));

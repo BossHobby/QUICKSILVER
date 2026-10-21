@@ -26,8 +26,18 @@ target_info_t target_info = {
 #else
     .features = 0,
 #endif
+    // SPI radios are added by rx_spi_detect() once their hardware responds.
     .rx_protocols = {
-        RX_PROTOCOL_UNIFIED_SERIAL,
+#ifdef USE_RX_SERIAL
+        RX_PROTOCOL_SERIAL_AUTO,
+        RX_PROTOCOL_CRSF,
+        RX_PROTOCOL_SBUS,
+        RX_PROTOCOL_IBUS,
+        RX_PROTOCOL_FPORT,
+        RX_PROTOCOL_DSM,
+        RX_PROTOCOL_REDPINE_SERIAL,
+        RX_PROTOCOL_MAVLINK,
+#endif
     },
 
     .gyro_id = 0x0,

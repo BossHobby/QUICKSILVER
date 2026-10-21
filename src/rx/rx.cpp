@@ -12,7 +12,7 @@
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "io/simulator.h"
-#include "rx/unified_serial.h"
+#include "rx/rx_serial.h"
 #include "util/filter.h"
 #include "util/util.h"
 
@@ -183,53 +183,52 @@ void rx_init() {
   rx_init_state();
   rx_spi_detect();
 
-  serial_rx_detected_protcol = RX_SERIAL_PROTOCOL_INVALID;
   if (!target_has_rx_protocol(profile.receiver.protocol)) {
     profile.receiver.protocol = RX_PROTOCOL_INVALID;
   }
+  state.rx_protocol = profile.receiver.protocol;
 
-  switch (profile.receiver.protocol) {
-  case RX_PROTOCOL_UNIFIED_SERIAL:
-#ifdef USE_RX_UNIFIED
+  switch (state.rx_protocol) {
+  case RX_PROTOCOL_SERIAL_AUTO:
+  case RX_PROTOCOL_SBUS:
+  case RX_PROTOCOL_CRSF:
+  case RX_PROTOCOL_IBUS:
+  case RX_PROTOCOL_FPORT:
+  case RX_PROTOCOL_DSM:
+  case RX_PROTOCOL_REDPINE_SERIAL:
+  case RX_PROTOCOL_MAVLINK:
+#ifdef USE_RX_SERIAL
     rx_serial_init();
 #endif
     break;
 
-  case RX_PROTOCOL_FRSKY_D8:
 #ifdef USE_RX_SPI_FRSKY
+  case RX_PROTOCOL_FRSKY_D8:
     rx_frsky_d8_init();
-#endif
     break;
-
   case RX_PROTOCOL_FRSKY_D16_FCC:
   case RX_PROTOCOL_FRSKY_D16_LBT:
-#ifdef USE_RX_SPI_FRSKY
     rx_frsky_d16_init();
-#endif
     break;
-
   case RX_PROTOCOL_REDPINE:
-#ifdef USE_RX_SPI_FRSKY
     rx_redpine_init();
-#endif
     break;
+#endif
 
-  case RX_PROTOCOL_EXPRESS_LRS:
 #ifdef USE_RX_SPI_EXPRESS_LRS
+  case RX_PROTOCOL_EXPRESS_LRS:
     rx_expresslrs_init();
-#endif
     break;
-
-  case RX_PROTOCOL_FLYSKY_AFHDS:
-#ifdef USE_RX_SPI_FLYSKY
-    rx_flysky_afhds_init();
 #endif
+
+#ifdef USE_RX_SPI_FLYSKY
+  case RX_PROTOCOL_FLYSKY_AFHDS:
+    rx_flysky_afhds_init();
     break;
   case RX_PROTOCOL_FLYSKY_AFHDS2A:
-#ifdef USE_RX_SPI_FLYSKY
     rx_flysky_afhds2a_init();
-#endif
     break;
+#endif
 
   default:
     break;
@@ -267,54 +266,39 @@ static bool rx_check() {
 #ifdef SIMULATOR
   return simulator_rx_check();
 #else
-  switch (profile.receiver.protocol) {
-  case RX_PROTOCOL_UNIFIED_SERIAL:
-#ifdef USE_RX_UNIFIED
+  switch (state.rx_protocol) {
+#ifdef USE_RX_SERIAL
+  case RX_PROTOCOL_SERIAL_AUTO:
+  case RX_PROTOCOL_SBUS:
+  case RX_PROTOCOL_CRSF:
+  case RX_PROTOCOL_IBUS:
+  case RX_PROTOCOL_FPORT:
+  case RX_PROTOCOL_DSM:
+  case RX_PROTOCOL_REDPINE_SERIAL:
+  case RX_PROTOCOL_MAVLINK:
     return rx_serial_check();
-#else
-    return false;
 #endif
 
-  case RX_PROTOCOL_FRSKY_D8:
 #ifdef USE_RX_SPI_FRSKY
+  case RX_PROTOCOL_FRSKY_D8:
     return rx_frsky_d8_check();
-#else
-    return false;
-#endif
-
   case RX_PROTOCOL_FRSKY_D16_FCC:
   case RX_PROTOCOL_FRSKY_D16_LBT:
-#ifdef USE_RX_SPI_FRSKY
     return rx_frsky_d16_check();
-#else
-    return false;
-#endif
-
   case RX_PROTOCOL_REDPINE:
-#ifdef USE_RX_SPI_FRSKY
     return rx_redpine_check();
-#else
-    return false;
 #endif
 
-  case RX_PROTOCOL_EXPRESS_LRS:
 #ifdef USE_RX_SPI_EXPRESS_LRS
+  case RX_PROTOCOL_EXPRESS_LRS:
     return rx_expresslrs_check();
-#else
-    return false;
 #endif
 
+#ifdef USE_RX_SPI_FLYSKY
   case RX_PROTOCOL_FLYSKY_AFHDS:
-#ifdef USE_RX_SPI_FLYSKY
     return rx_flysky_afhds_check();
-#else
-    return false;
-#endif
   case RX_PROTOCOL_FLYSKY_AFHDS2A:
-#ifdef USE_RX_SPI_FLYSKY
     return rx_flysky_afhds2a_check();
-#else
-    return false;
 #endif
 
   default:
@@ -328,27 +312,39 @@ static TickType_t rx_service_deadline() {
   // Simulator frames arrive via simulator_update, which notifies the IO worker.
   return portMAX_DELAY;
 #else
-  switch (profile.receiver.protocol) {
-  case RX_PROTOCOL_NRF24_BAYANG_TELEMETRY:
-  case RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON:
-  case RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND:
+  const rx_protocol_t protocol = state.rx_protocol;
+  switch (protocol) {
+  case RX_PROTOCOL_SERIAL_AUTO:
+  case RX_PROTOCOL_SBUS:
+  case RX_PROTOCOL_CRSF:
+  case RX_PROTOCOL_IBUS:
+  case RX_PROTOCOL_FPORT:
+  case RX_PROTOCOL_DSM:
+  case RX_PROTOCOL_REDPINE_SERIAL:
+  case RX_PROTOCOL_MAVLINK:
+    break;
+
+    // SPI radio state machines are time-compared inside their check and have
+    // no EXTI to wake the worker; keep the fast poll.
+#ifdef USE_RX_SPI_FRSKY
   case RX_PROTOCOL_FRSKY_D8:
   case RX_PROTOCOL_FRSKY_D16_FCC:
   case RX_PROTOCOL_FRSKY_D16_LBT:
   case RX_PROTOCOL_REDPINE:
+    return 1;
+#endif
+#ifdef USE_RX_SPI_EXPRESS_LRS
   case RX_PROTOCOL_EXPRESS_LRS:
+    return 1;
+#endif
+#ifdef USE_RX_SPI_FLYSKY
   case RX_PROTOCOL_FLYSKY_AFHDS:
   case RX_PROTOCOL_FLYSKY_AFHDS2A:
-    // SPI radio state machines are time-compared inside their check and have
-    // no EXTI to wake the worker; keep the fast poll.
     return 1;
-
-  case RX_PROTOCOL_INVALID:
-  case RX_PROTOCOL_MAX:
-    return portMAX_DELAY;
+#endif
 
   default:
-    break;
+    return portMAX_DELAY;
   }
 
   // Retry any input left by a bounded drain even without another interrupt.
@@ -356,12 +352,11 @@ static TickType_t rx_service_deadline() {
     return 1;
 
   // Serial transport wakes the worker via serial_rx_notify_from_isr. While
-  // unified autodetect is cycling, its candidate-switch timer needs a
-  // periodic wake.
-  if (serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_INVALID)
+  // autodetect is cycling, its candidate-switch timer needs a periodic wake.
+  if (protocol == RX_PROTOCOL_SERIAL_AUTO)
     return pdMS_TO_TICKS(1000);
   // CRSF also advances delayed baud changes and telemetry without RX bytes.
-  if (serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF)
+  if (protocol == RX_PROTOCOL_CRSF)
     return 1;
   return portMAX_DELAY;
 #endif
@@ -418,7 +413,7 @@ void rx_process() {
 }
 
 void rx_stop() {
-  switch (profile.receiver.protocol) {
+  switch (state.rx_protocol) {
 #ifdef USE_RX_SPI_EXPRESS_LRS
   case RX_PROTOCOL_EXPRESS_LRS:
     rx_expresslrs_stop();
@@ -428,4 +423,12 @@ void rx_stop() {
   default:
     break;
   }
+}
+
+// Caller holds profile_mutex on the ground. SPI receivers treat cleared bind
+// data as unbound; Spektrum receivers bind at the next power-up.
+void rx_reset_bind() {
+  memset(profile.receiver.bind.raw, 0, BIND_RAW_STORAGE_SIZE);
+  if (profile.receiver.protocol == RX_PROTOCOL_DSM)
+    profile.receiver.bind.dsm.bind_request = 1;
 }

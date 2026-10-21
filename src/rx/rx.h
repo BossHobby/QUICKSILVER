@@ -11,27 +11,33 @@
 
 #define RX_CHANNEL_MAX 16
 
+// Values are persisted and shared with the Configurator: they stay fixed even
+// when a receiver family is compiled out.
 typedef enum {
-  RX_PROTOCOL_INVALID,
-  RX_PROTOCOL_UNIFIED_SERIAL,
-  // SBUS..BAYANG are never advertised and only keep the persisted numbering;
-  // serial protocols are selected inside unified serial.
-  RX_PROTOCOL_SBUS,
-  RX_PROTOCOL_CRSF,
-  RX_PROTOCOL_IBUS,
-  RX_PROTOCOL_FPORT,
-  RX_PROTOCOL_DSM,
-  RX_PROTOCOL_NRF24_BAYANG_TELEMETRY,
-  RX_PROTOCOL_BAYANG_PROTOCOL_BLE_BEACON,
-  RX_PROTOCOL_BAYANG_PROTOCOL_TELEMETRY_AUTOBIND,
-  RX_PROTOCOL_FRSKY_D8,
-  RX_PROTOCOL_FRSKY_D16_FCC,
-  RX_PROTOCOL_FRSKY_D16_LBT,
-  RX_PROTOCOL_REDPINE,
-  RX_PROTOCOL_EXPRESS_LRS,
-  RX_PROTOCOL_FLYSKY_AFHDS,
-  RX_PROTOCOL_FLYSKY_AFHDS2A,
-  RX_PROTOCOL_MAX,
+  RX_PROTOCOL_INVALID = 0,
+  // Cycles the serial protocols below until one locks, then selects it.
+  RX_PROTOCOL_SERIAL_AUTO = 1,
+  RX_PROTOCOL_SBUS = 2,
+  RX_PROTOCOL_CRSF = 3,
+  RX_PROTOCOL_IBUS = 4,
+  RX_PROTOCOL_FPORT = 5,
+  RX_PROTOCOL_DSM = 6,
+  RX_PROTOCOL_REDPINE_SERIAL = 7,
+  RX_PROTOCOL_MAVLINK = 8,
+#ifdef USE_RX_SPI_FRSKY
+  RX_PROTOCOL_FRSKY_D8 = 9,
+  RX_PROTOCOL_FRSKY_D16_FCC = 10,
+  RX_PROTOCOL_FRSKY_D16_LBT = 11,
+  RX_PROTOCOL_REDPINE = 12,
+#endif
+#ifdef USE_RX_SPI_EXPRESS_LRS
+  RX_PROTOCOL_EXPRESS_LRS = 13,
+#endif
+#ifdef USE_RX_SPI_FLYSKY
+  RX_PROTOCOL_FLYSKY_AFHDS = 14,
+  RX_PROTOCOL_FLYSKY_AFHDS2A = 15,
+#endif
+  RX_PROTOCOL_MAX = 16,
 } __attribute__((__packed__)) rx_protocol_t;
 
 typedef enum {
@@ -159,3 +165,4 @@ void rx_lqi_update(float expected_fps);
 void rx_lqi_update_direct(float rssi);
 
 void rx_spektrum_bind();
+void rx_reset_bind();

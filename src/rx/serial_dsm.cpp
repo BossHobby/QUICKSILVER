@@ -1,4 +1,4 @@
-#include "rx/unified_serial.h"
+#include "rx/rx_serial.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -11,7 +11,7 @@
 #include "driver/time.h"
 #include "util/util.h"
 
-#ifdef USE_RX_UNIFIED
+#ifdef USE_RX_SERIAL
 
 typedef enum {
   DSM_PROTO_INVALID = 0,
@@ -145,36 +145,42 @@ dsm_do_more:
   return PACKET_ERROR;
 }
 
-// Send Spektrum bind pulses to a GPIO e.g. TX1
+// Send Spektrum bind pulses to the RX pin when a bind was requested. The
+// receiver only accepts them at power-up, so this runs once during startup,
+// before other threads start, and saves the consumed request.
 void rx_spektrum_bind() {
+  if (profile.receiver.protocol != RX_PROTOCOL_DSM || !profile.receiver.bind.dsm.bind_request) {
+    return;
+  }
   if (profile.serial.rx == SERIAL_PORT_INVALID) {
     return;
   }
 
-  if (profile.receiver.bind.bind_saved == 0) {
-    const gpio_pins_t spectrum_bind_pin = target.serial_ports[profile.serial.rx].rx;
+  const gpio_pins_t spectrum_bind_pin = target.serial_ports[profile.serial.rx].rx;
 
-    gpio_config_t gpio_init = gpio_config_default();
-    gpio_init.mode = GPIO_OUTPUT;
-    gpio_init.output = GPIO_PUSHPULL;
-    gpio_init.pull = GPIO_NO_PULL;
-    gpio_pin_init(spectrum_bind_pin, gpio_init);
+  gpio_config_t gpio_init = gpio_config_default();
+  gpio_init.mode = GPIO_OUTPUT;
+  gpio_init.output = GPIO_PUSHPULL;
+  gpio_init.pull = GPIO_NO_PULL;
+  gpio_pin_init(spectrum_bind_pin, gpio_init);
 
-    // RX line, set high
+  // RX line, set high
+  gpio_pin_set(spectrum_bind_pin);
+  // Bind window is around 20-140ms after powerup
+  time_delay_us(60000);
+
+  for (uint8_t i = 0; i < 9; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
+    // RX line, drive low for 120us
+    gpio_pin_reset(spectrum_bind_pin);
+    time_delay_us(120);
+
+    // RX line, drive high for 120us
     gpio_pin_set(spectrum_bind_pin);
-    // Bind window is around 20-140ms after powerup
-    time_delay_us(60000);
-
-    for (uint8_t i = 0; i < 9; i++) { // 9 pulses for internal dsmx 11ms, 3 pulses for internal dsm2 22ms
-      // RX line, drive low for 120us
-      gpio_pin_reset(spectrum_bind_pin);
-      time_delay_us(120);
-
-      // RX line, drive high for 120us
-      gpio_pin_set(spectrum_bind_pin);
-      time_delay_us(120);
-    }
+    time_delay_us(120);
   }
+
+  profile.receiver.bind.dsm.bind_request = 0;
+  flash_save();
 }
 
 float rx_serial_dsm_expected_fps() {
