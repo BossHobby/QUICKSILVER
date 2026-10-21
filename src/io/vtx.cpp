@@ -10,7 +10,6 @@
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "rx/rx.h"
-#include "rx/unified_serial.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
 
@@ -89,7 +88,7 @@ static vtx_protocol_t vtx_desired_protocol() {
   }
   if (profile.serial.smart_audio != SERIAL_PORT_INVALID &&
       profile.serial.smart_audio == profile.serial.rx &&
-      serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
+      state.rx_protocol == RX_PROTOCOL_CRSF) {
     return VTX_PROTOCOL_MSP_VTX;
   }
   return VTX_PROTOCOL_INVALID;
@@ -182,7 +181,7 @@ TickType_t vtx_update() {
 
   if (profile.serial.smart_audio != SERIAL_PORT_INVALID &&
       profile.serial.smart_audio == profile.serial.rx &&
-      serial_rx_detected_protcol != RX_SERIAL_PROTOCOL_CRSF)
+      state.rx_protocol != RX_PROTOCOL_CRSF)
     return portMAX_DELAY;
 
   if ((time_millis() - vtx_delay_start) < vtx_delay_ms)

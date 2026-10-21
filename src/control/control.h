@@ -175,7 +175,8 @@ typedef struct {
   stick_wizard_state_t stick_calibration_wizard; // current phase of the calibration wizard
 
   float rx_rssi;
-  uint32_t rx_status;
+  uint32_t rx_status;        // SPI receiver bind state (rx_spi_status_t)
+  rx_protocol_t rx_protocol; // IO-owned active receiver protocol; SERIAL_AUTO until detection locks
   uint32_t last_frame_time_us;
 
   float throttle; // input throttle with idle etc applied
@@ -293,6 +294,7 @@ typedef struct {
   MEMBER(stick_calibration_wizard, uint8_t)            \
   MEMBER(rx_rssi, float)                               \
   MEMBER(rx_status, uint32_t)                          \
+  MEMBER(rx_protocol, uint8_t)                         \
   MEMBER(last_frame_time_us, uint32_t)                 \
   MEMBER(throttle, float)                              \
   MEMBER(thrsum, float)                                \

@@ -1,4 +1,4 @@
-#include "rx/unified_serial.h"
+#include "rx/rx_serial.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -9,7 +9,7 @@
 #include "driver/time.h"
 #include "util/util.h"
 
-#ifdef USE_RX_UNIFIED
+#ifdef USE_RX_SERIAL
 
 #define IBUS_PACKET_SIZE 32
 

@@ -2,7 +2,7 @@
 
 #define USE_SPI
 #define USE_SERIAL
-#define USE_RX_UNIFIED
+#define USE_RX_SERIAL
 #define USE_BLACKBOX
 #define USE_ADC
 #define USE_GPS

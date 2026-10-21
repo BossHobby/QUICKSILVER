@@ -68,12 +68,6 @@ void flash_save() {
   {
     memset(buffer, 0, PROFILE_STORAGE_SIZE);
     flash_write_magic(buffer, FMC_MAGIC | PROFILE_STORAGE_OFFSET);
-
-    if (profile.receiver.bind.bind_saved == 0) {
-      // reset all bind data
-      memset(profile.receiver.bind.raw, 0, BIND_RAW_STORAGE_SIZE);
-    }
-
     memcpy(buffer + FMC_MAGIC_SIZE, (uint8_t *)&profile, sizeof(profile_t));
     fmc_write_buf(PROFILE_STORAGE_OFFSET, buffer, PROFILE_STORAGE_SIZE);
   }
@@ -111,24 +105,9 @@ void target_defaults_apply(profile_t *profile) {
     profile->serial.gps = defaults->serial.gps;
   }
 
-  // Explicit serial providers select the unified serial decoder via the bind
-  // union; the top-level protocol stays unified serial because rx_init
-  // rejects unadvertised protocols. bind_saved keeps flash_save() from
-  // clearing the selection. Anything else, including the legacy
-  // "unified_serial" default, leaves autodetection enabled.
-  switch (defaults->receiver.protocol) {
-  case RX_PROTOCOL_CRSF:
-    profile->receiver.protocol = RX_PROTOCOL_UNIFIED_SERIAL;
-    profile->receiver.bind.unified.protocol = RX_SERIAL_PROTOCOL_CRSF;
-    profile->receiver.bind.bind_saved = 1;
-    break;
-  case RX_PROTOCOL_SBUS:
-    profile->receiver.protocol = RX_PROTOCOL_UNIFIED_SERIAL;
-    profile->receiver.bind.unified.protocol = RX_SERIAL_PROTOCOL_SBUS;
-    profile->receiver.bind.bind_saved = 1;
-    break;
-  default:
-    break;
+  // Without a target default the profile keeps serial autodetection.
+  if (defaults->receiver.protocol != RX_PROTOCOL_INVALID) {
+    profile->receiver.protocol = defaults->receiver.protocol;
   }
 
   if (defaults->vtx.protocol == VTX_PROTOCOL_SMART_AUDIO || defaults->vtx.protocol == VTX_PROTOCOL_TRAMP) {
@@ -169,10 +148,8 @@ void flash_load() {
   profile_output_update();
 
 #ifdef EXPRESS_LRS_UID
-  if (profile.receiver.bind.bind_saved == 0) {
+  if (profile.receiver.bind.elrs.is_set == 0x0 && profile.receiver.bind.elrs.magic != 0x37) {
     const uint8_t uid[6] = {EXPRESS_LRS_UID};
-    profile.receiver.bind.bind_saved = 1;
-
     profile.receiver.bind.elrs.is_set = 0x1;
     profile.receiver.bind.elrs.magic = 0x37;
     memcpy(profile.receiver.bind.elrs.uid, uid, 6);

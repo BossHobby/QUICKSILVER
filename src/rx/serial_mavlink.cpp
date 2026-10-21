@@ -1,4 +1,4 @@
-#include "rx/mavlink_serial.h"
+#include "rx/serial_mavlink.h"
 
 #include <math.h>
 #include <stdbool.h>
@@ -13,10 +13,10 @@
 #include "rx/rx.h"
 #include "util/util.h"
 
-#ifdef USE_RX_UNIFIED
+#ifdef USE_RX_SERIAL
 
 /*
- * Minimal MAVLink implementation for the unified serial receiver.
+ * Minimal MAVLink implementation for the serial receiver.
  *
  * v1 (0xFE) and v2 (0xFD) framing; only the messages needed to receive RC
  * channels and send telemetry. Frames with an unknown crc_extra are dropped.
@@ -51,7 +51,7 @@
 #define MAVLINK_SYSID 1
 #define MAVLINK_COMPID 1
 
-// Receive payload cap, matches the unified serial frame buffer size
+// Receive payload cap, matches the serial receiver frame buffer size
 #define MAVLINK_MAX_RX_PAYLOAD RX_BUFF_SIZE
 
 // Telemetry assembly buffer

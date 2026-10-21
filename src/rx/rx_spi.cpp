@@ -8,23 +8,30 @@
 
 volatile uint8_t rx_spi_packet[128];
 
-#ifndef USE_RX_SPI_EXPRESS_LRS
-bool elrs_radio_init() {
-  return false;
-}
+static void rx_spi_detect_radio() {
+#ifdef USE_RX_SPI_EXPRESS_LRS
+  if (elrs_radio_init()) {
+    target_add_rx_protocol(RX_PROTOCOL_EXPRESS_LRS);
+    return;
+  }
 #endif
-
-#ifndef USE_RX_SPI_FRSKY
-bool frsky_init() {
-  return false;
-}
+#ifdef USE_RX_SPI_FRSKY
+  if (frsky_init()) {
+    target_add_rx_protocol(RX_PROTOCOL_FRSKY_D8);
+    target_add_rx_protocol(RX_PROTOCOL_FRSKY_D16_FCC);
+    target_add_rx_protocol(RX_PROTOCOL_FRSKY_D16_LBT);
+    target_add_rx_protocol(RX_PROTOCOL_REDPINE);
+    return;
+  }
 #endif
-
-#ifndef USE_RX_SPI_FLYSKY
-bool flysky_detect() {
-  return false;
-}
+#ifdef USE_RX_SPI_FLYSKY
+  if (flysky_detect()) {
+    target_add_rx_protocol(RX_PROTOCOL_FLYSKY_AFHDS);
+    target_add_rx_protocol(RX_PROTOCOL_FLYSKY_AFHDS2A);
+    return;
+  }
 #endif
+}
 
 void rx_spi_detect() {
   static bool did_detect = false;
@@ -32,18 +39,7 @@ void rx_spi_detect() {
     return;
   }
 
-  if (elrs_radio_init()) {
-    target_add_rx_protocol(RX_PROTOCOL_EXPRESS_LRS);
-  } else if (frsky_init()) {
-    target_add_rx_protocol(RX_PROTOCOL_FRSKY_D8);
-    target_add_rx_protocol(RX_PROTOCOL_FRSKY_D16_FCC);
-    target_add_rx_protocol(RX_PROTOCOL_FRSKY_D16_LBT);
-    target_add_rx_protocol(RX_PROTOCOL_REDPINE);
-  } else if (flysky_detect()) {
-    target_add_rx_protocol(RX_PROTOCOL_FLYSKY_AFHDS);
-    target_add_rx_protocol(RX_PROTOCOL_FLYSKY_AFHDS2A);
-  }
-
+  rx_spi_detect_radio();
   did_detect = true;
 }
 

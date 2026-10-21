@@ -518,7 +518,7 @@ const profile_t default_profile = {
 #endif
 
     .receiver = {
-        .protocol = RX_PROTOCOL_UNIFIED_SERIAL,
+        .protocol = RX_PROTOCOL_SERIAL_AUTO,
 
         .aux = {
             ARMING, // AUX_ARMING

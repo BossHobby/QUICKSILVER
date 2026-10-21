@@ -19,7 +19,6 @@
 #include "osd/menu.h"
 #include "osd/status.h"
 #include "rx/crsf.h"
-#include "rx/unified_serial.h"
 #include "util/util.h"
 
 #define ICON_RSSI 0x1
@@ -473,8 +472,8 @@ static void osd_handle_gestures() {
     flash_save();
     flight_reset_runtime();
     break;
-  case GESTURE_TOGGLE_BIND:
-    profile.receiver.bind.bind_saved = !profile.receiver.bind.bind_saved;
+  case GESTURE_RESET_BIND:
+    rx_reset_bind();
     save_bind_only = true;
     led_flash();
     break;
@@ -522,7 +521,7 @@ static void print_osd_rssi(osd_element_t *el) {
   }
 
   osd_start_el(el);
-  if (serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
+  if (state.rx_protocol == RX_PROTOCOL_CRSF) {
     osd_write_uint(crsf_stats.rf_mode, 1);
     osd_write_char(':');
     osd_write_uint(rx_rssi - 0.5f, 2);
@@ -635,7 +634,7 @@ static void print_osd_crsf_tx_power(osd_element_t *el) {
   osd_start_el(el);
 
   const uint8_t tx_power = crsf_stats.uplink_tx_power;
-  if (serial_rx_detected_protcol != RX_SERIAL_PROTOCOL_CRSF || tx_power >= CRSF_TX_POWER_MAX) {
+  if (state.rx_protocol != RX_PROTOCOL_CRSF || tx_power >= CRSF_TX_POWER_MAX) {
     osd_write_char(ICON_RSSI);
     osd_write_str("---MW");
     return;

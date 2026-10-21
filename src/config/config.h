@@ -62,14 +62,6 @@
 // RECEIVER SETTINGS
 // ================================================================================================
 
-// ---- RECEIVER PROTOCOL ----
-// #define RX_SBUS
-// #define RX_CRSF
-// #define RX_IBUS
-// #define RX_FPORT
-// #define RX_DSM
-// #define RX_MAVLINK
-
 // ---- SERIAL PORT CONFIGURATION ----
 // Serial receiver UART selection (uncomment for default from target or if using SPI receiver)
 // #define RX_USART SERIAL_PORT1
@@ -80,9 +72,6 @@
 // #define RX_USART SERIAL_PORT6
 // #define RX_USART SERIAL_PORT7  // STM32F7/H7/AT32F4 only
 // #define RX_USART SERIAL_PORT8  // STM32F7/H7/AT32F4 only
-
-// Serial receiver inversion (normally true for SBUS and FPORT)
-// #define INVERT_UART
 
 // SmartAudio VTX control UART (comment out to disable)
 // #define SMART_AUDIO_USART SERIAL_PORT1

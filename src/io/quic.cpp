@@ -25,7 +25,7 @@
 #include "io/usb_configurator.h"
 #include "io/vtx.h"
 #include "osd/render.h"
-#include "rx/unified_serial.h"
+#include "rx/rx_serial.h"
 #include "util/cbor_helper.h"
 #include "util/lzss.h"
 
@@ -679,8 +679,8 @@ SLOW_FLASH static void process_rx(quic_t *quic, cbor_value_t *dec) {
 
   switch (cmd) {
   case QUIC_RX_BIND:
-#ifdef USE_RX_UNIFIED
-    if (profile.receiver.protocol == RX_PROTOCOL_CRSF || serial_rx_detected_protcol == RX_SERIAL_PROTOCOL_CRSF) {
+#ifdef USE_RX_SERIAL
+    if (state.rx_protocol == RX_PROTOCOL_CRSF) {
       if (rx_serial_crsf_bind()) {
         quic_send(quic, QUIC_CMD_RX, QUIC_FLAG_NONE, NULL, 0);
       } else {

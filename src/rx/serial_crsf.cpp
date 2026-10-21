@@ -1,4 +1,4 @@
-#include "rx/unified_serial.h"
+#include "rx/rx_serial.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -19,7 +19,7 @@
 #include "util/ring_buffer.h"
 #include "util/util.h"
 
-#ifdef USE_RX_UNIFIED
+#ifdef USE_RX_SERIAL
 
 #define MSP_BUFFER_SIZE 128
 #define CRSF_CHANNEL_VALUE_MIN 172
@@ -575,7 +575,7 @@ static void rx_serial_send_crsf_telemetry() {
 packet_status_t rx_serial_process_crsf() {
   const packet_status_t status = rx_serial_process_crsf_frame_stream();
 
-  if (serial_rx_detected_protcol != RX_SERIAL_PROTOCOL_CRSF)
+  if (state.rx_protocol != RX_PROTOCOL_CRSF)
     return status;
 
   if (!rx_serial_crsf_update_baudrate(status))

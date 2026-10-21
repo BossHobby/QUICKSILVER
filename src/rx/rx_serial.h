@@ -23,16 +23,6 @@ typedef enum {
   PACKET_CHANNELS_RECEIVED,
 } packet_status_t;
 
-typedef enum {
-  RX_STATUS_NONE = 0,
-  RX_STATUS_DETECTING = 100,
-  // RX_STATUS_DETECTING + RX_SERIAL_PROTOCOL_X = detecting proto X
-  RX_STATUS_DETECTED = 200,
-  // RX_STATUS_DETECTED + RX_SERIAL_PROTOCOL_X = detected proto X
-} rx_status_t;
-
-extern rx_serial_protocol_t serial_rx_detected_protcol;
-
 float rx_serial_crsf_expected_fps();
 float rx_serial_dsm_expected_fps();
 
