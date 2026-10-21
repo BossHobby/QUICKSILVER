@@ -46,6 +46,7 @@ static struct {
 static struct {
   bool valid;
   bool home_valid;
+  float home_altitude; // GPS altitude at the home capture, meters MSL.
   gps_coord_t position;
   bool position_valid;
   uint32_t checked_ms;
@@ -282,8 +283,10 @@ static void nav_update_home(bool arming) {
 
   if (arming) {
     gps.home_valid = gps.valid;
-    if (gps.home_valid)
+    if (gps.home_valid) {
       state.gps_home = state.gps_coord;
+      gps.home_altitude = state.gps_altitude;
+    }
   }
 
   if (!flags.arm_state) {
@@ -334,6 +337,14 @@ void nav_update() {
 #endif
 }
 
+bool nav_home_valid() {
+  return gps.home_valid;
+}
+
+float nav_home_altitude() {
+  return gps.home_altitude;
+}
+
 #ifdef PIO_UNIT_TESTING
 void nav_test_altitude_sample(float altitude, uint32_t timestamp_ms) {
   nav_filter_altitude(altitude, timestamp_ms);
@@ -342,6 +353,11 @@ void nav_test_altitude_sample(float altitude, uint32_t timestamp_ms) {
 
 void nav_test_update_gps_sanity(void) {
   nav_update_gps_sanity();
+}
+
+void nav_test_set_home(bool valid, float altitude) {
+  gps.home_valid = valid;
+  gps.home_altitude = altitude;
 }
 
 bool nav_test_gps_sane(void) {

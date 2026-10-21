@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "control/control.h"
+#include "control/navigation.h"
 #include "core/profile.h"
 #include "core/target.h"
 #include "io/gps.h"
@@ -209,6 +210,21 @@ uint32_t crsf_tlm_frame_gps_extended(uint8_t *buf) {
   frame->payload.vdop = frame->payload.hdop;
 
   return crsf_tlm_frame_finalize(buf, CRSF_FRAME_GPS_EXTENDED_PAYLOAD_SIZE);
+}
+
+// Returns 0 while no home is latched.
+uint32_t crsf_tlm_frame_gps_home(uint8_t *buf) {
+  if (!nav_home_valid())
+    return 0;
+
+  crsf_gps_home_frame_t *frame = (crsf_gps_home_frame_t *)buf;
+  frame->header.type = CRSF_FRAMETYPE_GPS_HOME;
+  frame->payload = (crsf_gps_home_payload_t){
+      .latitude = (int32_t)__builtin_bswap32((uint32_t)state.gps_home.lat),
+      .longitude = (int32_t)__builtin_bswap32((uint32_t)state.gps_home.lon),
+      .altitude = __builtin_bswap16((uint16_t)(nav_home_altitude() + 1000)),
+  };
+  return crsf_tlm_frame_finalize(buf, CRSF_FRAME_GPS_HOME_PAYLOAD_SIZE);
 }
 
 uint32_t crsf_tlm_frame_flight_mode(uint8_t *buf) {
