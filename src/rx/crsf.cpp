@@ -7,6 +7,7 @@
 #include "core/target.h"
 #include "io/gps.h"
 #include "util/crc.h"
+#include "util/datetime.h"
 #include "util/util.h"
 
 crsf_stats_t crsf_stats;
@@ -167,6 +168,26 @@ uint32_t crsf_tlm_frame_gps(uint8_t *buf) {
   frame->payload.satellites = state.gps_sats;
 
   return crsf_tlm_frame_finalize(buf, CRSF_FRAME_GPS_PAYLOAD_SIZE);
+}
+
+// Returns 0 while the clock has no time source.
+uint32_t crsf_tlm_frame_gps_time(uint8_t *buf) {
+  datetime_t now;
+  if (!datetime_now(&now))
+    return 0;
+
+  crsf_gps_time_frame_t *frame = (crsf_gps_time_frame_t *)buf;
+  frame->header.type = CRSF_FRAMETYPE_GPS_TIME;
+  frame->payload = (crsf_gps_time_payload_t){
+      .year = (int16_t)__builtin_bswap16(now.year),
+      .month = now.month,
+      .day = now.day,
+      .hour = now.hour,
+      .minute = now.minute,
+      .second = now.second,
+      .millisecond = __builtin_bswap16(now.millisecond),
+  };
+  return crsf_tlm_frame_finalize(buf, CRSF_FRAME_GPS_TIME_PAYLOAD_SIZE);
 }
 
 uint32_t crsf_tlm_frame_gps_extended(uint8_t *buf) {
