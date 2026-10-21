@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "control/control.h"
+#include "control/navigation.h"
 #include "core/debug.h"
 #include "core/profile.h"
 #include "core/project.h"
@@ -33,6 +34,8 @@
 #define CRSF_TELEMETRY_INTERVAL_US 2000
 // Receivers only need the occasional resync, so keep the downlink for live data.
 #define CRSF_GPS_TIME_INTERVAL_MS 30000
+// Home only changes on arming; the resend covers handsets that missed the first frame.
+#define CRSF_GPS_HOME_INTERVAL_MS 10000
 #define CRSF_BAUDRATE_CHANGE_DELAY_US 4000
 #define CRSF_BAUDRATE_ERROR_FALLBACK_COUNT 200
 
@@ -514,6 +517,13 @@ static void rx_serial_send_crsf_telemetry() {
   static uint32_t gps_time_sent_ms = 0;
   const bool gps_time_due = !gps_time_sent || (time_millis() - gps_time_sent_ms) >= CRSF_GPS_TIME_INTERVAL_MS;
   bool gps_time_frame = false;
+  static bool gps_home_sent = false;
+  static uint32_t gps_home_sent_ms = 0;
+  if (!nav_home_valid())
+    gps_home_sent = false;
+  const bool gps_home_due = gps_enabled && nav_home_valid() &&
+                            (!gps_home_sent || (time_millis() - gps_home_sent_ms) >= CRSF_GPS_HOME_INTERVAL_MS);
+  bool gps_home_frame = false;
 
   switch (telemetry_counter++ % 8) {
   case 0:
@@ -535,11 +545,15 @@ static void rx_serial_send_crsf_telemetry() {
     telemetry_size = crsf_tlm_frame_attitude(crsf_telemetry_packet);
     break;
   default:
-    if (gps_time_due) {
+    if (gps_home_due) {
+      telemetry_size = crsf_tlm_frame_gps_home(crsf_telemetry_packet);
+      gps_home_frame = telemetry_size != 0;
+    }
+    if (!gps_home_frame && gps_time_due) {
       telemetry_size = crsf_tlm_frame_gps_time(crsf_telemetry_packet);
       gps_time_frame = telemetry_size != 0;
     }
-    if (!gps_time_frame)
+    if (!gps_home_frame && !gps_time_frame)
       telemetry_size = crsf_tlm_frame_battery_sensor(crsf_telemetry_packet);
     break;
   }
@@ -548,6 +562,10 @@ static void rx_serial_send_crsf_telemetry() {
     return;
 
   telemetry_time = now;
+  if (gps_home_frame) {
+    gps_home_sent = true;
+    gps_home_sent_ms = time_millis();
+  }
   if (gps_time_frame) {
     gps_time_sent = true;
     gps_time_sent_ms = time_millis();
