@@ -10,6 +10,7 @@
 #include "driver/serial.h"
 #include "driver/time.h"
 #include "util/cbor_helper.h"
+#include "util/datetime.h"
 #include "util/ring_buffer.h"
 
 #ifdef USE_GPS
@@ -189,6 +190,11 @@ typedef struct {
 // 0: no carrier phase solution
 // 1: float solution (no fixed integer carrier phase)
 // 2: fixed solution (integer carrier phase)
+
+/* Valid field bits */
+#define VALID_DATE 0x01           // Valid UTC date
+#define VALID_TIME 0x02           // Valid UTC time of day
+#define VALID_FULLY_RESOLVED 0x04 // UTC time of day has been fully resolved (no seconds uncertainty)
 
 /* Flags2 field bits */
 #define FLAGS2_CONFIRMED_AVAI 0x01 // Information about UTC Date and Time of Day validity confirmation is available
@@ -483,6 +489,21 @@ static void gps_handle_packet(const uint16_t class_id, const uint8_t *payload, c
     taskEXIT_CRITICAL();
 
     // Update comprehensive status
+    const uint8_t time_valid = VALID_DATE | VALID_TIME | VALID_FULLY_RESOLVED;
+    if ((nav_pvt->valid & time_valid) == time_valid) {
+      const datetime_t utc = {
+          .year = nav_pvt->year,
+          .month = nav_pvt->month,
+          .day = nav_pvt->day,
+          .hour = nav_pvt->hour,
+          .minute = nav_pvt->min,
+          .second = nav_pvt->sec,
+          .millisecond = 0,
+      };
+      // nano is signed and rounds the seconds field, so apply it separately.
+      datetime_set_epoch_ms(datetime_to_epoch_ms(&utc) + nav_pvt->nano / 1000000);
+    }
+
     gps_status.fix_type = nav_pvt->fixType;
     gps_status.sats_used = nav_pvt->numSV;
     gps_status.pdop = nav_pvt->pDOP;
