@@ -26,6 +26,7 @@
 //        rx: select serial protocols directly in receiver.protocol and renumber it,
 //            retiring unified serial (now serial autodetect) and Bayang; add receiver.invert.
 //        rx: drop receiver.bind.bind_saved; bind data is kept as-is and DSM bind is requested in it.
+//        meta: encode the firmware build (git version); it is not persisted or decoded.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
 // 0.2.5 (c9dec9f1): add osd profiles.

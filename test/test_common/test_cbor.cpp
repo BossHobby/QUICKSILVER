@@ -1,3 +1,4 @@
+#include <string.h>
 #include <unity.h>
 
 #include "core/profile.h"
@@ -37,6 +38,49 @@ void test_cbor_profile_servo_rate_roundtrip(void) {
     TEST_ASSERT_EQUAL_MEMORY(&source.pid.pid_rates[i].kff, &decoded.pid.pid_rates[i].kff, sizeof(vec3_t));
   }
 #endif
+}
+
+// Positions dec at the value of key in the map at dec.
+static bool cbor_find_key(cbor_value_t *dec, const char *key) {
+  cbor_container_t map;
+  if (cbor_decode_map(dec, &map) < CBOR_OK)
+    return false;
+  for (uint32_t i = 0; i < cbor_decode_map_size(dec, &map); i++) {
+    const uint8_t *name;
+    uint32_t name_len;
+    if (cbor_decode_tstr(dec, &name, &name_len) < CBOR_OK)
+      return false;
+    if (name_len == strlen(key) && memcmp(name, key, name_len) == 0)
+      return true;
+    if (cbor_decode_skip(dec) < CBOR_OK)
+      return false;
+  }
+  return false;
+}
+
+void test_cbor_profile_metadata_reports_firmware(void) {
+  profile_t source = default_profile;
+  source.meta.datetime = 1792670400;
+  static uint8_t buffer[4096]; // QUIC profile response capacity.
+  cbor_value_t codec;
+  cbor_encoder_init(&codec, buffer, sizeof(buffer));
+  TEST_ASSERT_TRUE(cbor_encode_profile_t(&codec, &source) >= CBOR_OK);
+  const auto size = cbor_encoder_len(&codec);
+
+  cbor_decoder_init(&codec, buffer, size);
+  TEST_ASSERT_TRUE(cbor_find_key(&codec, "meta"));
+  TEST_ASSERT_TRUE(cbor_find_key(&codec, "firmware"));
+  const uint8_t *firmware;
+  uint32_t firmware_len;
+  TEST_ASSERT_TRUE(cbor_decode_tstr(&codec, &firmware, &firmware_len) >= CBOR_OK);
+  TEST_ASSERT_EQUAL_UINT32(strlen(target_info.git_version), firmware_len);
+  TEST_ASSERT_EQUAL_MEMORY(target_info.git_version, firmware, firmware_len);
+
+  // Decoding skips the build; the stored metadata is unchanged.
+  profile_t decoded = {};
+  cbor_decoder_init(&codec, buffer, size);
+  TEST_ASSERT_TRUE(cbor_decode_profile_t(&codec, &decoded) >= CBOR_OK);
+  TEST_ASSERT_EQUAL_MEMORY(&source.meta, &decoded.meta, sizeof(source.meta));
 }
 
 // Both ordinary members and enum storage must match the selected wire codec.
