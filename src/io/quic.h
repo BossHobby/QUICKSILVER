@@ -13,6 +13,7 @@
 //         quic: add QUIC_HEADER_COMPRESSED; requests carrying it accept LZSS replies.
 //         state: add RTH heading acquisition and heading-failed phases; reorder RTH phase values.
 //         profile: add GPS constellation selection.
+//         blackbox: files carry their start datetime.
 // 0.2.9 (30cde6a5e): profile: move bind and vtx settings into profile.
 // 0.2.8 (fab52980): rx: add CRSF bind command.
 // 0.2.7 (399b96c5): blackbox: harden logging and transfer handling.

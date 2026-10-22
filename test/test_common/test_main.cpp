@@ -82,6 +82,7 @@ extern void test_blackbox_captures_before_delayed_encoding();
 extern void test_blackbox_runs_in_own_freertos_task();
 extern void test_blackbox_mailbox_overrun_and_session_drain();
 extern void test_blackbox_storage_stall_and_rejected_delta();
+extern void test_blackbox_file_records_start_datetime();
 extern void test_blackbox_sleeps_until_recording_or_reset();
 extern void test_blackbox_wakes_for_samples_and_storage();
 extern void test_blackbox_completion_bursts_share_cpu();
@@ -495,6 +496,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_blackbox_runs_in_own_freertos_task);
   RUN_TEST(test_blackbox_mailbox_overrun_and_session_drain);
   RUN_TEST(test_blackbox_storage_stall_and_rejected_delta);
+  RUN_TEST(test_blackbox_file_records_start_datetime);
   RUN_TEST(test_blackbox_sleeps_until_recording_or_reset);
   RUN_TEST(test_blackbox_wakes_for_samples_and_storage);
   RUN_TEST(test_blackbox_completion_bursts_share_cpu);

@@ -11,6 +11,8 @@
 #define FILES_SECTOR_OFFSET 1
 #define PAGE_SIZE SDCARD_PAGE_SIZE
 
+static_assert(sizeof(blackbox_device_header_t) <= PAGE_SIZE, "the directory is written as a single block");
+
 typedef enum {
   STATE_DETECT,
   STATE_IDLE,

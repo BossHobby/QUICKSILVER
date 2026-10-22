@@ -8,6 +8,7 @@
 #include "io/blackbox_device_sdcard.h"
 #include "io/blackbox_device_simulator.h"
 #include "util/cbor_helper.h"
+#include "util/datetime.h"
 #include "util/util.h"
 
 #ifdef USE_BLACKBOX
@@ -179,6 +180,9 @@ bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, float
   file->blackbox_rate = blackbox_rate;
   file->size = 0;
   file->start = offset;
+
+  int64_t epoch_ms;
+  file->datetime = datetime_now_epoch_ms(&epoch_ms) ? epoch_ms / 1000 : 0;
 
   if (!blackbox_device_write_profile(recording_profile)) {
     return false;
