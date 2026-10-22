@@ -824,6 +824,10 @@ cbor_result_t cbor_encode_profile_metadata_t(cbor_value_t *enc, const profile_me
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "datetime"));
   CBOR_CHECK_ERROR(res = cbor_encode_uint32_t(enc, &meta->datetime));
 
+  // Encode-only like version: the build that produced this encoding.
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "firmware"));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, target_info.git_version));
+
   CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
   return res;
 }
