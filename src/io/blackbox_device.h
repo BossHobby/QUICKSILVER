@@ -8,7 +8,7 @@
 #include "util/mutex.h"
 #include "util/ring_buffer.h"
 
-#define BLACKBOX_HEADER_MAGIC (0xdeadbeef ^ (sizeof(blackbox_t) << 24) ^ BLACKBOX_VERSION)
+#define BLACKBOX_HEADER_MAGIC (0xdeadbeef ^ (sizeof(blackbox_t) << 24) ^ (sizeof(blackbox_device_header_t) << 12) ^ BLACKBOX_VERSION)
 
 // max size for a given entry
 #define BLACKBOX_MAX_SIZE 255
@@ -50,6 +50,7 @@ typedef struct {
   uint32_t blackbox_rate;
   uint32_t start;
   uint32_t size;
+  uint32_t datetime; // UTC seconds since 1970 at recording start, 0 if the clock was not set.
 } blackbox_device_file_t;
 
 #define BLACKBOX_DEVICE_FILE_MEMBERS \
@@ -57,7 +58,8 @@ typedef struct {
   MEMBER(looptime, float)            \
   MEMBER(blackbox_rate, uint32_t)    \
   MEMBER(start, uint32_t)            \
-  MEMBER(size, uint32_t)
+  MEMBER(size, uint32_t)             \
+  MEMBER(datetime, uint32_t)
 
 #define BLACKBOX_DEVICE_MAX_FILES 10
 

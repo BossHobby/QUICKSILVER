@@ -11,6 +11,8 @@
 #define PAGE_SIZE M25P16_PAGE_SIZE
 #define MAX_WRITE_SIZE PAGE_SIZE
 
+static_assert(sizeof(blackbox_device_header_t) <= PAGE_SIZE, "the directory is written with a single page program");
+
 typedef enum {
   STATE_DETECT,
   STATE_UNSUPPORTED,

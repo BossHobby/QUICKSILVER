@@ -23,6 +23,7 @@
 #include "control/control.h"
 #include "util/vector.h"
 #include "util/cbor_helper.h"
+#include "util/datetime.h"
 
 namespace {
 struct recorded_frame_t {
@@ -908,6 +909,38 @@ void test_blackbox_mailbox_overrun_and_session_drain() {
 
 void test_blackbox_storage_stall_and_rejected_delta() {
   run_blackbox_test(test_blackbox_storage_stall_and_rejected_delta_body);
+}
+
+static void test_blackbox_file_records_start_datetime_body() {
+  blackbox_test_t fixture;
+  datetime_test_reset();
+  flags.arm_state = 1;
+  blackbox_capture();
+  capture_frame(1, 1, 125, 1);
+  step_blackbox();
+  TEST_ASSERT_EQUAL_UINT(1, starts);
+  TEST_ASSERT_EQUAL_UINT32(0, blackbox_current_file()->datetime);
+  flags.arm_state = 0;
+  blackbox_capture();
+  step_blackbox();
+  TEST_ASSERT_EQUAL_UINT(1, stops);
+
+  // The clock keeps running from its anchor until the next log opens.
+  const datetime_t anchor = {2026, 10, 22, 11, 59, 58, 750};
+  time_test_set_us(1000000);
+  datetime_set_epoch_ms(datetime_to_epoch_ms(&anchor));
+  flags.arm_state = 1;
+  blackbox_capture();
+  capture_frame(1, 2, 2500000, 2);
+  for (unsigned i = 0; i < 4 && starts < 2; i++) step_blackbox();
+  TEST_ASSERT_EQUAL_UINT(2, starts);
+  const datetime_t opened = {2026, 10, 22, 12, 0, 0, 0};
+  TEST_ASSERT_EQUAL_UINT32(datetime_to_epoch_ms(&opened) / 1000, blackbox_current_file()->datetime);
+  datetime_test_reset();
+}
+
+void test_blackbox_file_records_start_datetime() {
+  run_blackbox_test(test_blackbox_file_records_start_datetime_body);
 }
 
 static void test_blackbox_sleeps_until_recording_or_reset_body() {

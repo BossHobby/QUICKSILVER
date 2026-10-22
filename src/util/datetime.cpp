@@ -1,5 +1,8 @@
 #include "util/datetime.h"
 
+#include <FreeRTOS.h>
+#include <task.h>
+
 #include "core/project.h"
 #include "driver/time.h"
 
@@ -55,22 +58,38 @@ void datetime_from_epoch_ms(int64_t epoch_ms, datetime_t *dt) {
 }
 
 void datetime_set_epoch_ms(int64_t epoch_ms) {
-  anchor_millis = time_millis();
+  const uint32_t now = time_millis();
+  taskENTER_CRITICAL();
+  anchor_millis = now;
   anchor_epoch_ms = epoch_ms;
   clock_valid = true;
+  taskEXIT_CRITICAL();
 }
 
 bool datetime_valid() {
   return clock_valid;
 }
 
-bool datetime_now(datetime_t *dt) {
-  if (!clock_valid)
+bool datetime_now_epoch_ms(int64_t *epoch_ms) {
+  taskENTER_CRITICAL();
+  const bool valid = clock_valid;
+  const int64_t anchor = anchor_epoch_ms;
+  const uint32_t anchor_at = anchor_millis;
+  taskEXIT_CRITICAL();
+  if (!valid)
     return false;
 
   // Unsigned elapsed time stays exact for 49 days without a new anchor.
-  const uint32_t elapsed = time_millis() - anchor_millis;
-  datetime_from_epoch_ms(anchor_epoch_ms + elapsed, dt);
+  *epoch_ms = anchor + (uint32_t)(time_millis() - anchor_at);
+  return true;
+}
+
+bool datetime_now(datetime_t *dt) {
+  int64_t epoch_ms;
+  if (!datetime_now_epoch_ms(&epoch_ms))
+    return false;
+
+  datetime_from_epoch_ms(epoch_ms, dt);
   return true;
 }
 
