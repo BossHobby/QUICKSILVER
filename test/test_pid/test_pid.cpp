@@ -441,7 +441,7 @@ void test_angle_pid_uses_legacy_dterm_timefactor(void) {
 
 void test_angle_pid_rth_damps_rotation_without_target_kick(void) {
   pid_setUp();
-  state.rth_active = true;
+  state.rth_state = RTH_STATE_CLIMB;
   profile.pid.small_angle.kp = profile.pid.big_angle.kp = 1;
   profile.pid.small_angle.kd = profile.pid.big_angle.kd = 3;
   for (int axis = 0; axis < 2; axis++) {
@@ -457,8 +457,8 @@ void test_angle_pid_rth_damps_rotation_without_target_kick(void) {
     state.gyro.axis[axis] = -1;
     TEST_ASSERT_FLOAT_WITHIN(0.00001f, 0.0096f, angle_pid(axis));
     state.gyro.axis[axis] = 0;
-    state.rth_active = false;
+    state.rth_state = RTH_STATE_INACTIVE;
     TEST_ASSERT_FLOAT_WITHIN(0.00001f, 0, angle_pid(axis));
-    state.rth_active = true;
+    state.rth_state = RTH_STATE_CLIMB;
   }
 }

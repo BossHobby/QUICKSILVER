@@ -54,7 +54,6 @@ extern void baro_test_sample(float altitude, uint32_t timestamp_ms);
 
 namespace {
 static constexpr double DT = 0.001;
-static constexpr double GRAVITY = 9.80665;
 static constexpr double MASS = 0.6;
 static constexpr double MAX_THRUST = 6.0; // N per motor at unit speed
 static constexpr double ARM = 0.10;      // X and Y arm projections, meters
@@ -169,7 +168,16 @@ static void put_u32(uint8_t *bytes, int32_t value) {
   for (unsigned i = 0; i < 4; i++) bytes[i] = bits >> (8 * i);
 }
 
-static void gps_sample(const fix_t &fix, unsigned sample) {
+// Deterministic pseudo-random sequence, uniform in [-1, 1].
+static double noise_sample(unsigned sample, unsigned axis) {
+  uint32_t x = sample * 2654435761U + axis * 40503U;
+  x ^= x >> 15;
+  x *= 2246822519U;
+  x ^= x >> 13;
+  return x / 2147483647.5 - 1;
+}
+
+static void gps_sample(const fix_t &fix, unsigned sample, double velocity_noise) {
   // UBX NAV-PVT, same native serial/parser boundary as test_common/test_gps.
   uint8_t packet[100] = {0xb5, 0x62, 1, 7, 92, 0};
   uint8_t *p = packet + 6;
@@ -177,8 +185,10 @@ static void gps_sample(const fix_t &fix, unsigned sample) {
   p[20] = GPS_FIX_3D;
   p[21] = 1;
   p[23] = 12;
+  // Uniform noise of this amplitude has a standard deviation of amplitude / sqrt(3).
   const double noise = 0.06 * sin(sample * 1.7);
-  const double vn = fix.vn + noise, ve = fix.ve - noise;
+  const double vn = fix.vn + noise + velocity_noise * noise_sample(sample, 0);
+  const double ve = fix.ve - noise + velocity_noise * noise_sample(sample, 1);
   put_u32(p + 24, lround(fix.east * 1e7 / 111194.93));
   put_u32(p + 28, lround(fix.north * 1e7 / 111194.93));
   put_u32(p + 36, lround(fix.height * 1000));
@@ -207,6 +217,8 @@ struct scenario_t {
   double wind_north = 0, wind_east = 0;
   float configured_hover = 0.5f;
   bool climbing_departure = false;
+  double velocity_noise = 0; // m/s, amplitude of uniform GPS velocity noise
+  double baro_noise = 0;     // meters, standard deviation of turbulent barometer noise
 };
 
 struct flight_t {
@@ -218,6 +230,7 @@ struct flight_t {
   float roll = 0, pitch = 0, yaw = 0, throttle = 0;
   double gps_velocity_bias[2] = {}; // north, east m/s; reported velocity disagrees with position
   double return_height = 0, takeover_height = 0;
+  double baro_error = 0;
   char context[512];
 
   explicit flight_t(scenario_t config) : scenario(config) {
@@ -295,7 +308,7 @@ struct flight_t {
       fix_t fix = history[(tick + HISTORY_SIZE - scenario.gps_delay_ms) % HISTORY_SIZE];
       fix.vn += gps_velocity_bias[0];
       fix.ve += gps_velocity_bias[1];
-      if (gps_available) gps_sample(fix, gps_count);
+      if (gps_available) gps_sample(fix, gps_count, scenario.velocity_noise);
       next_gps += scenario.gps_jitter ? (gps_count % 2 ? 80 : 120) : 100;
       gps_count++;
     }
@@ -305,8 +318,12 @@ struct flight_t {
       serial_gps.tx_done = true;
       gps_task();
     }
-    if (baro_available && tick % 20 == 0)
-      baro_test_sample(-truth.position[2] + 0.03 * sin(tick * DT * 2.3), time_millis());
+    if (baro_available && tick % 20 == 0) {
+      // Turbulence wanders the static pressure over about 0.4 s, with a
+      // standard deviation of baro_noise.
+      baro_error += 0.05 * (scenario.baro_noise * noise_sample(tick / 20, 2) * 11 - baro_error);
+      baro_test_sample(-truth.position[2] + 0.03 * sin(tick * DT * 2.3) + baro_error, time_millis());
+    }
     if (rc_available && tick % 10 == 0) {
       uint16_t channels[RX_CHANNEL_MAX] = {};
       channels[0] = lround((double(roll) + 1) * 0.5 * AUX_VALUE_MAX);
@@ -360,10 +377,10 @@ struct flight_t {
 
   void depart() {
     run(3000);
-    check(!flags.arm_state && state.gps_lock && nav_altitude_ready(), "ground initialization");
+    check(!flags.arm_state && state.gps_lock && flags.baro_valid, "ground initialization");
     arm = true;
     run(300);
-    check(flags.arm_state && nav_rth_home_valid(), "arming and home capture");
+    check(flags.arm_state && flags.home_valid, "arming and home capture");
     for (unsigned i = 0; i < 4000; i++) {
       pilot_height(scenario.climbing_departure ? 2 + i * DT : 8);
       step();
@@ -389,13 +406,13 @@ struct flight_t {
     return_height = takeover_height + double(profile.navigation.rth_altitude);
     rth = true;
     run(100);
-    check(state.rth_active, "RTH accepted");
+    check(state.rth_state >= RTH_STATE_CLIMB, "RTH accepted");
   }
 
   void finish_return() {
     for (unsigned i = 0; i < 90000; i++) {
       step();
-      check(state.rth_active && flags.arm_state, "RTH remains armed and active");
+      check(state.rth_state >= RTH_STATE_CLIMB && flags.arm_state, "RTH remains armed and active");
       check(-truth.position[2] > takeover_height - 2 && -truth.position[2] < return_height + 3, "RTH altitude transient bounded");
       if (i >= 80000) {
         check(state.rth_state == RTH_STATE_HOVER_HOME, "sustained home hover");
@@ -497,7 +514,7 @@ void test_navigation_motor_loop_guided_hold_stops_smoothly() {
   // The mission switch grants guided flight; without a mission it flies nothing yet.
   flight.mission_switch = true;
   flight.run(100);
-  flight.check(state.guided_ready && !state.rth_active, "guided flight granted");
+  flight.check(flags.guided_ready && state.rth_state < RTH_STATE_CLIMB, "guided flight granted");
   nav_command_t command = {.type = NAV_COMMAND_GOTO, .id = 1};
   // Home is the 0/0 origin, which reads as an unset waypoint: aim 1 m north of it.
   command.waypoint = {.coord = {.lon = 0, .lat = 90}, .altitude = int16_t(lroundf(state.altitude)), .speed = 60}; // 6 m/s
@@ -513,7 +530,9 @@ void test_navigation_motor_loop_guided_hold_stops_smoothly() {
   double travel = 0;
   for (unsigned i = 0; i < 20000; i++) {
     flight.step();
-    flight.check(state.guided_active && state.rth_state == RTH_STATE_HOVER_HOME, "HOLD hovers in place");
+    flight.check(state.nav_target == NAV_TARGET_GUIDED &&
+                     (state.rth_state == RTH_STATE_BRAKE || state.rth_state == RTH_STATE_HOVER_HOME),
+                 "HOLD hovers in place");
     flight.check(flight.truth.rotation[2][2] > cos(25 * M_PI / 180), "HOLD brakes without a hard reversal");
     travel = fmax(travel, hypot(flight.truth.position[0] - stop_from[0], flight.truth.position[1] - stop_from[1]));
   }
@@ -542,7 +561,7 @@ void test_navigation_motor_loop_climb_holds_position() {
   };
   flight.mission_switch = true;
   flight.run(100);
-  flight.check(state.mission_active && state.rth_state == RTH_STATE_CLIMB, "mission climbs in place");
+  flight.check(state.nav_target == NAV_TARGET_MISSION && state.rth_state == RTH_STATE_CLIMB, "mission climbs in place");
 
   // Measure from where the brake has stopped the vehicle.
   for (unsigned i = 0; i < 10000 && hypot(flight.truth.velocity[0], flight.truth.velocity[1]) > 0.3; i++)
@@ -584,16 +603,16 @@ void test_navigation_motor_loop_sensor_outages() {
     flight.baro_available = sensor != 1;
     for (unsigned i = 0; i < 2000; i++) {
       flight.step();
-      flight.check(state.rth_active && flags.arm_state, "temporary outage preserves RTH");
+      flight.check(state.rth_state >= RTH_STATE_CLIMB && flags.arm_state, "temporary outage preserves RTH");
       flight.check(fabs(-flight.truth.position[2] - height) < 2, "outage altitude hold");
       if (i > 1000) {
         flight.check(state.rx_override.roll == 0 && state.rx_override.pitch == 0 && state.rth_yaw_rate == 0, "stale sensor levels craft");
-        flight.check(sensor == 0 ? !nav_gps_ready() : !nav_altitude_ready(), "missing sensor becomes stale");
+        flight.check(sensor == 0 ? !flags.gps_valid : !flags.baro_valid, "missing sensor becomes stale");
       }
     }
     flight.gps_available = flight.baro_available = true;
     flight.run(1500);
-    flight.check(nav_gps_ready() && nav_altitude_ready() && state.rth_active, "sensor reacquisition");
+    flight.check(flags.gps_valid && flags.baro_valid && state.rth_state >= RTH_STATE_CLIMB, "sensor reacquisition");
   }
   flight.finish_return();
 }
@@ -606,7 +625,7 @@ void test_navigation_motor_loop_rc_loss_and_handback() {
   flight.return_height = flight.takeover_height + double(profile.navigation.rth_altitude);
   flight.rc_available = false;
   flight.run(2000);
-  flight.check(flags.failsafe_signal_lost && state.rth_failsafe_active && flags.controls_override, "RC timeout starts failsafe RTH");
+  flight.check(flags.failsafe_signal_lost && state.failsafe_owner == FAILSAFE_OWNER_RTH && flags.controls_override, "RC timeout starts failsafe RTH");
   // Remain disconnected beyond MOTOR_BEEPS_TIMEOUT: airborne failsafe must
   // continue writing motor commands instead of entering the ground beeper.
   flight.finish_return();
@@ -616,14 +635,14 @@ void test_navigation_motor_loop_rc_loss_and_handback() {
   for (unsigned i = 0; i < 3; i++) {
     flight.rc_available = true;
     flight.run(100);
-    flight.check(state.rth_failsafe_active, "brief recovered link cannot hand back");
+    flight.check(state.failsafe_owner == FAILSAFE_OWNER_RTH, "brief recovered link cannot hand back");
     flight.rc_available = false;
     flight.run(400);
   }
   flight.yaw = 0;
   flight.rc_available = true;
   flight.run(1500);
-  flight.check(!flags.failsafe_signal_lost && state.rth_failsafe_active, "stable centered link retains automatic control");
+  flight.check(!flags.failsafe_signal_lost && state.failsafe_owner == FAILSAFE_OWNER_RTH, "stable centered link retains automatic control");
 
   // A deliberate yaw input acknowledges recovery without commanding lateral
   // tilt. Low throttle exposes an abrupt handback as a motor/height transient.
@@ -631,8 +650,8 @@ void test_navigation_motor_loop_rc_loss_and_handback() {
   const float automatic_throttle = state.throttle;
   flight.throttle = 0.12f;
   flight.yaw = 0.4f;
-  for (unsigned i = 0; i < 200 && state.rth_active; i++) flight.step();
-  flight.check(!state.rth_active && !flags.controls_override && !flags.failsafe && flags.arm_state, "pilot acknowledgement releases override");
+  for (unsigned i = 0; i < 200 && state.rth_state >= RTH_STATE_CLIMB; i++) flight.step();
+  flight.check(state.rth_state < RTH_STATE_CLIMB && !flags.controls_override && !flags.failsafe && flags.arm_state, "pilot acknowledgement releases override");
   flight.check(fabsf(state.throttle - automatic_throttle) < 0.02f, "handback starts from automatic throttle");
   flight.yaw = 0;
   float previous = state.throttle;
@@ -644,7 +663,7 @@ void test_navigation_motor_loop_rc_loss_and_handback() {
   }
   flight.check(state.throttle < 0.15f, "pilot throttle ultimately owns output");
   for (unsigned i = 0; i < 5000; i++) { flight.pilot_height(height); flight.step(); }
-  flight.check(fabs(-flight.truth.position[2] - height) < 1 && flags.arm_state && !state.rth_active, "pilot recovers height after handback");
+  flight.check(fabs(-flight.truth.position[2] - height) < 1 && flags.arm_state && state.rth_state < RTH_STATE_CLIMB, "pilot recovers height after handback");
   flight.arm = false;
   flight.run(20);
   flight.check(!flags.arm_state, "pilot disarm");
@@ -668,7 +687,7 @@ void test_navigation_motor_loop_mission() {
   const double takeover_height = -flight.truth.position[2];
   flight.mission_switch = true;
   flight.run(100);
-  flight.check(state.mission_active && state.rth_active, "mission accepted");
+  flight.check(state.nav_target == NAV_TARGET_MISSION && state.rth_state >= RTH_STATE_CLIMB, "mission accepted");
 
   // Each waypoint is reached before the next becomes active.
   double closest[3] = {1e9, 1e9, 1e9};
@@ -676,7 +695,7 @@ void test_navigation_motor_loop_mission() {
   double halfway[3] = {NAN, NAN, NAN};
   for (unsigned i = 0; i < 90000; i++) {
     flight.step();
-    flight.check(state.mission_active && flags.arm_state, "mission remains armed and active");
+    flight.check(state.nav_target == NAV_TARGET_MISSION && flags.arm_state, "mission remains armed and active");
     const unsigned index = state.mission_index;
     flight.check(index < 3, "waypoint index stays within the route");
     const double north = flight.truth.position[0] - origin[0] - route[index][0];
@@ -684,6 +703,8 @@ void test_navigation_motor_loop_mission() {
     closest[index] = fmin(closest[index], hypot(north, east));
     if (index > 0 && isnan(halfway[index]) && hypot(north, east) < 15) halfway[index] = -flight.truth.position[2];
     if (index > 0) flight.check(closest[index - 1] < 4, "previous waypoint reached before advancing");
+    if (index == 1 && state.rth_state == RTH_STATE_NAVIGATE && fabs(east + route[1][1] / 2) < 0.5)
+      flight.check(fabs(-flight.truth.position[2] - (route[0][2] + route[1][2]) / 2) < 1, "altitude changes evenly along the leg");
     flight.check(-flight.truth.position[2] > fmin(takeover_height, 10) - 2 && -flight.truth.position[2] < 16, "mission altitude bounded");
     if (i >= 80000) {
       flight.check(index == 2 && state.rth_state == RTH_STATE_HOVER_HOME, "holds the last waypoint");
@@ -699,7 +720,100 @@ void test_navigation_motor_loop_mission() {
   // Switching the mission off hands control back to the pilot.
   flight.mission_switch = false;
   flight.run(100);
-  flight.check(!state.rth_active && !flags.controls_override && flags.arm_state, "mission switch hands back");
+  flight.check(state.rth_state < RTH_STATE_CLIMB && !flags.controls_override && flags.arm_state, "mission switch hands back");
+}
+
+void test_navigation_motor_loop_wrong_heading() {
+  // Acro flying can leave the integrated heading far off while its confidence
+  // still reads as usable. Turn the airframe without a gyro reading to model it.
+  const struct { scenario_t scenario; double error_deg; } cases[] = {
+      {{"wrong heading", 100, true}, 100},
+      {{"reversed heading/wind", 250, true, 2.0, -1.5}, 170},
+  };
+  for (const auto &test : cases) {
+    flight_t flight(test.scenario);
+    flight.depart();
+    const double half = test.error_deg * M_PI / 360;
+    const double c = cos(half), s = sin(half);
+    const double q[4] = {flight.truth.q[0], flight.truth.q[1], flight.truth.q[2], flight.truth.q[3]};
+    flight.truth.q[0] = c * q[0] - s * q[3];
+    flight.truth.q[1] = c * q[1] - s * q[2];
+    flight.truth.q[2] = c * q[2] + s * q[1];
+    flight.truth.q[3] = c * q[3] + s * q[0];
+    flight.truth.rotate();
+    flight.start_return();
+    const double start[2] = {flight.truth.position[0], flight.truth.position[1]};
+    bool acquired = false;
+    double stray = 0;
+    for (unsigned i = 0; i < 40000 && !(acquired && state.rth_state == RTH_STATE_NAVIGATE); i++) {
+      flight.step();
+      acquired |= state.rth_state == RTH_STATE_ACQUIRE_HEADING;
+      stray = fmax(stray, hypot(flight.truth.position[0] - start[0], flight.truth.position[1] - start[1]));
+    }
+    printf("%s: stray before relearning=%.2fm\n", flight.scenario.name, stray);
+    flight.check(acquired && state.rth_state == RTH_STATE_NAVIGATE, "diverging return relearns the heading");
+    flight.check(stray < 130, "divergence caught before flying far off");
+    flight.finish_return();
+  }
+}
+
+void test_navigation_motor_loop_gusty_cruise() {
+  // Navigation optimizes for the distance closing at a steady rate: gusts may
+  // move the speed, but should not pitch the vehicle back and forth.
+  // Real receivers report velocity with about 0.2 m/s of noise, and the
+  // barometer reads turbulence in forward flight.
+  flight_t flight({"gusty cruise", 100, true, 0, 0, 0.5f, false, 0.35, 0.4});
+  flight.depart();
+  flight.mission_switch = true;
+  flight.run(100);
+  nav_command_t command = {.type = NAV_COMMAND_GOTO, .id = 1};
+  // Waypoints store whole meters.
+  const int16_t altitude = int16_t(lroundf(state.altitude));
+  command.waypoint = {.coord = {.lon = int32_t(lround(-70 * 1e7 / 111194.93)), .lat = int32_t(lround(-70 * 1e7 / 111194.93))},
+                      .altitude = altitude};
+  flight.check(nav_command_apply(&command) == NAV_RESULT_OK, "GOTO accepted");
+
+  double previous_distance = -1, closing_sum = 0, closing_square = 0, pitch_sum = 0, pitch_square = 0, top_speed = 0;
+  double throttle_sum = 0, throttle_square = 0, altitude_square = 0, altitude_worst = 0;
+  unsigned samples = 0;
+  for (unsigned i = 0; i < 90000 && state.rth_state != RTH_STATE_HOVER_HOME; i++) {
+    const double t = flight.tick * DT;
+    // Two incommensurate gust periods around a steady crosswind.
+    flight.truth.wind[0] = 1.5 * sin(0.7 * t) + 0.8 * sin(1.9 * t + 1);
+    flight.truth.wind[1] = 1.0 + 1.2 * sin(0.5 * t + 2);
+    flight.step();
+    const double distance = hypot(flight.truth.position[0] + 70, flight.truth.position[1] + 70);
+    if (state.rth_state != RTH_STATE_NAVIGATE || distance < 40 || flight.tick % 100) continue;
+    if (previous_distance > 0 && distance < 220) {
+      const double closing = (previous_distance - distance) / 0.1;
+      const double pitch = double(state.rx_override.pitch) * profile.rate.level_max_angle;
+      closing_sum += closing;
+      closing_square += closing * closing;
+      pitch_sum += pitch;
+      pitch_square += pitch * pitch;
+      top_speed = fmax(top_speed, hypot(flight.truth.velocity[0], flight.truth.velocity[1]));
+      throttle_sum += double(state.throttle);
+      throttle_square += double(state.throttle) * double(state.throttle);
+      const double altitude_error = -flight.truth.position[2] - altitude;
+      altitude_square += altitude_error * altitude_error;
+      altitude_worst = fmax(altitude_worst, fabs(altitude_error));
+      samples++;
+    }
+    previous_distance = distance;
+  }
+  flight.check(samples > 200, "cruise segment flown");
+  const auto spread = [samples](double sum, double square) {
+    const double mean = sum / samples;
+    return sqrt(fmax(square / samples - mean * mean, 0));
+  };
+  const double pitch_spread = spread(pitch_sum, pitch_square);
+  printf("%s: closing=%.2f+-%.2fm/s pitch=%.1f+-%.2fdeg top speed=%.2fm/s throttle=+-%.3f altitude rms=%.2fm worst=%.2fm\n",
+      flight.scenario.name, closing_sum / samples, spread(closing_sum, closing_square), pitch_sum / samples, pitch_spread,
+      top_speed, spread(throttle_sum, throttle_square), sqrt(altitude_square / samples), altitude_worst);
+  flight.check(top_speed < double(profile.navigation.rth_cruise_speed) + 2, "gusts do not run away with the speed");
+  // A speed loop trimmed as hard as the proportional term resonates near 2.3 degrees here.
+  flight.check(pitch_spread < 2.0, "cruise pitch rides out gusts");
+  flight.check(altitude_worst < 1, "altitude holds within a meter");
 }
 
 static mission_waypoint_t flight_waypoint(double north, double east, int16_t altitude, uint8_t type) {
@@ -728,13 +842,13 @@ void test_navigation_motor_loop_pass_mission() {
     mission.waypoints[i] = flight_waypoint(route[i][0], route[i][1], 10, types[i]);
   flight.mission_switch = true;
   flight.run(100);
-  flight.check(state.mission_active && state.rth_active, "mission accepted");
+  flight.check(state.nav_target == NAV_TARGET_MISSION && state.rth_state >= RTH_STATE_CLIMB, "mission accepted");
 
   double corner_speed[2] = {1e9, 1e9}; // slowest within 10 m of each corner
   double cross_track = 0;              // worst after settling onto each later leg
   for (unsigned i = 0; i < 80000; i++) {
     flight.step();
-    flight.check(state.mission_active && flags.arm_state, "mission remains armed and active");
+    flight.check(state.nav_target == NAV_TARGET_MISSION && flags.arm_state, "mission remains armed and active");
     const unsigned index = state.mission_index;
     const double north = flight.truth.position[0], east = flight.truth.position[1];
     const double speed = hypot(flight.truth.velocity[0], flight.truth.velocity[1]);
@@ -762,28 +876,28 @@ void test_navigation_motor_loop_pass_mission() {
 // Ground start through a mission TAKEOFF to the first waypoint, ending in a LAND.
 static void flight_takeoff_mission(flight_t &flight) {
   flight.run(3000);
-  flight.check(!flags.arm_state && state.gps_lock && nav_altitude_ready(), "ground initialization");
+  flight.check(!flags.arm_state && state.gps_lock && flags.baro_valid, "ground initialization");
   mission = {.count = 3, .end_action = MISSION_END_HOLD};
   mission.waypoints[0] = flight_waypoint(1, 1, 8, MISSION_WAYPOINT_TAKEOFF);
   mission.waypoints[1] = flight_waypoint(60, 20, 10, MISSION_WAYPOINT_STOP);
   mission.waypoints[2] = flight_waypoint(40, 50, 0, MISSION_WAYPOINT_LAND);
   flight.arm = true;
   flight.run(300);
-  flight.check(flags.arm_state && nav_rth_home_valid(), "arming and home capture");
+  flight.check(flags.arm_state && flags.home_valid, "arming and home capture");
 
   // The takeoff climbs where the craft stands: only at its waypoint.
   const mission_waypoint_t takeoff = mission.waypoints[0];
   mission.waypoints[0] = flight_waypoint(20, 0, 8, MISSION_WAYPOINT_TAKEOFF);
   flight.mission_switch = true;
   flight.run(500);
-  flight.check(!state.rth_active && !flags.controls_override, "no takeoff away from its waypoint");
+  flight.check(state.rth_state < RTH_STATE_CLIMB && !flags.controls_override, "no takeoff away from its waypoint");
   flight.mission_switch = false;
   flight.run(100);
   mission.waypoints[0] = takeoff;
 
   flight.mission_switch = true;
   flight.run(500);
-  flight.check(state.rth_state == RTH_STATE_TAKEOFF_READY && state.mission_active, "takeoff waits for the throttle stick");
+  flight.check(state.rth_state == RTH_STATE_TAKEOFF_READY && state.nav_target == NAV_TARGET_MISSION, "takeoff waits for the throttle stick");
   flight.check(state.throttle == 0 && flight.truth.position[2] >= 0, "motors stay stopped on the ground");
   flight.throttle = 0.5f;
 }
@@ -805,7 +919,7 @@ void test_navigation_motor_loop_takeoff_and_land() {
     if (landing && touchdown_speed < 0 && height < 0.01)
       touchdown_speed = flight.truth.velocity[2];
     if (flags.arm_state && !landing)
-      flight.check(state.mission_active, "mission flies until the landing");
+      flight.check(state.nav_target == NAV_TARGET_MISSION, "mission flies until the landing");
   }
   const double north = flight.truth.position[0], east = flight.truth.position[1];
   printf("%s: climb top=%.2fm touchdown=%.2fm/s disarmed after %.1fs at (%.2f,%.2f)\n", flight.scenario.name,
@@ -819,7 +933,7 @@ void test_navigation_motor_loop_takeoff_and_land() {
   flight.throttle = 0;
   flight.run(500);
   flight.check(!flags.arm_state, "re-arming needs the arm switch cycled");
-  flight.check(!state.rth_active && !flags.controls_override, "navigation released after disarm");
+  flight.check(state.rth_state < RTH_STATE_CLIMB && !flags.controls_override, "navigation released after disarm");
 }
 
 void test_navigation_motor_loop_takeoff_stick_abort() {
@@ -832,7 +946,7 @@ void test_navigation_motor_loop_takeoff_stick_abort() {
   const double height = -flight.truth.position[2];
   flight.roll = 0.3f;
   flight.run(100);
-  flight.check(!state.rth_active && !flags.controls_override && flags.arm_state, "stick takes control back");
+  flight.check(state.rth_state < RTH_STATE_CLIMB && !flags.controls_override && flags.arm_state, "stick takes control back");
   flight.roll = 0;
   double lowest = height;
   for (unsigned i = 0; i < 3000; i++) {
@@ -849,10 +963,87 @@ void test_navigation_motor_loop_takeoff_stick_abort() {
   flight.run(100);
   flight.mission_switch = true;
   flight.run(100);
-  flight.check(state.mission_active && state.rth_state != RTH_STATE_TAKEOFF_READY && state.rth_state != RTH_STATE_TAKEOFF,
+  flight.check(state.nav_target == NAV_TARGET_MISSION && state.rth_state != RTH_STATE_TAKEOFF_READY &&
+                   state.rth_state != RTH_STATE_TAKEOFF_SPINUP && state.rth_state != RTH_STATE_TAKEOFF,
                "the restarted mission climbs in place instead of taking off again");
   for (unsigned i = 0; i < 20000 && state.mission_index == 0; i++) flight.step();
   flight.check(state.mission_index == 1, "continues to the first waypoint");
+}
+
+void test_navigation_motor_loop_takeoff_rth_switch_cancels() {
+  flight_t flight({"takeoff cancel", 100, true});
+  flight_takeoff_mission(flight);
+  flight.throttle = 0;
+  // The held RTH switch cancels the waiting takeoff and does not lift off itself.
+  flight.rth = true;
+  flight.run(1000);
+  flight.check(state.rth_state < RTH_STATE_CLIMB && !flags.controls_override, "the RTH switch cancels the takeoff");
+  // Handed back to the pilot's lowered throttle stick.
+  flight.check(state.throttle < 0.05f && flight.truth.position[2] >= 0, "stays on the ground");
+  flight.rth = false;
+  flight.mission_switch = false;
+  flight.run(100);
+  flight.check(state.rth_state == RTH_STATE_INACTIVE, "releasing the switches clears the cancel");
+}
+
+void test_navigation_motor_loop_takeoff_from_a_slope() {
+  // Resting tilted, angle mode reads the slope as an attitude error. Waiting
+  // armed and spinning up on the ground must not integrate it.
+  flight_t flight({"sloped takeoff", 100, true});
+  flight.truth.ground_tilt = 8 * M_PI / 180;
+  flight_takeoff_mission(flight);
+  flight.throttle = 0;
+  flight.run(2000);
+  flight.check(state.rth_state == RTH_STATE_TAKEOFF_READY, "waiting for the throttle stick");
+  flight.throttle = 0.5f;
+  double worst_iterm = 0;
+  for (unsigned i = 0; i < 20000 && state.rth_state != RTH_STATE_TAKEOFF; i++) {
+    flight.step();
+    const vec3_t *ierror = pid_get_ierror();
+    worst_iterm = fmax(worst_iterm, fmax(fabs(ierror->roll), fabs(ierror->pitch)));
+  }
+  printf("%s: worst I-term before lift-off %.3f\n", flight.scenario.name, worst_iterm);
+  flight.check(state.rth_state == RTH_STATE_TAKEOFF, "lifts off");
+  flight.check(worst_iterm < 0.01, "no I-term before lift-off");
+  for (unsigned i = 0; i < 20000 && state.mission_index == 0; i++) flight.step();
+  flight.check(state.mission_index == 1, "climbs out to the first waypoint");
+}
+
+void test_navigation_motor_loop_takeoff_spinup_cancels() {
+  // Spinning up on the ground, an RTH request or a lost sensor stops the
+  // motors instead of climbing home or jumping to the raised throttle stick.
+  for (unsigned cause = 0; cause < 2; cause++) {
+    flight_t flight({cause ? "spin-up gps loss" : "spin-up rth", 100, true});
+    flight_takeoff_mission(flight);
+    flight.run(300);
+    flight.check(state.rth_state == RTH_STATE_TAKEOFF_SPINUP && state.throttle > 0 && flight.truth.position[2] >= 0, "spinning up on the ground");
+    if (cause)
+      flight.gps_available = false;
+    else
+      flight.rth = true;
+    for (unsigned i = 0; i < 3000 && flags.arm_state; i++) flight.step();
+    flight.check(!flags.arm_state && state.rth_state < RTH_STATE_CLIMB, "the takeoff ends disarmed");
+    flight.check(flight.truth.position[2] > -0.1, "never left the ground");
+  }
+}
+
+void test_navigation_motor_loop_land_through_gps_loss() {
+  flight_t flight({"land gps loss", 100, true});
+  flight_takeoff_mission(flight);
+  for (unsigned i = 0; i < 150000 && state.rth_state != RTH_STATE_LAND; i++) flight.step();
+  flight.check(state.rth_state == RTH_STATE_LAND && -flight.truth.position[2] > 5, "landing from height");
+
+  // The descent needs only the barometer: it lands level where it is.
+  flight.gps_available = false;
+  unsigned i = 0;
+  for (; i < 60000 && flags.arm_state; i++) {
+    flight.step();
+    if (flags.arm_state)
+      flight.check(state.rth_state == RTH_STATE_LAND, "the landing continues without GPS");
+  }
+  printf("%s: disarmed %.1fs after the loss, %.2fm off the waypoint\n", flight.scenario.name, i * 1e-3,
+      hypot(flight.truth.position[0] - 40, flight.truth.position[1] - 50));
+  flight.check(!flags.arm_state && flight.truth.position[2] > -0.05, "touchdown disarms");
 }
 
 void test_navigation_motor_loop_land_on_slope() {

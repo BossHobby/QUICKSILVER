@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "control/control.h"
-#include "control/navigation.h"
 #include "core/debug.h"
 #include "core/profile.h"
 #include "core/project.h"
@@ -552,9 +551,9 @@ static void rx_serial_send_crsf_telemetry() {
   bool gps_time_frame = false;
   static bool gps_home_sent = false;
   static uint32_t gps_home_sent_ms = 0;
-  if (!nav_home_valid())
+  if (!flags.home_valid)
     gps_home_sent = false;
-  const bool gps_home_due = gps_enabled && nav_home_valid() &&
+  const bool gps_home_due = gps_enabled && flags.home_valid &&
                             (!gps_home_sent || (time_millis() - gps_home_sent_ms) >= CRSF_GPS_HOME_INTERVAL_MS);
   bool gps_home_frame = false;
 

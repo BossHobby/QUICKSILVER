@@ -20,7 +20,7 @@ float angle_pid(int x) {
   const float timefactor = ANGLE_PID_DTIME_FACTOR * state.looptime_inverse;
   // Navigation targets arrive slower than the control loop. Differentiate
   // measured rotation during RTH so target steps cannot kick the D term.
-  const float derivative = state.rth_active
+  const float derivative = state.rth_state >= RTH_STATE_CLIMB
       ? -state.gyro.axis[x] * ANGLE_PID_DTIME_FACTOR
       : (state.angle_error.axis[x] - lasterror.axis[x]) * timefactor;
 

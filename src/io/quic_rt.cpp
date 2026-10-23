@@ -239,14 +239,14 @@ static uint8_t quic_rt_flags() {
   if (state.wing_nav_state != WING_NAV_INACTIVE)
     value |= QUIC_RT_FLAG_NAVIGATING;
 #else
-  if (state.rth_active)
+  if (state.rth_state >= RTH_STATE_CLIMB)
     value |= QUIC_RT_FLAG_NAVIGATING;
 #endif
-  if (state.mission_active)
+  if (state.nav_target == NAV_TARGET_MISSION)
     value |= QUIC_RT_FLAG_MISSION;
-  if (state.guided_active)
+  if (state.nav_target == NAV_TARGET_GUIDED)
     value |= QUIC_RT_FLAG_GUIDED;
-  if (state.guided_ready)
+  if (flags.guided_ready)
     value |= QUIC_RT_FLAG_GUIDED_READY;
   return value;
 }

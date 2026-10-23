@@ -31,7 +31,7 @@ static struct {
 } handback;
 
 static bool control_navigation_active(void) {
-  return flags.controls_override && (state.rth_active || state.failsafe_hold);
+  return flags.controls_override && (state.rth_state >= RTH_STATE_CLIMB || flags.failsafe_hold);
 }
 
 static void control_flight_mode() {

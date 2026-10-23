@@ -48,7 +48,6 @@ typedef enum {
 // integrator holds the trim, so the sticks must also be centered.
 static constexpr float AUTOTRIM_STICK_CENTER = 0.05f;
 
-static constexpr float GRAVITY = 9.80665f; // m/s^2
 // Cruise-to-current airspeed ratio limits; the throttle proxy is coarse. Idle
 // glides read slow although they keep near cruise airspeed, so the slow limit
 // stays close.
@@ -177,7 +176,7 @@ static wing_mode_t wing_active_mode() {
 // Launch takes over from arming, so an always-on switch leaves the disarmed
 // surfaces on the sticks for preflight checks and OSD menus.
 static bool wing_launch_in_progress() {
-  return flags.arm_state && rx_aux_on(AUX_AUTOLAUNCH) && state.wing_launch_available &&
+  return flags.arm_state && rx_aux_on(AUX_AUTOLAUNCH) && flags.wing_launch_available &&
          !flags.failsafe && state.wing_launch_state < WING_LAUNCH_DONE;
 }
 
@@ -309,7 +308,7 @@ static void wing_autotrim_update_flown() {
     return;
   }
   if ((state.gps_lock && state.gps_speed >= WING_FLYING_MIN_SPEED) ||
-      (state.baro_valid && fabsf(state.altitude) > WING_FLYING_MIN_ALTITUDE)) {
+      (flags.baro_valid && fabsf(state.altitude) > WING_FLYING_MIN_ALTITUDE)) {
     autotrim.flown = true;
   }
 }
@@ -492,7 +491,7 @@ static bool wing_launch_probably_not_flying() {
 }
 
 static void wing_launch_reset_pids_if_needed() {
-  if (!rx_aux_on(AUX_AUTOLAUNCH) || !state.wing_launch_available || state.wing_launch_state >= WING_LAUNCH_DONE) {
+  if (!rx_aux_on(AUX_AUTOLAUNCH) || !flags.wing_launch_available || state.wing_launch_state >= WING_LAUNCH_DONE) {
     return;
   }
   if (state.wing_launch_state < WING_LAUNCH_SPINUP || wing_launch_probably_not_flying()) {
@@ -529,28 +528,28 @@ static bool wing_launch_max_altitude_reached() {
 static float wing_autolaunch_throttle() {
   const bool launch_aux_on = rx_aux_on(AUX_AUTOLAUNCH);
   if (!flags.arm_state) {
-    state.wing_launch_available = launch_aux_on;
+    flags.wing_launch_available = launch_aux_on;
     wing_launch_set_state(WING_LAUNCH_IDLE);
     return state.throttle;
   }
   // Launch runs at most once per arm: DONE or ABORTED holds until disarm, so
   // neither a recovered link nor a re-enabled switch may restart it in flight.
   if (state.wing_launch_state >= WING_LAUNCH_DONE) {
-    state.wing_launch_available = false;
+    flags.wing_launch_available = false;
     return state.throttle;
   }
   if (flags.failsafe || !launch_aux_on) {
-    if (state.wing_launch_available) {
+    if (flags.wing_launch_available) {
       // Throttle already latched in_air before release. A link loss must not
       // let navigation bypass the throw detection or hand-clear delay.
       if (flags.failsafe && state.wing_launch_state < WING_LAUNCH_SPINUP)
         control_failsafe_disarm();
       wing_launch_set_state(WING_LAUNCH_ABORTED);
     }
-    state.wing_launch_available = false;
+    flags.wing_launch_available = false;
     return state.throttle;
   }
-  if (!state.wing_launch_available) {
+  if (!flags.wing_launch_available) {
     return state.throttle;
   }
 

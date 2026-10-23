@@ -107,15 +107,15 @@ const char *control_flight_mode_name(void) {
     return "RATE ASST";
   return "MANUAL";
 #elif defined(VEHICLE_WING)
-  if (state.mission_failsafe_active)
+  if (state.failsafe_owner == FAILSAFE_OWNER_MISSION)
     return "FS MISSION";
-  if (state.wing_nav_failsafe)
+  if (flags.wing_nav_failsafe)
     return state.wing_nav_state == WING_NAV_DESCEND ? "FS DESCEND" : "FS RTH";
   if (state.failsafe_phase == FAILSAFE_PHASE_STAGE1_GUARD)
     return "FS LEVEL";
-  if (state.mission_active)
+  if (state.nav_target == NAV_TARGET_MISSION)
     return "MISSION";
-  if (state.guided_active)
+  if (state.nav_target == NAV_TARGET_GUIDED)
     return "GUIDED";
   switch (state.wing_nav_state) {
   case WING_NAV_LOITER:
@@ -138,17 +138,17 @@ const char *control_flight_mode_name(void) {
     return "ACRO";
   return "MANUAL";
 #else
-  if (state.mission_failsafe_active)
+  if (state.failsafe_owner == FAILSAFE_OWNER_MISSION)
     return "FS MISSION";
-  if (state.rth_failsafe_active)
+  if (state.failsafe_owner == FAILSAFE_OWNER_RTH)
     return "FS RTH";
-  if (state.failsafe_hold)
+  if (flags.failsafe_hold)
     return "FS HOLD";
-  if (state.mission_active)
+  if (state.nav_target == NAV_TARGET_MISSION)
     return "MISSION";
-  if (state.guided_active)
+  if (state.nav_target == NAV_TARGET_GUIDED)
     return "GUIDED";
-  if (state.rth_active || rx_aux_on(AUX_RETURN_TO_HOME))
+  if (state.rth_state >= RTH_STATE_CLIMB || rx_aux_on(AUX_RETURN_TO_HOME))
     return "RTH";
   if (!rx_aux_on(AUX_LEVELMODE))
     return "ACRO";
@@ -171,7 +171,7 @@ static void failsafe_set_phase(failsafe_phase_t phase, uint32_t now_us) {
   }
 
   if (phase != FAILSAFE_PHASE_STAGE1_GUARD) {
-    state.failsafe_hold = false;
+    flags.failsafe_hold = false;
   }
 
   if (phase == FAILSAFE_PHASE_IDLE) {
@@ -183,9 +183,9 @@ static void failsafe_set_phase(failsafe_phase_t phase, uint32_t now_us) {
 
 static void failsafe_clear_stage1_fallback(void) {
   if (state.failsafe_phase == FAILSAFE_PHASE_STAGE1_GUARD) {
-    state.failsafe_hold = false;
+    flags.failsafe_hold = false;
 #ifdef VEHICLE_MULTI
-    if (state.rth_active) {
+    if (state.rth_state >= RTH_STATE_CLIMB) {
       return;
     }
 #endif
@@ -209,21 +209,21 @@ static bool failsafe_sticks_active(void) {
 static void failsafe_update_mission(uint32_t now_us) {
   if (!flags.failsafe_signal_lost)
     failsafe_mission.handed_over = false;
-  if (!state.mission_failsafe_active) {
+  if (state.failsafe_owner != FAILSAFE_OWNER_MISSION) {
 #ifdef VEHICLE_MULTI
     const bool continues = profile.navigation.mission_on_failsafe || state.rth_state == RTH_STATE_LAND;
 #else
     const bool continues = profile.navigation.mission_on_failsafe;
 #endif
-    if (continues && state.mission_engaged && flags.arm_state && flags.rx_ready == 1 &&
+    if (continues && flags.mission_engaged && flags.arm_state && flags.rx_ready == 1 &&
         flags.failsafe_signal_lost && !flags.failsafe && now_us - state.last_frame_time_us >= FAILSAFE_HOLD_TIME_US) {
-      state.mission_failsafe_active = true;
+      state.failsafe_owner = FAILSAFE_OWNER_MISSION;
       failsafe_mission = {};
     }
     return;
   }
-  if (!state.mission_engaged || !flags.arm_state || flags.rx_ready != 1) {
-    state.mission_failsafe_active = false;
+  if (!flags.mission_engaged || !flags.arm_state || flags.rx_ready != 1) {
+    state.failsafe_owner = FAILSAFE_OWNER_NONE;
     failsafe_mission = {};
     if (flags.failsafe_signal_lost) {
       failsafe_mission.handed_over = true;
@@ -235,7 +235,7 @@ static void failsafe_update_mission(uint32_t now_us) {
     failsafe_mission.recovering = true;
     failsafe_mission.recovered_us = now_us;
   } else if (now_us - failsafe_mission.recovered_us >= FAILSAFE_RECOVERY_TIME_US && failsafe_sticks_active()) {
-    state.mission_failsafe_active = false;
+    state.failsafe_owner = FAILSAFE_OWNER_NONE;
   }
 }
 
@@ -243,7 +243,7 @@ static void failsafe_update_mission(uint32_t now_us) {
 static bool failsafe_airborne(uint32_t now_us) {
   // Guided flight flies the throttle, so a low pilot stick says nothing then.
   return flags.arm_state && flags.in_air &&
-         (state.rth_active || failsafe_mission.handed_over ||
+         (state.rth_state >= RTH_STATE_CLIMB || failsafe_mission.handed_over ||
           (now_us - failsafe_throttle_up_us) < FAILSAFE_THROTTLE_LOW_TIME_US);
 }
 
@@ -251,14 +251,17 @@ static bool failsafe_airborne(uint32_t now_us) {
 // stable for the recovery time and the pilot moves the sticks. A flapping
 // link therefore never restarts or interrupts the return.
 static void failsafe_update_rth_ownership(uint32_t now_us) {
-  if (!state.rth_active || !profile.navigation.rth_on_failsafe || flags.rx_ready != 1 || !flags.arm_state ||
-      state.mission_failsafe_active) {
+  if (state.failsafe_owner == FAILSAFE_OWNER_MISSION) {
+    failsafe_rth = {};
+    return;
+  }
+  if (state.rth_state < RTH_STATE_CLIMB || !profile.navigation.rth_on_failsafe || flags.rx_ready != 1 || !flags.arm_state) {
     failsafe_rth = {};
   } else if (flags.failsafe_signal_lost) {
     // A mission or ground station target rides out the hold-last window like
     // manual flight, so a brief dropout neither ends it nor leaves failsafe
     // owning the recovery.
-    if (!(state.mission_active || state.guided_active) || now_us - state.last_frame_time_us >= FAILSAFE_HOLD_TIME_US) {
+    if (state.nav_target == NAV_TARGET_HOME || now_us - state.last_frame_time_us >= FAILSAFE_HOLD_TIME_US) {
       failsafe_rth.owns_link_loss = true;
       failsafe_rth.link_recovering = false;
     }
@@ -271,16 +274,16 @@ static void failsafe_update_rth_ownership(uint32_t now_us) {
       failsafe_rth = {};
     }
   }
-  state.rth_failsafe_active = failsafe_rth.owns_link_loss;
-  const bool owned = state.rth_failsafe_active || state.mission_failsafe_active;
-  if (!owned || cosf(state.attitude.roll) * cosf(state.attitude.pitch) > FAILSAFE_CRASH_MIN_TILT) {
+  state.failsafe_owner = failsafe_rth.owns_link_loss ? FAILSAFE_OWNER_RTH : FAILSAFE_OWNER_NONE;
+}
+
+static void failsafe_update_upright(uint32_t now_us) {
+  if (state.failsafe_owner == FAILSAFE_OWNER_NONE || cosf(state.attitude.roll) * cosf(state.attitude.pitch) > FAILSAFE_CRASH_MIN_TILT)
     failsafe_upright_us = now_us;
-  }
 }
 
 static bool failsafe_navigation_crashed(uint32_t now_us) {
-  return (state.rth_failsafe_active || state.mission_failsafe_active) &&
-         (now_us - failsafe_upright_us) >= FAILSAFE_CRASH_TIME_US;
+  return state.failsafe_owner != FAILSAFE_OWNER_NONE && now_us - failsafe_upright_us >= FAILSAFE_CRASH_TIME_US;
 }
 #endif
 
@@ -291,12 +294,12 @@ static void failsafe_apply_stage1_fallback(uint32_t now_us) {
 #ifdef VEHICLE_ROVER
   state.rx_override.throttle = 0.5f;
 #elif defined(VEHICLE_MULTI)
-  if (state.failsafe_hold) {
+  if (flags.failsafe_hold) {
     // Navigation owns throttle while holding.
   } else if (failsafe_airborne(now_us)) {
     // Level and hold altitude from the pilot's last throttle instead of
     // idling; navigation takes over the vertical axis on its next update.
-    state.failsafe_hold = true;
+    flags.failsafe_hold = true;
     state.rx_override.throttle = state.throttle;
   } else {
     state.rx_override.throttle = 0.0f;
@@ -350,6 +353,7 @@ void control_failsafe_update() {
   failsafe_update_mission(now_us);
 #ifdef VEHICLE_MULTI
   failsafe_update_rth_ownership(now_us);
+  failsafe_update_upright(now_us);
   if (!flags.failsafe_signal_lost && state.failsafe_phase == FAILSAFE_PHASE_IDLE &&
       state.rx_filtered.throttle > THROTTLE_SAFETY) {
     failsafe_throttle_up_us = now_us;
@@ -368,8 +372,7 @@ void control_failsafe_update() {
   if (failsafe_navigation_crashed(now_us)) {
     failsafe_rth = {};
     failsafe_mission = {};
-    state.rth_failsafe_active = false;
-    state.mission_failsafe_active = false;
+    state.failsafe_owner = FAILSAFE_OWNER_NONE;
     flags.failsafe = 1;
     flags.failsafe_outputs_blocked = 1;
     failsafe_set_phase(FAILSAFE_PHASE_STAGE2_DROP, now_us);
@@ -379,20 +382,12 @@ void control_failsafe_update() {
   }
 #endif
   // Navigation flies through the loss until it gives up or the pilot takes over.
-  if (state.mission_failsafe_active) {
+  if (state.failsafe_owner != FAILSAFE_OWNER_NONE) {
     flags.failsafe = 1;
     flags.failsafe_outputs_blocked = 0;
     failsafe_set_phase(FAILSAFE_PHASE_STAGE1_GUARD, now_us);
     return;
   }
-#ifdef VEHICLE_MULTI
-  if (state.rth_failsafe_active) {
-    flags.failsafe = 1;
-    flags.failsafe_outputs_blocked = 0;
-    failsafe_set_phase(FAILSAFE_PHASE_STAGE1_GUARD, now_us);
-    return;
-  }
-#endif
 
   if (flags.failsafe_signal_lost) {
     if (state.failsafe_phase == FAILSAFE_PHASE_STAGE2_DROP ||
@@ -412,7 +407,7 @@ void control_failsafe_update() {
 #ifdef VEHICLE_WING
     // Navigation takes over within one 10 ms update of stage 1 and then flies
     // the failsafe; stay in stage 1 with live outputs instead of stage 2.
-    if (state.wing_nav_failsafe) {
+    if (flags.wing_nav_failsafe) {
       flags.failsafe = 1;
       flags.failsafe_outputs_blocked = 0;
       failsafe_set_phase(FAILSAFE_PHASE_STAGE1_GUARD, now_us);

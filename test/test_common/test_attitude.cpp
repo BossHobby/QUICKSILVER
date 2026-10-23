@@ -413,7 +413,7 @@ void test_attitude_gps_reacquisition_does_not_snap_yaw(void) {
 void test_attitude_rth_sideways_motion_does_not_correct_heading(void) {
   attitude_test_setup();
   flags.controls_override = 1;
-  state.rth_active = true;
+  state.rth_state = RTH_STATE_CLIMB;
   state.rth_state = RTH_STATE_NAVIGATE;
   state.rx_override.roll = 0.15f;
   state.gps_lock = true;
@@ -431,7 +431,7 @@ void test_attitude_rth_sideways_motion_does_not_correct_heading(void) {
 void test_attitude_rth_large_heading_error_can_recover(void) {
   attitude_test_setup();
   flags.controls_override = 1;
-  state.rth_active = true;
+  state.rth_state = RTH_STATE_CLIMB;
   state.rth_state = RTH_STATE_NAVIGATE;
   state.nav_target_bearing = 180;
   state.gps_vel_east = 4;
@@ -477,7 +477,7 @@ void test_attitude_heading_correction_is_sample_rate_independent(void) {
 static float run_rth_heading_recovery(uint8_t phase, float speed_home, float accuracy, bool fresh) {
   attitude_test_setup();
   flags.controls_override = 1;
-  state.rth_active = true;
+  state.rth_state = RTH_STATE_CLIMB;
   state.rth_state = phase;
   state.rx_override.pitch = 0.1f;
   state.gps_lock = true;
@@ -552,7 +552,7 @@ static void run_rth_forward_flight(float pitch_deg, float speed, float course, u
 void test_attitude_rth_weak_aligned_course_retains_confidence() {
   attitude_test_setup();
   flags.controls_override = 1;
-  state.rth_active = true;
+  state.rth_state = RTH_STATE_CLIMB;
   state.rth_state = RTH_STATE_NAVIGATE;
   state.nav_target_bearing = 0;
   state.gps_lock = true;

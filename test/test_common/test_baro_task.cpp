@@ -19,10 +19,10 @@ void test_baro_altitude_reference_without_gps() {
   flags.arm_state = false;
   baro_test_sample(99, 0);
   baro_test_sample(100, 0);
-  TEST_ASSERT_FALSE(state.baro_valid); // IO only publishes; Flight derives altitude.
+  TEST_ASSERT_FALSE(flags.baro_valid); // IO only publishes; Flight derives altitude.
   time_test_set_us(10000);
   nav_update();
-  TEST_ASSERT_TRUE(state.baro_valid);
+  TEST_ASSERT_TRUE(flags.baro_valid);
   TEST_ASSERT_EQUAL_FLOAT(0, state.altitude);
 
   flags.arm_state = true;
@@ -38,12 +38,12 @@ void test_baro_altitude_reference_without_gps() {
   baro_test_sample(NAN, 100);
   time_test_set_us(100000);
   nav_update();
-  TEST_ASSERT_FALSE(state.baro_valid);
+  TEST_ASSERT_FALSE(flags.baro_valid);
   TEST_ASSERT_EQUAL_UINT32(50, state.baro_last_update_ms);
   baro_test_sample(120, 1000);
   time_test_set_us(1000000);
   nav_update();
-  TEST_ASSERT_TRUE(state.baro_valid);
+  TEST_ASSERT_TRUE(flags.baro_valid);
   TEST_ASSERT_EQUAL_FLOAT(0, state.baro_vertical_speed);
   TEST_ASSERT_EQUAL_FLOAT(20, state.altitude);
 

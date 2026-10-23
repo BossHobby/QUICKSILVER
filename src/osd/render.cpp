@@ -657,7 +657,7 @@ static float osd_throttle() {
   if (state.wing_nav_state != WING_NAV_INACTIVE)
     return state.throttle;
 #elif defined(VEHICLE_MULTI)
-  if (flags.controls_override && (state.rth_active || state.failsafe_hold))
+  if (flags.controls_override && (state.rth_state >= RTH_STATE_CLIMB || flags.failsafe_hold))
     return state.throttle;
 #endif
   return state.rx_filtered.throttle;
@@ -667,6 +667,27 @@ static void print_heading(float heading_deg) {
   // Bearings run clockwise; font arrows run from south toward east and north.
   const uint8_t direction = (uint8_t)((normalize_deg(heading_deg) + 11.25f) / 22.5f) % 16;
   osd_write_char(ICON_ARROW_SOUTH + (24 - direction) % 16);
+}
+
+char *osd_format_distance(char *text, float distance) {
+  if (distance >= 999.5f && distance < 9950.0f) {
+    // Tenths of a kilometer, 1.0 to 9.9.
+    const uint32_t tenths = (uint32_t)(distance / 100.0f + 0.5f);
+    *text++ = '0' + tenths / 10;
+    *text++ = '.';
+    *text++ = '0' + tenths % 10;
+    *text++ = ICON_KILOMETERS;
+    return text;
+  }
+  // Whole meters below a kilometer, whole kilometers from 10, right-aligned
+  // so the label does not shift as the distance changes.
+  const bool kilometers = distance >= 999.5f;
+  const uint32_t value = (uint32_t)constrain((kilometers ? distance / 1000.0f : distance) + 0.5f, 0.0f, 999.0f);
+  *text++ = value >= 100 ? '0' + value / 100 : ' ';
+  *text++ = value >= 10 ? '0' + value / 10 % 10 : ' ';
+  *text++ = '0' + value % 10;
+  *text++ = kilometers ? ICON_KILOMETERS : ICON_METERS;
+  return text;
 }
 
 void osd_init() {

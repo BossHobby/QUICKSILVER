@@ -220,11 +220,11 @@ static void test_wing_launch_delay_ramp_and_timed_handoff() {
   TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[1]);
   TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[2]);
   tick();
-  TEST_ASSERT_FALSE(state.wing_launch_available);
+  TEST_ASSERT_FALSE(flags.wing_launch_available);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, (0.5f - 0.05f) * 1.0526316f, state.throttle);
   tick(1000);
   TEST_ASSERT_EQUAL(WING_LAUNCH_DONE, state.wing_launch_state);
-  TEST_ASSERT_FALSE(state.wing_launch_available);
+  TEST_ASSERT_FALSE(flags.wing_launch_available);
 }
 
 static void test_wing_launch_keeps_cruise_gains_until_done() {
@@ -280,12 +280,12 @@ static void test_wing_launch_stage1_recovery_requires_disarm_before_relaunch() {
   flags.failsafe_signal_lost = 1;
   tick(FAILSAFE_HOLD_TIME_US / 1000 - 1);
   TEST_ASSERT_EQUAL(WING_LAUNCH_ACTIVE, state.wing_launch_state);
-  TEST_ASSERT_TRUE(state.wing_launch_available);
+  TEST_ASSERT_TRUE(flags.wing_launch_available);
   tick(1);
   TEST_ASSERT_EQUAL(FAILSAFE_PHASE_STAGE1_GUARD, state.failsafe_phase);
   TEST_ASSERT_TRUE(flags.arm_state);
   TEST_ASSERT_EQUAL(WING_LAUNCH_ABORTED, state.wing_launch_state);
-  TEST_ASSERT_FALSE(state.wing_launch_available);
+  TEST_ASSERT_FALSE(flags.wing_launch_available);
 
   flags.failsafe_signal_lost = 0;
   state.rx_filtered.throttle = 0.5f;
@@ -293,7 +293,7 @@ static void test_wing_launch_stage1_recovery_requires_disarm_before_relaunch() {
   tick(2000);
   TEST_ASSERT_TRUE(flags.arm_state);
   TEST_ASSERT_FALSE(flags.failsafe);
-  TEST_ASSERT_FALSE(state.wing_launch_available);
+  TEST_ASSERT_FALSE(flags.wing_launch_available);
   TEST_ASSERT_EQUAL(WING_LAUNCH_ABORTED, state.wing_launch_state);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, (0.5f - 0.05f) * 1.0526316f, state.throttle);
   TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[1]);
@@ -304,7 +304,7 @@ static void test_wing_launch_stage1_recovery_requires_disarm_before_relaunch() {
   state.accel_raw.pitch = 0;
   tick(2);
   TEST_ASSERT_FALSE(flags.arm_state);
-  TEST_ASSERT_TRUE(state.wing_launch_available);
+  TEST_ASSERT_TRUE(flags.wing_launch_available);
   state.aux_active |= 1U << AUX_ARMING;
   tick();
   TEST_ASSERT_TRUE(flags.arm_state);
@@ -317,7 +317,7 @@ static void test_wing_launch_switch_reenabled_in_flight_does_not_restart() {
   prepare_launch();
   state.aux_active &= ~(1U << AUX_AUTOLAUNCH);
   tick();
-  TEST_ASSERT_FALSE(state.wing_launch_available);
+  TEST_ASSERT_FALSE(flags.wing_launch_available);
   state.aux_active |= 1U << AUX_AUTOLAUNCH;
   state.GEstG = {{0.5f, 0, 0.8660254f}};
   tick(2000);
@@ -333,7 +333,7 @@ static void test_wing_launch_always_on_leaves_disarmed_surfaces_on_sticks() {
   state.rx_filtered.throttle = 0;
   tick(2);
   TEST_ASSERT_FALSE(flags.arm_state);
-  TEST_ASSERT_TRUE(state.wing_launch_available);
+  TEST_ASSERT_TRUE(flags.wing_launch_available);
 
   state.GEstG = {{0.5f, 0, 0.8660254f}};
   state.rx_filtered.roll = 0.2f;

@@ -8,6 +8,8 @@
 //        add state field with flags, aux switches, failsafe phase, RTH, wing, mission and guided states;
 //        multirotor RTH states include mission takeoff and landing. Navigation debug 9 carries
 //        the land detector checks while landing.
+//        rth_state orders aborted after inactive; every phase from climb on owns the controls.
+//        add the brake rth_state before a guided hold.
 //        add the UTC start datetime to each directory entry.
 // 0.3.1 (95765fe1): add GPS coordinate, home and altitude fields; grow debug to 16 entries.
 //        replace the four-motor field with per-output values (a1887d4f).

@@ -43,20 +43,40 @@ typedef enum {
   FAILSAFE_PHASE_RECOVERY,
 } failsafe_phase_t;
 
+// Navigation flying through a receiver loss instead of the failsafe
+// procedure, until the link is stable and the pilot moves a stick. The
+// switches stay locked meanwhile.
+typedef enum {
+  FAILSAFE_OWNER_NONE,
+  FAILSAFE_OWNER_MISSION, // the mission continues
+  FAILSAFE_OWNER_RTH,     // multirotor RTH returns
+} failsafe_owner_t;
+
+// Multirotor navigation phases. From RTH_STATE_CLIMB on, navigation owns the
+// controls.
 typedef enum {
   RTH_STATE_INACTIVE,
+  RTH_STATE_ABORTED, // gave up; not retried until the pilot ends the request or disarms
   RTH_STATE_CLIMB,
   RTH_STATE_ACQUIRE_HEADING,
   RTH_STATE_TURN,
   RTH_STATE_NAVIGATE,
   RTH_STATE_HOVER_HOME,
+  RTH_STATE_BRAKE, // HOLD stops over the ground, then hovers where it came to rest
   RTH_STATE_HEADING_FAILED,
-  RTH_STATE_ABORTED,
   RTH_STATE_NAV_FAILED,
   RTH_STATE_TAKEOFF_READY, // mission TAKEOFF armed on the ground, motors stopped until the throttle stick is raised
-  RTH_STATE_TAKEOFF,       // spinning up, lifting off and climbing in place
+  RTH_STATE_TAKEOFF_SPINUP, // spinning up on the ground until lift-off
+  RTH_STATE_TAKEOFF,        // lifted off, climbing in place
   RTH_STATE_LAND,          // descending on a mission LAND waypoint until touchdown disarms
 } rth_state_t;
+
+// What navigation flies to.
+typedef enum {
+  NAV_TARGET_HOME,
+  NAV_TARGET_MISSION, // the active waypoint of the stored mission
+  NAV_TARGET_GUIDED,  // the ground station target in nav_route.guided
+} nav_target_t;
 
 constexpr float RTH_MIN_HEADING_CONFIDENCE = 0.2f;
 
@@ -123,6 +143,17 @@ typedef struct {
   uint8_t turtle : 1;
   uint8_t turtle_ready : 1;
   uint8_t gestures_disabled : 1;
+
+  // Flight navigation status. Shared navigation owns the sensor checks and
+  // home; all are clear without a GPS port.
+  uint8_t baro_valid : 1; // last filtered sample was finite and is at most BARO_STALE_MS old, checked at the 10 ms navigation cadence
+  uint8_t gps_valid : 1;  // lock, accuracy and freshness are sufficient and the position did not jump
+  uint8_t home_valid : 1; // home latched on arming from a valid GPS position; clear while disarmed
+  uint8_t guided_ready : 1;    // the pilot grants guided flight: ground station commands are accepted
+  uint8_t mission_engaged : 1; // navigation flies the mission, its end action or a return the mission switch ends
+  uint8_t failsafe_hold : 1;   // airborne stage 1 failsafe levels and holds altitude instead of idling; owned by control
+  uint8_t wing_launch_available : 1;
+  uint8_t wing_nav_failsafe : 1; // wing navigation owns a receiver failsafe; failsafe holds stage 1 with live outputs
 
   // Separate bytes prevent IO flag writes from overwriting Flight's bitfields.
   uint8_t failsafe_signal_lost; // RX reports loss; Flight also enforces timeout.
@@ -220,37 +251,29 @@ typedef struct {
   // Barometer: detection, sample health and filtered outputs.
   bool baro_detected;           // Set by baro_init after probing; enables IO barometer updates.
   // Flight navigation owns the derived barometer fields below.
-  bool baro_valid;              // last filtered sample was finite; check timestamp for freshness.
   uint32_t baro_last_update_ms; // time of last finite sample; zero at init, valid distinguishes a sample at time zero.
   float baro_vertical_speed;    // filtered vertical velocity, m/s up; zero at init/reacquisition.
   float altitude;               // filtered meters above launch, or above the first sample before arming; zero at init, held without a new valid sample.
   float vertical_speed;         // m/s up, accelerometer fused with barometer; decays toward zero without barometer.
+  float vertical_accel;         // bias-corrected, smoothed earth-vertical acceleration, m/s^2 up.
   float hover_throttle;         // learned level-hover throttle; zero until learned in flight.
 
   // Navigation: home reference and return-to-home commands.
+  float home_altitude; // GPS altitude at the home capture, meters MSL.
   gps_coord_t gps_home;
   float home_bearing;
   float home_distance;
-  uint8_t rth_state; // rth_state_t
-  bool rth_active;   // multirotor guided flight owns the controls: RTH, or a mission when mission_active
-  bool rth_failsafe_active;
-  // Guided flight target, published by navigation at its 10 ms cadence: the
-  // ground station target, the active waypoint during a mission, otherwise home.
+  uint8_t rth_state;      // rth_state_t, owned by multirotor navigation
+  uint8_t failsafe_owner; // failsafe_owner_t, owned by control failsafe
+  // Navigation target, published by navigation at its 10 ms cadence.
+  uint8_t nav_target;        // nav_target_t
   float nav_target_bearing;  // degrees true from the vehicle
   float nav_target_distance; // meters
-  bool mission_active;       // following the stored waypoint mission
-  uint8_t mission_index;     // active waypoint while mission_active
-  bool guided_active;        // following the ground station target in nav_guided
-  bool guided_ready;         // the pilot grants guided flight: ground station commands are accepted
-  bool mission_engaged;      // navigation flies the mission, its end action or a return the mission switch ends
-  // A mission continues through a receiver loss. The switches stay locked
-  // until the link is stable and the pilot moves a stick.
-  bool mission_failsafe_active;
-  bool failsafe_hold; // airborne stage 1 failsafe: level and hold altitude instead of idling
-  float rth_yaw_rate; // radians/s, independent of pilot rates
+  uint8_t mission_index;     // active waypoint while flying the mission
+  float rth_yaw_rate;        // radians/s, independent of pilot rates
   // Horizontal acceleration from GPS velocity, m/s^2. Published by multirotor
-  // RTH and by flying wings for IMU gravity compensation; zero while inactive,
-  // without valid GPS or without a trusted heading.
+  // navigation for IMU gravity compensation; zero while inactive, without
+  // valid GPS or without a trusted heading. Wings compensate turns in the IMU.
   float nav_accel_north;
   float nav_accel_east;
 
@@ -269,10 +292,8 @@ typedef struct {
   vec3_t angle_error;
   vec3_t stick_vector;
   uint8_t wing_launch_state;
-  bool wing_launch_available;
   uint8_t wing_autotrim_state;
   uint8_t wing_nav_state; // wing_nav_state_t, owned by wing navigation
-  bool wing_nav_failsafe; // wing navigation owns a receiver failsafe; failsafe holds stage 1 with live outputs
   float wing_speed_scale; // cruise / estimated airspeed, 0.6..1.25, from throttle and climb; 1 on the ground. Owned by wing control.
 
   uint32_t dshot_rpm[MOTOR_PIN_MAX]; // eRPM / 100 per target output slot, written by the DShot driver
@@ -339,27 +360,22 @@ typedef struct {
   MEMBER(gps_coord, gps_coord_t)                       \
   MEMBER(gps_altitude, float)                          \
   MEMBER(baro_detected, bool)                          \
-  MEMBER(baro_valid, bool)                             \
   MEMBER(baro_last_update_ms, uint32_t)                \
   MEMBER(baro_vertical_speed, float)                   \
   MEMBER(altitude, float)                              \
   MEMBER(vertical_speed, float)                        \
+  MEMBER(vertical_accel, float)                        \
   MEMBER(hover_throttle, float)                        \
+  MEMBER(home_altitude, float)                         \
   MEMBER(gps_home, gps_coord_t)                        \
   MEMBER(home_bearing, float)                          \
   MEMBER(home_distance, float)                         \
   MEMBER(rth_state, uint8_t)                           \
-  MEMBER(rth_active, bool)                             \
-  MEMBER(rth_failsafe_active, bool)                    \
+  MEMBER(failsafe_owner, uint8_t)                      \
+  MEMBER(nav_target, uint8_t)                          \
   MEMBER(nav_target_bearing, float)                    \
   MEMBER(nav_target_distance, float)                   \
-  MEMBER(mission_active, bool)                         \
   MEMBER(mission_index, uint8_t)                       \
-  MEMBER(guided_active, bool)                          \
-  MEMBER(guided_ready, bool)                           \
-  MEMBER(mission_engaged, bool)                        \
-  MEMBER(mission_failsafe_active, bool)                \
-  MEMBER(failsafe_hold, bool)                          \
   MEMBER(rth_yaw_rate, float)                          \
   MEMBER(setpoint, vec3_t)                             \
   MEMBER(error, vec3_t)                                \
@@ -373,10 +389,8 @@ typedef struct {
   MEMBER(angle_error, vec3_t)                          \
   MEMBER(stick_vector, vec3_t)                         \
   MEMBER(wing_launch_state, uint8_t)                   \
-  MEMBER(wing_launch_available, bool)                  \
   MEMBER(wing_autotrim_state, uint8_t)                 \
   MEMBER(wing_nav_state, uint8_t)                      \
-  MEMBER(wing_nav_failsafe, bool)                      \
   MEMBER(wing_speed_scale, float)                      \
   ARRAY_MEMBER(dshot_rpm, MOTOR_PIN_MAX, uint32_t)     \
   END_STRUCT()

@@ -666,7 +666,7 @@ static void test_autotrim_run_up_needs_flight_evidence() {
 
 static void test_autotrim_climb_shows_flight_without_gps() {
   run_up_with_autotrim_on();
-  state.baro_valid = 1;
+  flags.baro_valid = 1;
   state.altitude = 10.0f;
   control();
   // Descending back toward launch height keeps the flight latched.

@@ -148,6 +148,12 @@ static inline vec3_t pid_should_enable_iterm_vec() {
     stick_movement = false;
     return (vec3_t){{0.0f, 0.0f, 0.0f}};
   }
+#ifdef VEHICLE_MULTI
+  // A mission takeoff waits and spins up on the ground, where the resting
+  // tilt reads as an angle error: integrating it tips the craft at spin-up.
+  if (state.rth_state == RTH_STATE_TAKEOFF_READY || state.rth_state == RTH_STATE_TAKEOFF_SPINUP)
+    return (vec3_t){{0.0f, 0.0f, 0.0f}};
+#endif
   if (flags.in_air) {
     stick_movement = false;
     return (vec3_t){{1.0f, 1.0f, 1.0f}};

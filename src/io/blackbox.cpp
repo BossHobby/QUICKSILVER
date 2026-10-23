@@ -432,24 +432,24 @@ static uint32_t blackbox_state_word() {
   if (flags.lowbatt)
     result |= BBOX_STATE_LOWBATT;
 #if defined(VEHICLE_WING)
-  if (state.wing_nav_failsafe)
+  if (flags.wing_nav_failsafe)
     result |= BBOX_STATE_WING_NAV_FAILSAFE;
   result |= (uint32_t)state.wing_nav_state << BBOX_STATE_WING_NAV_SHIFT;
   result |= (uint32_t)state.wing_launch_state << BBOX_STATE_WING_LAUNCH_SHIFT;
   result |= (uint32_t)state.wing_autotrim_state << BBOX_STATE_WING_AUTOTRIM_SHIFT;
 #elif defined(VEHICLE_MULTI)
-  if (state.rth_active)
+  if (state.rth_state >= RTH_STATE_CLIMB)
     result |= BBOX_STATE_RTH_ACTIVE;
-  if (state.rth_failsafe_active)
+  if (state.failsafe_owner == FAILSAFE_OWNER_RTH)
     result |= BBOX_STATE_RTH_FAILSAFE;
-  if (state.failsafe_hold)
+  if (flags.failsafe_hold)
     result |= BBOX_STATE_FAILSAFE_HOLD;
   result |= (uint32_t)state.rth_state << BBOX_STATE_RTH_SHIFT;
 #endif
 #ifndef VEHICLE_ROVER
-  if (state.mission_active)
+  if (state.nav_target == NAV_TARGET_MISSION)
     result |= BBOX_STATE_MISSION_ACTIVE;
-  if (state.guided_active)
+  if (state.nav_target == NAV_TARGET_GUIDED)
     result |= BBOX_STATE_GUIDED_ACTIVE;
   result |= (uint32_t)state.mission_index << BBOX_STATE_MISSION_INDEX_SHIFT;
 #endif

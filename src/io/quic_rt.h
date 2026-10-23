@@ -82,10 +82,10 @@ typedef enum {
   QUIC_RT_FLAG_IN_AIR = 1 << 1,
   QUIC_RT_FLAG_FAILSAFE = 1 << 2,
   QUIC_RT_FLAG_GPS_LOCK = 1 << 3,
-  QUIC_RT_FLAG_NAVIGATING = 1 << 4,   // navigation owns the controls: state.rth_active, or any wing navigation state
-  QUIC_RT_FLAG_MISSION = 1 << 5,      // state.mission_active
-  QUIC_RT_FLAG_GUIDED = 1 << 6,       // state.guided_active
-  QUIC_RT_FLAG_GUIDED_READY = 1 << 7, // state.guided_ready
+  QUIC_RT_FLAG_NAVIGATING = 1 << 4,   // navigation owns the controls: state.rth_state >= RTH_STATE_CLIMB, or any wing navigation state
+  QUIC_RT_FLAG_MISSION = 1 << 5,      // state.nav_target == NAV_TARGET_MISSION
+  QUIC_RT_FLAG_GUIDED = 1 << 6,       // state.nav_target == NAV_TARGET_GUIDED
+  QUIC_RT_FLAG_GUIDED_READY = 1 << 7, // flags.guided_ready
 } quic_rt_flags_t;
 
 // quic_rt_status_t.result_index: command_result << 5 | mission_index.

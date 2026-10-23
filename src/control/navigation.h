@@ -47,8 +47,19 @@ typedef struct {
   mission_waypoint_t items[NAV_COMMAND_ITEMS_MAX]; // MISSION_ITEMS
 } nav_command_t;
 
-// Ground station target while state.guided_active, written by vehicle navigation.
-extern mission_waypoint_t nav_guided;
+// Mission progress and the leg flown to the current target, owned by vehicle
+// navigation in Flight, which starts it over on disarm.
+typedef struct {
+  uint8_t index;          // active mission waypoint, kept while other modes interrupt the mission
+  bool complete;          // the last waypoint was reached; the mission starts over from the first
+  bool returning;         // returning home for the mission switch, after MISSION_END_RTH or a ground station RTH; turning it off ends the return
+  gps_coord_t leg_origin; // where the leg to the current target started; its line runs from here
+  gps_coord_t altitude_origin; // where the altitude change toward the target started
+  float leg_altitude;          // meters above launch at altitude_origin
+  mission_waypoint_t guided; // ground station target flown as NAV_TARGET_GUIDED
+} nav_route_t;
+
+extern nav_route_t nav_route;
 
 // Local displacement in meters; GPS coordinates are signed degrees * 1e7.
 void nav_position_delta(gps_coord_t start, gps_coord_t end, float *north, float *east);
@@ -57,30 +68,37 @@ void nav_position_delta(gps_coord_t start, gps_coord_t end, float *north, float 
 // of the vehicle.
 bool nav_in_start_range(gps_coord_t target);
 bool nav_mission_in_start_range(uint8_t index);
+// Altitude target at the vehicle's progress along the leg from origin to
+// target: origin_altitude at its start, changing evenly to target_altitude.
+// rate, when given, receives the target's change in m/s at the ground velocity.
+float nav_leg_altitude(gps_coord_t origin, float origin_altitude, gps_coord_t target, float target_altitude, float *rate = nullptr);
+// The waypoint a mission (re)start flies to.
+uint8_t nav_route_resume();
+// Start the leg to the current target here.
+void nav_route_start_leg();
+// Change altitude evenly from here over the rest of the leg, keeping its line.
+void nav_route_restart_altitude();
+// Fly on to the next waypoint; the leg's altitude changes from the one reached.
+void nav_route_next();
 // The stored waypoint lies within MISSION_TAKEOFF_MAX_DISTANCE of the vehicle.
 bool nav_mission_in_takeoff_range(uint8_t index);
 // The guided target, the active mission waypoint, or home.
 gps_coord_t nav_target_coord();
-// Publish nav_target_* toward nav_target_coord().
+// Publish nav_target_* and mission_index toward nav_target_coord().
 void nav_update_target();
+// A command's target is within limits and, for a mission, stored and in
+// range; a mission resume becomes the resume waypoint. Vehicles check their
+// authority first.
+nav_command_result_t nav_command_check(nav_command_t *cmd);
 // Vehicle navigation applies a ground station command in Flight, before its update.
-nav_command_result_t nav_command_apply(const nav_command_t *cmd);
-// Vehicle navigation, in Flight: replace the stored mission with a valid one.
-// The active waypoint keeps its index, clamped to the new last waypoint, and is
-// flown anew if it changed. Rejecting leaves the stored mission.
+nav_command_result_t nav_command_apply(nav_command_t *cmd);
+// Replace the stored mission with a valid one. While flying it, the active
+// waypoint keeps its index, clamped to the new last waypoint; retarget reports
+// that it changed and must be flown anew; locked refuses that. Rejecting
+// leaves the stored mission.
+nav_command_result_t nav_route_replace(const mission_t *updated, bool flying, bool locked, bool *retarget);
+// Vehicle navigation, in Flight: nav_route_replace() for what it flies.
 nav_command_result_t nav_mission_replace(const mission_t *updated);
 
 void nav_init();
 void nav_update();
-
-// Home latched on arming from a sane GPS position; invalid while disarmed.
-bool nav_home_valid();
-float nav_home_altitude();
-
-// Smoothed earth-vertical acceleration, m/s^2 up.
-float nav_vertical_accel();
-
-// Publish horizontal GPS acceleration for IMU gravity compensation. The IMU
-// rotates it by heading, so vehicles update it only while heading is trusted.
-void nav_update_gps_accel();
-void nav_reset_gps_accel();

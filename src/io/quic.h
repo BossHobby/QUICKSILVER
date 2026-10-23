@@ -10,7 +10,8 @@
 
 // QUIC protocol changelog (protocol compatibility):
 // 0.2.11: mission: add waypoint mission get/set/clear command and mission state.
-//         state: add guided_active and guided_ready for ground station guided flight.
+//         state: navigation publishes nav_target and failsafe_owner enums; RTH phases reorder so
+//         every phase from climb on owns the controls; navigation status bits move out of state.
 //         crsf: sessions no longer block arming; arming ends them. Missions work over CRSF.
 // 0.2.10: blackbox: add GPS/home coordinates and navigation altitude (0.1 m), move Debug to field 16.
 //         quic: add QUIC_HEADER_COMPRESSED; requests carrying it accept LZSS replies.
