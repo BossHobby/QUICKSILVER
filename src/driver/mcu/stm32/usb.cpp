@@ -292,6 +292,7 @@ static void cdc_txonly(usbd_device *dev, uint8_t event, uint8_t ep) {
       // no zlp sent, flush now
       usbd_ep_write(dev, ep, 0, 0);
       tx_stalled = false;
+      did_zlp = true;
     } else {
       tx_stalled = true;
     }
