@@ -14,6 +14,7 @@
 #include "core/tasks.h"
 #include "driver/motor.h"
 #include "driver/osd/max7456.h"
+#include "driver/reset.h"
 #include "driver/serial.h"
 #include "driver/serial_4way.h"
 #include "driver/serial_esc.h"
@@ -320,16 +321,24 @@ SLOW_FLASH static void set_quic(quic_t *quic, cbor_value_t *dec) {
     break;
   }
   case QUIC_VAL_TARGET: {
-    memset(&target, 0, sizeof(target_t));
-    res = cbor_decode_target_t(dec, &target);
-    check_cbor_error(QUIC_CMD_SET);
-
-    flash_save();
-
-    res = cbor_encode_target_t(&enc, &target);
+    // Drivers, DMA ISRs and workers keep reading the target they were
+    // initialized from, so persist the new one from a copy and boot into it.
+    target_t *pending = (target_t *)calloc(1, sizeof(target_t));
+    if (pending == NULL) {
+      quic_errorf(QUIC_CMD_SET, "TARGET ALLOC FAILED");
+      break;
+    }
+    res = cbor_decode_target_t(dec, pending);
+    if (res >= CBOR_OK)
+      res = cbor_encode_target_t(&enc, pending);
+    if (res >= CBOR_OK)
+      flash_save(pending);
+    free(pending);
     check_cbor_error(QUIC_CMD_SET);
 
     quic_send(quic, QUIC_CMD_SET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    time_delay_ms(100);
+    system_reset();
     break;
   }
   default:

@@ -21,7 +21,7 @@ extern flash_storage_t flash_storage;
 #define PROFILE_STORAGE_OFFSET (FLASH_STORAGE_OFFSET + FLASH_STORAGE_SIZE)
 #define PROFILE_STORAGE_SIZE FLASH_ALIGN(4096 + 128 + 512)
 
-void flash_save();
+void flash_save(const target_t *saved_target = &target);
 void flash_load();
 
 // Applies target.defaults serial/receiver/vtx initial assignments on top of

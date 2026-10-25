@@ -24,7 +24,7 @@ static bool flash_compare_magic(uint32_t addr, uint32_t magic) {
   return ((uint32_t)fmc_read(addr)) == magic;
 }
 
-void flash_save() {
+void flash_save(const target_t *saved_target) {
   rx_stop();
 
   if (sizeof(profile_t) > PROFILE_STORAGE_SIZE - FMC_MAGIC_SIZE) {
@@ -48,7 +48,7 @@ void flash_save() {
     cbor_value_t enc;
     cbor_encoder_init(&enc, buffer + FMC_MAGIC_SIZE, TARGET_STORAGE_SIZE - FMC_MAGIC_SIZE);
 
-    cbor_result_t res = cbor_encode_target_t(&enc, &target);
+    cbor_result_t res = cbor_encode_target_t(&enc, saved_target);
     if (res < CBOR_OK) {
       fmc_lock();
       __enable_irq();
