@@ -402,12 +402,10 @@ void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool s
   if (config.direction & SERIAL_DIR_RX) {
     const bool dma_rx = (dma & SERIAL_DMA_RX) != 0;
     usart_interrupt_enable(USART.channel, USART_RDBF_INT, dma_rx ? FALSE : TRUE);
-    if (dma_rx) {
-      // Circular DMA has no RX interrupt of its own; the IDLE line interrupt
-      // signals a finished burst so the IO worker can wake on data.
-      usart_flag_clear(USART.channel, USART_IDLEF_FLAG);
-      usart_interrupt_enable(USART.channel, USART_IDLE_INT, TRUE);
-    }
+    // RX bytes are stored without waking anyone; the IDLE line interrupt
+    // signals a finished burst so the consumer wakes once per frame.
+    usart_flag_clear(USART.channel, USART_IDLEF_FLAG);
+    usart_interrupt_enable(USART.channel, USART_IDLE_INT, TRUE);
   }
 
   serial_enable_isr(serial->config.port);
@@ -489,14 +487,16 @@ static void handle_serial_isr(serial_port_t *serial) {
     usart_flag_clear(port->channel, USART_BFF_FLAG);
   serial->rx_error_count = serial->rx_error_count + overrun_error + parity_error + framing_error + noise_error + break_error;
 
+  // Sample IDLE before reading data: the data read clears it.
+  const bool rx_idle = usart_interrupt_flag_get(port->channel, USART_IDLEF_FLAG);
+
   if (usart_interrupt_flag_get(port->channel, USART_RDBF_FLAG)) {
     const volatile uint8_t data = usart_data_receive(port->channel);
     ring_buffer_write(serial->rx_buffer, data);
-    serial_rx_notify_from_isr(serial);
   }
 
-  // DMA-fed ports take one interrupt per burst instead of one per byte.
-  if (usart_interrupt_flag_get(port->channel, USART_IDLEF_FLAG)) {
+  // Ports take one notification per burst instead of one per byte.
+  if (rx_idle) {
     usart_flag_clear(port->channel, USART_IDLEF_FLAG);
     serial_rx_notify_from_isr(serial);
   }
