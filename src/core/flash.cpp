@@ -160,6 +160,7 @@ void flash_load() {
     // Flight trusts the count and coordinates; never fly a damaged block.
     if (!mission_valid(&mission))
       mission = {};
+    mission_changed();
   }
 
 #ifdef EXPRESS_LRS_UID

@@ -737,8 +737,10 @@ SLOW_FLASH static void process_mission(quic_t *quic, cbor_value_t *dec) {
     }
     res = cbor_decode_mission_t(dec, uploaded);
     const bool valid = res >= CBOR_OK && mission_valid(uploaded);
-    if (valid)
+    if (valid) {
       mission = *uploaded;
+      mission_changed();
+    }
     free(uploaded);
     check_cbor_error(QUIC_CMD_MISSION);
     if (!valid) {
@@ -750,6 +752,7 @@ SLOW_FLASH static void process_mission(quic_t *quic, cbor_value_t *dec) {
   }
   case QUIC_MISSION_CLEAR:
     mission = {};
+    mission_changed();
     flash_save();
     break;
   default:

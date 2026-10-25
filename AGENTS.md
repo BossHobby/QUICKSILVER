@@ -8,7 +8,6 @@ QUICKSILVER is flight-controller firmware for STM32 F4/F7/G4/H7 and AT32 F435, w
 - Keep changes focused. Moving USB into a thread does not authorize changing serial reads, simulator polling, protocol parsing or fault handling. Address adjacent issues separately unless they block the requested change.
 - Follow existing subsystem structure before inventing abstractions. Avoid trivial wrappers, redundant state, speculative counters and APIs with empty implementations added just to hide a conditional.
 - Comments should explain actual ownership, timing and invariants. Do not justify code with a scenario contradicted by startup or arming rules.
-- Use `rg` for searches and `apply_patch` for edits, not Python or shell replacement scripts merely to modify source text.
 
 ## Style and organization
 

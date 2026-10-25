@@ -729,6 +729,7 @@ const profile_t default_profile = {
     .navigation = {
         .rth_altitude = 10.0f,   // 10m above current position
         .rth_on_failsafe = true, // Enable RTH on failsafe
+        .mission_on_failsafe = true,
         .rth_cruise_speed = 30.0f / 3.6f, // 30 km/h
         .rth_throttle_min = 0.1f,
         .rth_throttle_hover = 0.5f,

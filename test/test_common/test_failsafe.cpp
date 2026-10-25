@@ -10,6 +10,7 @@
 #include "io/msp.h"
 #include "io/quic.h"
 #include "io/quic_crsf.h"
+#include "io/quic_rt.h"
 #include "rx/crsf.h"
 #include "rx/rx.h"
 #include "rx/rx_serial.h"
@@ -393,15 +394,15 @@ void test_failsafe_rth_keeps_outputs_allowed_past_stage2_time(void) {
   TEST_ASSERT_FALSE(flags.failsafe_outputs_blocked);
 }
 
-void test_failsafe_mission_rides_out_a_brief_loss(void) {
+static void failsafe_navigation_rides_out_a_brief_loss(bool *active) {
   failsafe_reset(1000000);
   profile.navigation.rth_on_failsafe = true;
   // Clear failsafe RTH ownership left by earlier tests.
   control_failsafe_update();
   nav_test_set_rth_active(true);
-  state.mission_active = true;
+  *active = true;
 
-  // Within the hold-last window the mission keeps flying, as manual flight would.
+  // Within the hold-last window navigation keeps flying, as manual flight would.
   flags.failsafe_signal_lost = 1;
   time_test_set_us(1000000 + FAILSAFE_DETECT_TIME_US + 1000);
   control_failsafe_update();
@@ -423,7 +424,15 @@ void test_failsafe_mission_rides_out_a_brief_loss(void) {
   TEST_ASSERT_TRUE(state.rth_failsafe_active);
   TEST_ASSERT_TRUE(flags.failsafe);
   TEST_ASSERT_FALSE(flags.failsafe_outputs_blocked);
-  state.mission_active = false;
+  *active = false;
+}
+
+void test_failsafe_mission_rides_out_a_brief_loss(void) {
+  failsafe_navigation_rides_out_a_brief_loss(&state.mission_active);
+}
+
+void test_failsafe_guided_rides_out_a_brief_loss(void) {
+  failsafe_navigation_rides_out_a_brief_loss(&state.guided_active);
 }
 #endif
 
@@ -1324,18 +1333,17 @@ static void crsf_quic_test_write(uint8_t control, uint8_t seq, uint8_t ack, cons
   crsf_test_write_frame(CRSF_FRAMETYPE_QUIC, payload, size + 5);
 }
 
-// Runs one IO telemetry slot and returns the configurator frame it queued.
+// Runs one IO telemetry slot and returns the configurator frame it queued;
+// standard telemetry in an idle slot is skipped.
 static uint8_t crsf_quic_test_poll(uint8_t *frame) {
   time_test_advance_us(2000);
   ring_buffer_clear(serial_rx.tx_buffer);
   rx_serial_check();
   while (ring_buffer_available(serial_rx.tx_buffer) >= 2) {
     const uint8_t size = crsf_test_read_tx_frame(frame);
-    if (frame[2] == CRSF_FRAMETYPE_QUIC) {
-      crsf_test_assert_frame_crc(frame, size);
+    crsf_test_assert_frame_crc(frame, size);
+    if (frame[2] == CRSF_FRAMETYPE_QUIC)
       return size;
-    }
-    TEST_ASSERT_FALSE(quic_crsf_active());
   }
   return 0;
 }
@@ -1381,7 +1389,7 @@ void test_crsf_quic_session_serves_configurator_requests(void) {
   TEST_ASSERT_EQUAL_UINT8(QUIC_CRSF_CONTROL_RESET, frame[5]);
   TEST_ASSERT_EQUAL_UINT8(0x5A, frame[6]);
 
-  // An active session leaves idle slots empty instead of sending telemetry.
+  // An idle slot of the session carries no configurator frame.
   TEST_ASSERT_EQUAL_UINT8(0, crsf_quic_test_poll(frame));
 
   // A retried RESET for the open session is answered without reopening it.
@@ -1413,17 +1421,130 @@ void test_crsf_quic_session_serves_configurator_requests(void) {
   TEST_ASSERT_GREATER_THAN_UINT32(QUIC_HEADER_LEN, size);
   TEST_ASSERT_EQUAL_UINT8(QUIC_CMD_MOTOR | (QUIC_FLAG_ERROR << 5), response[1]);
 
-  // Armed vehicles ignore the configurator, and the session then expires.
-  flags.arm_state = 1;
-  time_test_advance_us(3000000);
+  // An open session does not hold off arming, and arming ends it at once.
+  TEST_ASSERT_TRUE(quic_crsf_active());
+  failsafe_reset(time_micros());
+  failsafe_clear_arm_switch_latch();
+  state.aux_active = (1U << AUX_ARMING) | (1U << AUX_PREARM);
+  control_update_arming();
+  TEST_ASSERT_TRUE(flags.arm_state);
+  TEST_ASSERT_FALSE(quic_crsf_active());
+
+  // Armed vehicles ignore the configurator and send regular telemetry.
   crsf_quic_test_write(0, 2, next_seq, NULL, 0);
   TEST_ASSERT_EQUAL_UINT8(0, crsf_quic_test_poll(frame));
-  TEST_ASSERT_FALSE(quic_crsf_active());
   time_test_advance_us(2000);
   rx_serial_check();
   const uint8_t frame_size = crsf_test_read_tx_frame(frame);
   crsf_test_assert_frame_crc(frame, frame_size);
   TEST_ASSERT_NOT_EQUAL(CRSF_FRAMETYPE_QUIC, frame[2]);
+
+  // After disarming, the old session stays closed until a new RESET.
+  flags.arm_state = 0;
+  state.aux_active = 0;
+  crsf_quic_test_write(0, 2, next_seq, get_info, sizeof(get_info));
+  TEST_ASSERT_EQUAL_UINT8(0, crsf_quic_test_poll(frame));
+  quic_crsf_update();
+  TEST_ASSERT_EQUAL_UINT8(0, crsf_quic_test_poll(frame));
+
+  crsf_quic_test_write(QUIC_CRSF_CONTROL_RESET, 0x5B, 0, NULL, 0);
+  TEST_ASSERT_EQUAL_UINT8(0, crsf_quic_test_poll(frame));
+  quic_crsf_update();
+  TEST_ASSERT_EQUAL_UINT8(9, crsf_quic_test_poll(frame));
+  TEST_ASSERT_EQUAL_UINT8(QUIC_CRSF_CONTROL_RESET, frame[5]);
+  TEST_ASSERT_EQUAL_UINT8(0x5B, frame[6]);
+}
+
+void test_crsf_quic_session_paces_standard_telemetry(void) {
+  crsf_test_reset(4100000000U);
+  flags.arm_state = 0;
+
+  uint8_t frame[CRSF_FRAME_SIZE_MAX] = {0};
+  crsf_quic_test_write(QUIC_CRSF_CONTROL_RESET, 0x5C, 0, NULL, 0);
+  TEST_ASSERT_EQUAL_UINT8(0, crsf_quic_test_poll(frame));
+  quic_crsf_update();
+  TEST_ASSERT_EQUAL_UINT8(9, crsf_quic_test_poll(frame));
+  TEST_ASSERT_TRUE(quic_crsf_active());
+
+  // Idle session slots carry standard telemetry at most every 200 ms.
+  uint32_t count = 0;
+  uint32_t last_us = 0;
+  for (uint32_t slot = 0; slot < 250; slot++) {
+    time_test_advance_us(2000);
+    ring_buffer_clear(serial_rx.tx_buffer);
+    serial_rx.tx_done = true;
+    rx_serial_check();
+    while (ring_buffer_available(serial_rx.tx_buffer) >= 2) {
+      const uint8_t size = crsf_test_read_tx_frame(frame);
+      crsf_test_assert_frame_crc(frame, size);
+      if (frame[2] == CRSF_FRAMETYPE_QUIC || frame[2] == CRSF_FRAMETYPE_QUIC_RT)
+        continue;
+      if (count)
+        TEST_ASSERT_GREATER_OR_EQUAL_UINT32(200000, time_micros() - last_us);
+      last_us = time_micros();
+      count++;
+    }
+  }
+  TEST_ASSERT_TRUE(quic_crsf_active() || count);
+  TEST_ASSERT_GREATER_OR_EQUAL_UINT32(2, count);
+}
+
+// Polls telemetry slots until a QUIC_RT link frame is queued; returns its size or 0.
+static uint8_t crsf_quic_rt_test_poll(uint8_t *frame, uint32_t slots) {
+  for (uint32_t i = 0; i < slots; i++) {
+    time_test_advance_us(2000);
+    ring_buffer_clear(serial_rx.tx_buffer);
+    serial_rx.tx_done = true;
+    rx_serial_check();
+    while (ring_buffer_available(serial_rx.tx_buffer) >= 2) {
+      const uint8_t size = crsf_test_read_tx_frame(frame);
+      if (frame[2] == CRSF_FRAMETYPE_QUIC_RT) {
+        crsf_test_assert_frame_crc(frame, size);
+        return size;
+      }
+    }
+  }
+  return 0;
+}
+
+void test_crsf_quic_rt_serves_the_ground_station_while_armed(void) {
+  // Far from the other tests' clocks, so the ground station is unheard for them.
+  crsf_test_reset(4200000000U);
+  flags.arm_state = 1;
+  uint8_t frame[CRSF_FRAME_SIZE_MAX] = {0};
+
+  // A frame addressed to another device is not for the flight controller.
+  const uint8_t other[] = {CRSF_ADDRESS_USB, CRSF_ADDRESS_FLIGHT_CONTROLLER, QUIC_RT_VERSION, QUIC_RT_PING};
+  crsf_test_write_frame(CRSF_FRAMETYPE_QUIC_RT, other, sizeof(other));
+  TEST_ASSERT_EQUAL_UINT8(0, crsf_quic_rt_test_poll(frame, 150));
+
+  const uint8_t ping[] = {CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_USB, QUIC_RT_VERSION, QUIC_RT_PING};
+  crsf_test_write_frame(CRSF_FRAMETYPE_QUIC_RT, ping, sizeof(ping));
+  const uint8_t size = crsf_quic_rt_test_poll(frame, 150);
+  // sync, length, type, destination, origin, payload, crc
+  TEST_ASSERT_EQUAL_UINT8(5 + QUIC_RT_STATUS_SIZE + 1, size);
+  TEST_ASSERT_EQUAL_UINT8(CRSF_ADDRESS_USB, frame[3]);
+  TEST_ASSERT_EQUAL_UINT8(CRSF_ADDRESS_FLIGHT_CONTROLLER, frame[4]);
+  TEST_ASSERT_EQUAL_UINT8(QUIC_RT_VERSION, frame[5]);
+  TEST_ASSERT_EQUAL_UINT8(QUIC_RT_STATUS, frame[6]);
+  quic_rt_status_t status;
+  memcpy(&status, frame + 7, sizeof(status));
+  TEST_ASSERT_TRUE(status.flags & QUIC_RT_FLAG_ARMED);
+  // The QUIC_RT link is not a ground session.
+  TEST_ASSERT_FALSE(quic_crsf_active());
+
+  const uint8_t hold[] = {CRSF_ADDRESS_FLIGHT_CONTROLLER, CRSF_ADDRESS_USB, QUIC_RT_VERSION, QUIC_RT_COMMAND, NAV_COMMAND_HOLD, 9};
+  crsf_test_write_frame(CRSF_FRAMETYPE_QUIC_RT, hold, sizeof(hold));
+  rx_serial_check();
+  nav_command_t cmd;
+  TEST_ASSERT_TRUE(quic_rt_take(&cmd));
+  TEST_ASSERT_EQUAL_UINT8(NAV_COMMAND_HOLD, cmd.type);
+  TEST_ASSERT_EQUAL_UINT8(9, cmd.id);
+  TEST_ASSERT_FALSE(quic_rt_take(&cmd));
+
+  // Status stops once the ground station falls silent.
+  time_test_advance_us(3000000);
+  TEST_ASSERT_EQUAL_UINT8(0, crsf_quic_rt_test_poll(frame, 150));
   flags.arm_state = 0;
 }
 

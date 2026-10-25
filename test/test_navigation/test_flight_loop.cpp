@@ -199,6 +199,7 @@ struct flight_t {
   unsigned tick = 0, next_gps = 0, gps_count = 0;
   bool arm = false, rth = false, mission_switch = false, rc_available = true, gps_available = true, baro_available = true;
   float roll = 0, pitch = 0, yaw = 0, throttle = 0;
+  double gps_velocity_bias[2] = {}; // north, east m/s; reported velocity disagrees with position
   double return_height = 0, takeover_height = 0;
   char context[512];
 
@@ -274,7 +275,10 @@ struct flight_t {
     time_test_advance_us(1000);
     history[tick % HISTORY_SIZE] = {truth.position[0], truth.position[1], -truth.position[2], truth.velocity[0], truth.velocity[1], truth.velocity[2]};
     if (tick >= next_gps) {
-      if (gps_available) gps_sample(history[(tick + HISTORY_SIZE - scenario.gps_delay_ms) % HISTORY_SIZE], gps_count);
+      fix_t fix = history[(tick + HISTORY_SIZE - scenario.gps_delay_ms) % HISTORY_SIZE];
+      fix.vn += gps_velocity_bias[0];
+      fix.ve += gps_velocity_bias[1];
+      if (gps_available) gps_sample(fix, gps_count);
       next_gps += scenario.gps_jitter ? (gps_count % 2 ? 80 : 120) : 100;
       gps_count++;
     }
@@ -437,6 +441,108 @@ void test_navigation_motor_loop_delayed_gps_and_wind() {
   flight.finish_return();
 }
 
+void test_navigation_motor_loop_brakes_in_wind() {
+  // Headwind on the way home: cruise drag needs more than half the tilt limit.
+  flight_t flight({"brake/wind", 100, true, 5.0, 2.0});
+  profile.rate.level_max_angle = 30;
+  flight.depart();
+  flight.start_return();
+  const double start[2] = {flight.truth.position[0], flight.truth.position[1]};
+  // Braking from the departure speed at the 2 m/s^2 navigation limit; leveling
+  // instead drifts downwind until navigation fails.
+  const double takeover_speed = hypot(flight.truth.velocity[0], flight.truth.velocity[1]);
+  const double stopping_distance = takeover_speed * takeover_speed / (2 * 2.0);
+  double drift = 0, speed_error = 0;
+  unsigned cruise_samples = 0;
+  for (unsigned i = 0; i < 60000 && state.rth_state != RTH_STATE_HOVER_HOME; i++) {
+    const double speed = hypot(flight.truth.velocity[0], flight.truth.velocity[1]);
+    flight.step();
+    if (state.rth_state == RTH_STATE_CLIMB || state.rth_state == RTH_STATE_TURN)
+      drift = fmax(drift, hypot(flight.truth.position[0] - start[0], flight.truth.position[1] - start[1]));
+    const double distance = hypot(flight.truth.position[0], flight.truth.position[1]);
+    if (state.rth_state == RTH_STATE_NAVIGATE && distance > 30 && distance < 50) {
+      speed_error += double(profile.navigation.rth_cruise_speed) - speed;
+      cruise_samples++;
+    }
+  }
+  flight.check(cruise_samples > 1000, "cruise segment flown");
+  speed_error /= cruise_samples;
+  printf("%s: climb/turn drift=%.2fm stopping=%.2fm cruise speed error=%.2fm/s\n", flight.scenario.name,
+      drift, stopping_distance, speed_error);
+  flight.check(drift < stopping_distance + 5, "climb and turn hold position in wind");
+  flight.check(fabs(speed_error) < 0.25, "cruise trim reaches the commanded speed");
+  flight.finish_return();
+}
+
+void test_navigation_motor_loop_guided_hold_stops_smoothly() {
+  flight_t flight({"guided hold", 100, true, 1.0, -1.0});
+  flight.depart();
+  // The mission switch grants guided flight; without a mission it flies nothing yet.
+  flight.mission_switch = true;
+  flight.run(100);
+  flight.check(state.guided_ready && !state.rth_active, "guided flight granted");
+  nav_command_t command = {.type = NAV_COMMAND_GOTO, .id = 1};
+  // Home is the 0/0 origin, which reads as an unset waypoint: aim 1 m north of it.
+  command.waypoint = {.coord = {.lon = 0, .lat = 90}, .altitude = state.altitude, .speed = 6};
+  flight.check(nav_command_apply(&command) == NAV_RESULT_OK, "GOTO accepted");
+  for (unsigned i = 0; i < 30000 && !(state.rth_state == RTH_STATE_NAVIGATE && hypot(flight.truth.velocity[0], flight.truth.velocity[1]) > 5.5); i++)
+    flight.step();
+  flight.check(state.rth_state == RTH_STATE_NAVIGATE, "cruising toward the GOTO target");
+
+  const double stop_from[2] = {flight.truth.position[0], flight.truth.position[1]};
+  const double speed = hypot(flight.truth.velocity[0], flight.truth.velocity[1]);
+  command = {.type = NAV_COMMAND_HOLD, .id = 2};
+  flight.check(nav_command_apply(&command) == NAV_RESULT_OK, "HOLD accepted");
+  double travel = 0;
+  for (unsigned i = 0; i < 20000; i++) {
+    flight.step();
+    flight.check(state.guided_active && state.rth_state == RTH_STATE_HOVER_HOME, "HOLD hovers in place");
+    flight.check(flight.truth.rotation[2][2] > cos(25 * M_PI / 180), "HOLD brakes without a hard reversal");
+    travel = fmax(travel, hypot(flight.truth.position[0] - stop_from[0], flight.truth.position[1] - stop_from[1]));
+  }
+  const double rest = hypot(flight.truth.position[0] - stop_from[0], flight.truth.position[1] - stop_from[1]);
+  printf("%s: speed=%.2fm/s travel=%.2fm rest=%.2fm\n", flight.scenario.name, speed, travel, rest);
+  // It holds where the brake ends instead of flying back to where HOLD began.
+  // The 2 m/s^2 brake profile plus the velocity loop's response time.
+  flight.check(travel < speed * speed / (2 * 2.0) + speed * 1.5, "HOLD stopping distance");
+  flight.check(travel - rest < 3, "HOLD keeps the point where it stopped");
+  flight.check(hypot(flight.truth.velocity[0], flight.truth.velocity[1]) < 0.5, "HOLD settles");
+}
+
+void test_navigation_motor_loop_climb_holds_position() {
+  flight_t flight({"climb hold", 100, true, 1.5, -1.0});
+  flight.depart();
+  // GPS velocity reads 0.6 m/s east of the position track; a zero-velocity
+  // loop alone would drift 0.6 m/s west for the whole climb.
+  flight.gps_velocity_bias[1] = 0.6;
+  const double origin[2] = {flight.truth.position[0], flight.truth.position[1]};
+  const double climb_to = -flight.truth.position[2] + 25;
+  mission = {.count = 1, .end_action = MISSION_END_HOLD};
+  mission.waypoints[0] = {
+      .coord = {.lon = int32_t(lround(origin[1] * 1e7 / 111194.93)),
+                .lat = int32_t(lround((origin[0] + 60) * 1e7 / 111194.93))},
+      .altitude = float(climb_to),
+  };
+  flight.mission_switch = true;
+  flight.run(100);
+  flight.check(state.mission_active && state.rth_state == RTH_STATE_CLIMB, "mission climbs in place");
+
+  // Measure from where the brake has stopped the vehicle.
+  for (unsigned i = 0; i < 10000 && hypot(flight.truth.velocity[0], flight.truth.velocity[1]) > 0.3; i++)
+    flight.step();
+  const double rest[2] = {flight.truth.position[0], flight.truth.position[1]};
+  double wander = 0;
+  unsigned climb_ms = 0;
+  while (state.rth_state == RTH_STATE_CLIMB || state.rth_state == RTH_STATE_TURN) {
+    flight.step();
+    flight.check(++climb_ms < 30000, "climb and turn finish");
+    wander = fmax(wander, hypot(flight.truth.position[0] - rest[0], flight.truth.position[1] - rest[1]));
+  }
+  printf("%s: climb and turn %.1fs, wander=%.2fm\n", flight.scenario.name, climb_ms * 1e-3, wander);
+  flight.check(state.rth_state == RTH_STATE_NAVIGATE, "navigates after the climb");
+  flight.check(wander < 3, "climb and turn hold the point where the brake stopped");
+}
+
 void test_navigation_motor_loop_wrong_hover() {
   const float settings[] = {0.2f, 0.75f};
   for (float hover : settings) {
@@ -549,6 +655,8 @@ void test_navigation_motor_loop_mission() {
 
   // Each waypoint is reached before the next becomes active.
   double closest[3] = {1e9, 1e9, 1e9};
+  // Altitude halfway along the legs between waypoints, while still descending or climbing.
+  double halfway[3] = {NAN, NAN, NAN};
   for (unsigned i = 0; i < 90000; i++) {
     flight.step();
     flight.check(state.mission_active && flags.arm_state, "mission remains armed and active");
@@ -557,6 +665,7 @@ void test_navigation_motor_loop_mission() {
     const double north = flight.truth.position[0] - origin[0] - route[index][0];
     const double east = flight.truth.position[1] - origin[1] - route[index][1];
     closest[index] = fmin(closest[index], hypot(north, east));
+    if (index > 0 && isnan(halfway[index]) && hypot(north, east) < 15) halfway[index] = -flight.truth.position[2];
     if (index > 0) flight.check(closest[index - 1] < 4, "previous waypoint reached before advancing");
     flight.check(-flight.truth.position[2] > fmin(takeover_height, 10) - 2 && -flight.truth.position[2] < 16, "mission altitude bounded");
     if (i >= 80000) {
@@ -565,8 +674,10 @@ void test_navigation_motor_loop_mission() {
       flight.check(fabs(-flight.truth.position[2] - route[2][2]) < 1, "sustained last waypoint altitude error below 1m");
     }
   }
-  printf("%s: last waypoint error=%.2fm altitude=%.2fm closest=(%.2f,%.2f,%.2f)\n", flight.scenario.name,
-      closest[2], -flight.truth.position[2], closest[0], closest[1], closest[2]);
+  printf("%s: last waypoint error=%.2fm altitude=%.2fm closest=(%.2f,%.2f,%.2f) halfway=(%.2f,%.2f)\n", flight.scenario.name,
+      closest[2], -flight.truth.position[2], closest[0], closest[1], closest[2], halfway[1], halfway[2]);
+  for (unsigned i = 1; i < 3; i++)
+    flight.check(fabs(halfway[i] - 0.5 * (route[i - 1][2] + route[i][2])) < 1, "altitude changes over the whole leg");
 
   // Switching the mission off hands control back to the pilot.
   flight.mission_switch = false;

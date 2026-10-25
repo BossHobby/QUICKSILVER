@@ -679,6 +679,7 @@ typedef struct {
   // RTH parameters
   float rth_altitude;        // Altitude offset from current position
   bool rth_on_failsafe;      // Activate RTH on failsafe
+  bool mission_on_failsafe;  // A mission flying when the link is lost continues; fills padding, so stored profiles keep their layout
   float rth_cruise_speed;    // m/s target horizontal return speed
   float rth_throttle_min;
   float rth_throttle_hover;
@@ -695,6 +696,7 @@ typedef struct {
   START_STRUCT(profile_navigation_t)  \
   MEMBER(rth_altitude, float)         \
   MEMBER(rth_on_failsafe, bool)       \
+  MEMBER(mission_on_failsafe, bool)   \
   MEMBER(rth_cruise_speed, float)     \
   MEMBER(rth_throttle_min, float)     \
   MEMBER(rth_throttle_hover, float)   \
