@@ -58,9 +58,11 @@ extern "C" __attribute__((__used__)) void system_check_for_bootloader() {
 
     __disable_irq();
 
+    // Reset_Handler calls this before SystemInit, so clocks are still at reset
+    // state. HAL_RCC_DeInit would restart SysTick, whose interrupt the ROM
+    // bootloader then takes through this firmware's vector table.
     SysTick->CTRL = 0;
 
-    HAL_RCC_DeInit();
 #ifdef STM32G4
     __HAL_SYSCFG_REMAPMEMORY_SYSTEMFLASH();
 #endif
