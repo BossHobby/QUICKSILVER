@@ -61,6 +61,8 @@ STATE_MEMBERS
 
 static uint32_t failsafe_phase_start_us = 0;
 static bool failsafe_rearm_allows_prearm_hold = false;
+// Set by Flight navigation, consumed by the next arming update in Flight.
+static bool disarm_requested = false;
 
 // Stick deflection the pilot must give to take control back from navigation
 // that flew through a link loss.
@@ -198,7 +200,8 @@ static bool failsafe_sticks_active(void) {
 }
 
 // A mission flying when the link was lost continues, as ArduPilot does in
-// AUTO, and keeps flying at its end. Like failsafe RTH it first rides out the
+// AUTO, and keeps flying at its end. A landing always finishes, whatever
+// mission_on_failsafe says. Like failsafe RTH it first rides out the
 // hold-last window and keeps the switches locked until the link has been
 // stable for the recovery time and the pilot moves a stick; the sticks only
 // unlock the switches, they never steer. A mission that can no longer be
@@ -207,7 +210,12 @@ static void failsafe_update_mission(uint32_t now_us) {
   if (!flags.failsafe_signal_lost)
     failsafe_mission.handed_over = false;
   if (!state.mission_failsafe_active) {
-    if (profile.navigation.mission_on_failsafe && state.mission_engaged && flags.arm_state && flags.rx_ready == 1 &&
+#ifdef VEHICLE_MULTI
+    const bool continues = profile.navigation.mission_on_failsafe || state.rth_state == RTH_STATE_LAND;
+#else
+    const bool continues = profile.navigation.mission_on_failsafe;
+#endif
+    if (continues && state.mission_engaged && flags.arm_state && flags.rx_ready == 1 &&
         flags.failsafe_signal_lost && !flags.failsafe && now_us - state.last_frame_time_us >= FAILSAFE_HOLD_TIME_US) {
       state.mission_failsafe_active = true;
       failsafe_mission = {};
@@ -451,11 +459,22 @@ void control_failsafe_update() {
   }
 }
 
+void control_request_disarm() {
+  disarm_requested = true;
+}
+
 void control_update_arming() {
   static bool checked_prearm = false;
   static bool rx_ready_seen = false;
   static uint32_t arming_disabled_latch = ARMING_DISABLED_ARM_SWITCH;
   static bool was_failsafe_active = false;
+
+  if (disarm_requested) {
+    disarm_requested = false;
+    // checked_prearm stays set, so the raised arm switch cannot arm again
+    // until it has been lowered.
+    flags.arm_state = 0;
+  }
 
   flags.arm_request = rx_aux_on(AUX_ARMING);
   flags.arming_disabled_flags = ARMING_DISABLED_NONE;

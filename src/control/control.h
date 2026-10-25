@@ -53,6 +53,9 @@ typedef enum {
   RTH_STATE_HEADING_FAILED,
   RTH_STATE_ABORTED,
   RTH_STATE_NAV_FAILED,
+  RTH_STATE_TAKEOFF_READY, // mission TAKEOFF armed on the ground, motors stopped until the throttle stick is raised
+  RTH_STATE_TAKEOFF,       // spinning up, lifting off and climbing in place
+  RTH_STATE_LAND,          // descending on a mission LAND waypoint until touchdown disarms
 } rth_state_t;
 
 constexpr float RTH_MIN_HEADING_CONFIDENCE = 0.2f;
@@ -389,6 +392,10 @@ extern motor_test_t motor_test;
 cbor_result_t cbor_encode_control_state_t(cbor_value_t *enc, const control_state_t *s);
 
 void control_update_arming();
+// Flight: disarm at the next arming update, as if the arm switch had been
+// lowered; arming again needs the switch cycled. For a landing or an aborted
+// takeoff, so the motors stop in the same pass that disarms.
+void control_request_disarm();
 void control_failsafe_disarm();
 void control_failsafe_update();
 bool control_failsafe_active();

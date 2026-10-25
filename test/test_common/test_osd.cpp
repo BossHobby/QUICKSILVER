@@ -315,6 +315,23 @@ void test_osd_mission_status_names_the_waypoint() {
   assert_status_label("WP 11/12 FLY", true);
 
 #ifdef VEHICLE_MULTI
+  // Takeoff and landing name their phase and what the craft does.
+  state.mission_index = 11;
+  mission.waypoints[11].type = MISSION_WAYPOINT_LAND;
+  osd_status_update(&el);
+  assert_status_label("WP 12/12 LAND", true);
+  state.rth_state = RTH_STATE_LAND;
+  osd_status_update(&el);
+  assert_status_label("LAND: DESCENDING", true);
+  state.mission_index = 0;
+  state.rth_state = RTH_STATE_TAKEOFF;
+  osd_status_update(&el);
+  assert_status_label("TAKEOFF: CLIMBING", true);
+  // The heading run after it reads as in any other navigation.
+  state.rth_state = RTH_STATE_ACQUIRE_HEADING;
+  osd_status_update(&el);
+  assert_status_label("ACQUIRING HEADING", true);
+
   // Failsafe RTH readiness outranks the hint to toggle the mission switch.
   const auto saved_navigation = profile.navigation;
   const auto saved_gps = profile.serial.gps;
@@ -324,6 +341,29 @@ void test_osd_mission_status_names_the_waypoint() {
   state.aux_active = 1U << AUX_MISSION;
   osd_status_update(&el);
   assert_status_label("NO BARO", true);
+
+  // A ground takeoff names what keeps it from starting, a missing fix first.
+  extern void nav_test_set_gps_sane(bool sane);
+  extern void nav_test_set_home_valid(bool valid);
+  profile.navigation.rth_on_failsafe = false;
+  mission.waypoints[0] = {.coord = {.lon = 1, .lat = 1}, .altitude = 10, .type = MISSION_WAYPOINT_TAKEOFF};
+  nav_test_set_gps_sane(false);
+  osd_status_update(&el);
+  assert_status_label("TAKEOFF: NO GPS FIX", true);
+  nav_test_set_gps_sane(true);
+  state.baro_valid = true;
+  state.baro_last_update_ms = time_millis();
+  state.gps_coord = {.lon = 1, .lat = 1};
+  osd_status_update(&el);
+  assert_status_label("TAKEOFF: NO HOME", true); // armed since the start of the test
+  nav_test_set_home_valid(true);
+  osd_status_update(&el);
+  assert_status_label("TAKEOFF: TOGGLE SWITCH", true);
+  state.gps_coord = {.lon = 0, .lat = 2000};
+  osd_status_update(&el);
+  assert_status_label("TAKEOFF: MOVE TO WP 1", true);
+  nav_test_set_gps_sane(false);
+  nav_test_set_home_valid(false);
   profile.navigation = saved_navigation;
   profile.serial.gps = saved_gps;
 #endif

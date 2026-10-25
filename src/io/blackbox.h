@@ -5,7 +5,9 @@
 
 // BLACKBOX version changelog (log format compatibility):
 // 0.3.2: cpu_load is a percentage 0-100 (was microseconds).
-//        add state field with flags, aux switches, failsafe phase, RTH, wing, mission and guided states.
+//        add state field with flags, aux switches, failsafe phase, RTH, wing, mission and guided states;
+//        multirotor RTH states include mission takeoff and landing. Navigation debug 9 carries
+//        the land detector checks while landing.
 //        add the UTC start datetime to each directory entry.
 // 0.3.1 (95765fe1): add GPS coordinate, home and altitude fields; grow debug to 16 entries.
 //        replace the four-motor field with per-output values (a1887d4f).

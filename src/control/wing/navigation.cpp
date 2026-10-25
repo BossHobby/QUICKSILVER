@@ -581,7 +581,7 @@ nav_command_result_t nav_command_apply(const nav_command_t *cmd) {
     return NAV_RESULT_OK;
   }
   case NAV_COMMAND_HOLD:
-    nav_guided = {.coord = state.gps_coord, .altitude = state.altitude};
+    nav_guided = {.coord = state.gps_coord, .altitude = (int16_t)lroundf(state.altitude)};
     guided = {.active = true, .arrived = true, .recenter = true, .leg_origin = state.gps_coord};
     altitude.target_valid = false;
     return NAV_RESULT_OK;

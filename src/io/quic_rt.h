@@ -44,16 +44,17 @@ typedef enum {
   QUIC_RT_PING = 0x03,    // ground station -> flight controller: request STATUS, no body
 } quic_rt_type_t;
 
-// COMMAND arguments by nav_command_type_t; HOLD and RTH carry none.
+// COMMAND arguments by nav_command_type_t; HOLD and RTH carry none. Altitude
+// and speed use mission_waypoint_t units.
 typedef struct {
-  int32_t lat;         // degrees * 1e7
-  int32_t lon;         // degrees * 1e7
-  int32_t altitude_cm; // above launch
-  uint8_t speed_dms;   // 0.1 m/s horizontal; zero uses navigation.rth_cruise_speed
+  int32_t lat;      // degrees * 1e7
+  int32_t lon;      // degrees * 1e7
+  int16_t altitude; // meters above launch
+  uint8_t speed;    // 0.1 m/s horizontal; zero uses navigation.rth_cruise_speed
 } __attribute__((__packed__)) quic_rt_goto_t;
 
 typedef struct {
-  int32_t altitude_cm; // above launch
+  int16_t altitude; // meters above launch
 } __attribute__((__packed__)) quic_rt_set_alt_t;
 
 typedef struct {
@@ -63,10 +64,11 @@ typedef struct {
 // MISSION_ITEMS: <index> followed by 1 to NAV_COMMAND_ITEMS_MAX of these, for
 // the waypoints from index on.
 typedef struct {
-  int32_t lat;         // degrees * 1e7
-  int32_t lon;         // degrees * 1e7
-  int32_t altitude_cm; // above launch
-  uint16_t speed_cms;  // 0.01 m/s horizontal; zero uses navigation.rth_cruise_speed
+  int32_t lat;      // degrees * 1e7
+  int32_t lon;      // degrees * 1e7
+  int16_t altitude; // meters above launch
+  uint8_t speed;    // 0.1 m/s horizontal; zero uses navigation.rth_cruise_speed
+  uint8_t type;     // mission_waypoint_type_t
 } __attribute__((__packed__)) quic_rt_mission_item_t;
 
 typedef struct {

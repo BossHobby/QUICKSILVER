@@ -1421,7 +1421,7 @@ void test_navigation_delayed_gps_cruise_and_arrival() {
 static void mission_test_route(mission_end_action_t end_action) {
   mission = {.count = 2, .end_action = end_action};
   mission.waypoints[0] = {.coord = {.lon = 0, .lat = 2 * GPS_DEG_10M}, .altitude = 12, .speed = 0};
-  mission.waypoints[1] = {.coord = {.lon = 2 * GPS_DEG_10M, .lat = 2 * GPS_DEG_10M}, .altitude = 8, .speed = 3};
+  mission.waypoints[1] = {.coord = {.lon = 2 * GPS_DEG_10M, .lat = 2 * GPS_DEG_10M}, .altitude = 8, .speed = 30}; // 3 m/s
 }
 
 static void mission_test_airborne(float altitude) {
@@ -1754,6 +1754,29 @@ void test_navigation_mission_continues_through_link_loss(void) {
   TEST_ASSERT_FALSE(flags.failsafe);
   TEST_ASSERT_FALSE(state.rth_active || flags.controls_override);
   state.rx.roll = 0.0f;
+}
+
+// Without mission_on_failsafe a link loss ends the mission, but never a landing.
+void test_navigation_mission_landing_finishes_through_link_loss(void) {
+  mission_link_start();
+  profile.navigation.mission_on_failsafe = false;
+  mission.waypoints[1].type = MISSION_WAYPOINT_LAND;
+  mission.waypoints[1].altitude = 0;
+  state.gps_coord = mission.waypoints[0].coord;
+  mission_link_step();
+  state.gps_coord = mission.waypoints[1].coord;
+  for (int i = 0; i < 10 && state.rth_state != RTH_STATE_LAND; i++)
+    mission_link_step();
+  TEST_ASSERT_EQUAL(RTH_STATE_LAND, state.rth_state);
+
+  flags.failsafe_signal_lost = 1;
+  for (int i = 0; i < 150; i++)
+    mission_link_step();
+  TEST_ASSERT_TRUE(state.mission_failsafe_active);
+  TEST_ASSERT_TRUE(state.mission_active);
+  TEST_ASSERT_EQUAL(RTH_STATE_LAND, state.rth_state);
+  flags.failsafe_signal_lost = 0;
+  profile.navigation.mission_on_failsafe = true;
 }
 
 void test_navigation_mission_link_recovery_keeps_the_mission_switch(void) {
@@ -2273,6 +2296,10 @@ extern void test_navigation_motor_loop_wrong_hover();
 extern void test_navigation_motor_loop_sensor_outages();
 extern void test_navigation_motor_loop_rc_loss_and_handback();
 extern void test_navigation_motor_loop_mission();
+extern void test_navigation_motor_loop_pass_mission();
+extern void test_navigation_motor_loop_takeoff_and_land();
+extern void test_navigation_motor_loop_takeoff_stick_abort();
+extern void test_navigation_motor_loop_land_on_slope();
 
 int main() {
   UNITY_BEGIN();
@@ -2330,6 +2357,7 @@ int main() {
   RUN_TEST(test_navigation_mission_end_returns_home);
   RUN_TEST(test_navigation_mission_switches_and_link_loss);
   RUN_TEST(test_navigation_mission_continues_through_link_loss);
+  RUN_TEST(test_navigation_mission_landing_finishes_through_link_loss);
   RUN_TEST(test_navigation_mission_link_recovery_keeps_the_mission_switch);
   RUN_TEST(test_navigation_mission_link_loss_disarms_after_crash);
   RUN_TEST(test_navigation_mission_switch_ends_the_final_return);
@@ -2364,5 +2392,9 @@ int main() {
   RUN_TEST(test_navigation_motor_loop_sensor_outages);
   RUN_TEST(test_navigation_motor_loop_rc_loss_and_handback);
   RUN_TEST(test_navigation_motor_loop_mission);
+  RUN_TEST(test_navigation_motor_loop_pass_mission);
+  RUN_TEST(test_navigation_motor_loop_takeoff_and_land);
+  RUN_TEST(test_navigation_motor_loop_takeoff_stick_abort);
+  RUN_TEST(test_navigation_motor_loop_land_on_slope);
   return UNITY_END();
 }

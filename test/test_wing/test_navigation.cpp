@@ -791,8 +791,8 @@ static void mission_route(mission_end_action_t end_action) {
     mission.waypoints[i] = {
         .coord = {.lon = ORIGIN.lon + (int32_t)lrintf(route[i][1] / lon_scale * 1e7f),
                   .lat = ORIGIN.lat + (int32_t)lrintf(route[i][0] / METERS_PER_DEGREE_LAT * 1e7f)},
-        .altitude = 50.0f,
-        .speed = 0.0f,
+        .altitude = 50,
+        .speed = 0,
     };
   }
 }
@@ -1176,7 +1176,7 @@ static void send_goto(float north, float east, float altitude) {
   const quic_rt_goto_t msg = {
       .lat = ORIGIN.lat + (int32_t)lrintf(north / METERS_PER_DEGREE_LAT * 1e7f),
       .lon = ORIGIN.lon + (int32_t)lrintf(east / lon_scale * 1e7f),
-      .altitude_cm = (int32_t)(altitude * 100.0f),
+      .altitude = (int16_t)lroundf(altitude),
   };
   send_command(NAV_COMMAND_GOTO, &msg, sizeof(msg));
 }
@@ -1280,8 +1280,8 @@ static mission_waypoint_t route_point(float north, float east) {
   return {
       .coord = {.lon = ORIGIN.lon + (int32_t)lrintf(east / lon_scale * 1e7f),
                 .lat = ORIGIN.lat + (int32_t)lrintf(north / METERS_PER_DEGREE_LAT * 1e7f)},
-      .altitude = 50.0f,
-      .speed = 0.0f,
+      .altitude = 50,
+      .speed = 0,
   };
 }
 
@@ -1294,8 +1294,9 @@ static void send_mission(const mission_t &route) {
       const quic_rt_mission_item_t item = {
           .lat = wp.coord.lat,
           .lon = wp.coord.lon,
-          .altitude_cm = (int32_t)lroundf(wp.altitude * 100.0f),
-          .speed_cms = (uint16_t)lroundf(wp.speed * 100.0f),
+          .altitude = wp.altitude,
+          .speed = wp.speed,
+          .type = wp.type,
       };
       memcpy(args + 1 + i * sizeof(item), &item, sizeof(item));
     }

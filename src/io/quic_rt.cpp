@@ -71,8 +71,8 @@ static bool quic_rt_decode_command(const uint8_t *body, uint8_t size, nav_comman
     memcpy(&msg, args, sizeof(msg));
     cmd->waypoint = {
         .coord = {.lon = msg.lon, .lat = msg.lat},
-        .altitude = msg.altitude_cm * 0.01f,
-        .speed = msg.speed_dms * 0.1f,
+        .altitude = msg.altitude,
+        .speed = msg.speed,
     };
     return true;
   }
@@ -81,7 +81,7 @@ static bool quic_rt_decode_command(const uint8_t *body, uint8_t size, nav_comman
     if (args_size < sizeof(msg))
       return false;
     memcpy(&msg, args, sizeof(msg));
-    cmd->waypoint.altitude = msg.altitude_cm * 0.01f;
+    cmd->waypoint.altitude = msg.altitude;
     return true;
   }
   case NAV_COMMAND_MISSION: {
@@ -106,8 +106,9 @@ static bool quic_rt_decode_command(const uint8_t *body, uint8_t size, nav_comman
       memcpy(&msg, args + 1 + i * sizeof(msg), sizeof(msg));
       cmd->items[i] = {
           .coord = {.lon = msg.lon, .lat = msg.lat},
-          .altitude = msg.altitude_cm * 0.01f,
-          .speed = msg.speed_cms * 0.01f,
+          .altitude = msg.altitude,
+          .speed = msg.speed,
+          .type = msg.type,
       };
     }
     return true;

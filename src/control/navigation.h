@@ -10,7 +10,7 @@ constexpr float EARTH_RADIUS = 6371000.0f; // meters
 constexpr float METERS_PER_DEGREE_LAT = EARTH_RADIUS * M_PI_F / 180.0f;
 constexpr uint32_t NAV_GPS_STALE_MS = 500;
 constexpr uint8_t NAV_COMMAND_MISSION_RESUME = 0xFF; // nav_command_t.index: resume where the mission left off
-constexpr uint8_t NAV_COMMAND_ITEMS_MAX = 3;         // waypoints per MISSION_ITEMS, as many as fit a CRSF frame
+constexpr uint8_t NAV_COMMAND_ITEMS_MAX = 4;         // waypoints per MISSION_ITEMS, as many as fit a CRSF frame
 
 // Ground station commands, delivered by the QUIC_RT link. Guided commands need
 // the pilot to grant guided flight with the mission switch; mission edits only
@@ -57,6 +57,8 @@ void nav_position_delta(gps_coord_t start, gps_coord_t end, float *north, float 
 // of the vehicle.
 bool nav_in_start_range(gps_coord_t target);
 bool nav_mission_in_start_range(uint8_t index);
+// The stored waypoint lies within MISSION_TAKEOFF_MAX_DISTANCE of the vehicle.
+bool nav_mission_in_takeoff_range(uint8_t index);
 // The guided target, the active mission waypoint, or home.
 gps_coord_t nav_target_coord();
 // Publish nav_target_* toward nav_target_coord().

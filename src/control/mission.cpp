@@ -17,12 +17,21 @@ static constexpr int32_t MISSION_LON_LIMIT = 1800000000; // degrees * 1e7
 // Meters above launch. Baro drift and uneven ground make lower targets
 // unsafe, and a wing has to cruise clear of anything near launch level.
 #ifdef VEHICLE_WING
-static constexpr float MISSION_ALTITUDE_MIN = 20.0f;
+static constexpr int16_t MISSION_ALTITUDE_MIN = 20;
 #else
-static constexpr float MISSION_ALTITUDE_MIN = 5.0f;
+static constexpr int16_t MISSION_ALTITUDE_MIN = 5;
 #endif
-static constexpr float MISSION_ALTITUDE_MAX = 5000.0f; // launching from a mountain leaves the valley far below
-static constexpr float MISSION_SPEED_MAX = 30.0f; // m/s
+static constexpr int16_t MISSION_ALTITUDE_MAX = 5000; // launching from a mountain leaves the valley far below
+// A LAND waypoint's ground may lie below the launch point.
+static constexpr int16_t MISSION_GROUND_ALTITUDE_MIN = -1000;
+#ifdef VEHICLE_MULTI
+static constexpr uint8_t MISSION_WAYPOINT_TYPES = MISSION_WAYPOINT_TYPE_MAX;
+#else
+// A wing flies through every waypoint and takes off and lands by hand.
+static constexpr uint8_t MISSION_WAYPOINT_TYPES = MISSION_WAYPOINT_PASS;
+#endif
+// The speed field's range, reported to the planner.
+static constexpr float MISSION_SPEED_MAX = UINT8_MAX * MISSION_SPEED_SCALE; // m/s
 static constexpr float MISSION_SAVE_MAX_SPEED = 3.5f; // m/s; faster, a disarmed vehicle may still be flying
 
 mission_t mission;
@@ -33,7 +42,8 @@ static std::atomic<bool> save_pending{false};
 static std::atomic<uint32_t> revision{0};
 static_assert(std::atomic<uint32_t>::is_always_lock_free);
 
-// Waypoints are flat on the wire: {lat, lon, alt, speed}.
+// Waypoints are flat on the wire: {lat, lon, alt, speed, type} in their stored
+// units.
 static cbor_result_t cbor_encode_mission_waypoint_t(cbor_value_t *enc, const mission_waypoint_t *wp) {
   cbor_result_t res = CBOR_OK;
   CBOR_CHECK_ERROR(res = cbor_encode_map_indefinite(enc));
@@ -42,9 +52,11 @@ static cbor_result_t cbor_encode_mission_waypoint_t(cbor_value_t *enc, const mis
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "lon"));
   CBOR_CHECK_ERROR(res = cbor_encode_int32_t(enc, &wp->coord.lon));
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "alt"));
-  CBOR_CHECK_ERROR(res = cbor_encode_float(enc, &wp->altitude));
+  CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &wp->altitude));
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "speed"));
-  CBOR_CHECK_ERROR(res = cbor_encode_float(enc, &wp->speed));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint8_t(enc, &wp->speed));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "type"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint8_t(enc, &wp->type));
   return cbor_encode_end_indefinite(enc);
 }
 
@@ -61,9 +73,11 @@ static cbor_result_t cbor_decode_mission_waypoint_t(cbor_value_t *dec, mission_w
     } else if (buf_equal_string(name, name_len, "lon")) {
       CBOR_CHECK_ERROR(res = cbor_decode_int32_t(dec, &wp->coord.lon));
     } else if (buf_equal_string(name, name_len, "alt")) {
-      CBOR_CHECK_ERROR(res = cbor_decode_float(dec, &wp->altitude));
+      CBOR_CHECK_ERROR(res = cbor_decode_int16_t(dec, &wp->altitude));
     } else if (buf_equal_string(name, name_len, "speed")) {
-      CBOR_CHECK_ERROR(res = cbor_decode_float(dec, &wp->speed));
+      CBOR_CHECK_ERROR(res = cbor_decode_uint8_t(dec, &wp->speed));
+    } else if (buf_equal_string(name, name_len, "type")) {
+      CBOR_CHECK_ERROR(res = cbor_decode_uint8_t(dec, &wp->type));
     } else {
       CBOR_CHECK_ERROR(res = cbor_decode_skip(dec));
     }
@@ -79,16 +93,22 @@ bool mission_waypoint_valid(const mission_waypoint_t *wp) {
   if (coord.lat < -MISSION_LAT_LIMIT || coord.lat > MISSION_LAT_LIMIT ||
       coord.lon < -MISSION_LON_LIMIT || coord.lon > MISSION_LON_LIMIT)
     return false;
-  if (!float_is_finite(wp->altitude) || wp->altitude < MISSION_ALTITUDE_MIN || wp->altitude > MISSION_ALTITUDE_MAX)
+  if (wp->type >= MISSION_WAYPOINT_TYPES)
     return false;
-  return float_is_finite(wp->speed) && wp->speed >= 0.0f && wp->speed <= MISSION_SPEED_MAX;
+  const int16_t altitude_min = wp->type == MISSION_WAYPOINT_LAND ? MISSION_GROUND_ALTITUDE_MIN : MISSION_ALTITUDE_MIN;
+  return wp->altitude >= altitude_min && wp->altitude <= MISSION_ALTITUDE_MAX;
 }
 
 bool mission_valid(const mission_t *m) {
   if (m->count > MISSION_WAYPOINT_MAX || m->end_action >= MISSION_END_MAX)
     return false;
   for (uint32_t i = 0; i < m->count; i++) {
-    if (!mission_waypoint_valid(&m->waypoints[i]))
+    const mission_waypoint_t *wp = &m->waypoints[i];
+    if (!mission_waypoint_valid(wp))
+      return false;
+    // Takeoff starts the route from the ground; landing ends it there.
+    if ((wp->type == MISSION_WAYPOINT_TAKEOFF && i != 0) ||
+        (wp->type == MISSION_WAYPOINT_LAND && i + 1 != m->count))
       return false;
   }
   return true;
@@ -99,13 +119,12 @@ uint16_t mission_crc(const mission_t *m) {
   uint16_t crc = crc16_ccitt_data(0xFFFF, header, sizeof(header));
   for (uint32_t i = 0; i < m->count && i < MISSION_WAYPOINT_MAX; i++) {
     const mission_waypoint_t *wp = &m->waypoints[i];
-    const int32_t altitude_cm = lroundf(wp->altitude * 100.0f);
-    const uint16_t speed_cms = lroundf(wp->speed * 100.0f);
-    uint8_t item[14];
+    uint8_t item[12];
     memcpy(item, &wp->coord.lat, 4);
     memcpy(item + 4, &wp->coord.lon, 4);
-    memcpy(item + 8, &altitude_cm, 4);
-    memcpy(item + 12, &speed_cms, 2);
+    memcpy(item + 8, &wp->altitude, 2);
+    item[10] = wp->speed;
+    item[11] = wp->type;
     crc = crc16_ccitt_data(crc, item, sizeof(item));
   }
   return crc;
@@ -148,11 +167,16 @@ SLOW_FLASH cbor_result_t cbor_encode_mission_t(cbor_value_t *enc, const mission_
 
   // Report the limits mission_valid() enforces so the planner never guesses them.
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "min_alt"));
-  CBOR_CHECK_ERROR(res = cbor_encode_float(enc, &MISSION_ALTITUDE_MIN));
+  CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &MISSION_ALTITUDE_MIN));
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "max_alt"));
-  CBOR_CHECK_ERROR(res = cbor_encode_float(enc, &MISSION_ALTITUDE_MAX));
+  CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &MISSION_ALTITUDE_MAX));
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "max_speed"));
   CBOR_CHECK_ERROR(res = cbor_encode_float(enc, &MISSION_SPEED_MAX));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "min_ground_alt"));
+  CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &MISSION_GROUND_ALTITUDE_MIN));
+  // The vehicle accepts the waypoint types below this.
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "waypoint_types"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint8_t(enc, &MISSION_WAYPOINT_TYPES));
 
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "end_action"));
   CBOR_CHECK_ERROR(res = cbor_encode_uint8_t(enc, &m->end_action));

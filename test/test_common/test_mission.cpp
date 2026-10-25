@@ -19,8 +19,8 @@ static mission_t mission_test_route(uint8_t count) {
   for (uint8_t i = 0; i < count; i++) {
     route.waypoints[i] = {
         .coord = {.lon = 1511234000 + i * 100, .lat = -338765000 - i * 100},
-        .altitude = 30.0f + i,
-        .speed = i % 2 ? 0.0f : 5.0f,
+        .altitude = (int16_t)(30 + i),
+        .speed = (uint8_t)(i % 2 ? 0 : 50), // 5 m/s
     };
   }
   return route;
@@ -44,7 +44,7 @@ static size_t mission_test_encode(uint8_t *buffer, size_t size, const mission_t 
     TEST_ASSERT_TRUE(cbor_encode_str(&enc, "lon") >= CBOR_OK);
     TEST_ASSERT_TRUE(cbor_encode_int32_t(&enc, &wp->coord.lon) >= CBOR_OK);
     TEST_ASSERT_TRUE(cbor_encode_str(&enc, "alt") >= CBOR_OK);
-    TEST_ASSERT_TRUE(cbor_encode_float(&enc, &wp->altitude) >= CBOR_OK);
+    TEST_ASSERT_TRUE(cbor_encode_int16_t(&enc, &wp->altitude) >= CBOR_OK);
     TEST_ASSERT_TRUE(cbor_encode_end_indefinite(&enc) >= CBOR_OK);
   }
   TEST_ASSERT_TRUE(cbor_encode_end_indefinite(&enc) >= CBOR_OK);
@@ -68,8 +68,8 @@ void test_mission_full_route_roundtrip(void) {
   for (unsigned i = 0; i < MISSION_WAYPOINT_MAX; i++) {
     TEST_ASSERT_EQUAL_INT32(source.waypoints[i].coord.lat, decoded.waypoints[i].coord.lat);
     TEST_ASSERT_EQUAL_INT32(source.waypoints[i].coord.lon, decoded.waypoints[i].coord.lon);
-    TEST_ASSERT_EQUAL_FLOAT(source.waypoints[i].altitude, decoded.waypoints[i].altitude);
-    TEST_ASSERT_EQUAL_FLOAT(source.waypoints[i].speed, decoded.waypoints[i].speed);
+    TEST_ASSERT_EQUAL_INT16(source.waypoints[i].altitude, decoded.waypoints[i].altitude);
+    TEST_ASSERT_EQUAL_UINT8(source.waypoints[i].speed, decoded.waypoints[i].speed);
   }
 }
 
@@ -90,7 +90,7 @@ void test_mission_rejects_oversized_and_out_of_range_routes(void) {
   cbor_decoder_init(&codec, buffer, short_size);
   TEST_ASSERT_TRUE(cbor_decode_mission_t(&codec, &decoded) >= CBOR_OK);
   TEST_ASSERT_EQUAL_UINT8(2, decoded.count);
-  TEST_ASSERT_EQUAL_FLOAT(0.0f, decoded.waypoints[0].speed);
+  TEST_ASSERT_EQUAL_UINT8(0, decoded.waypoints[0].speed);
   TEST_ASSERT_TRUE(mission_valid(&decoded));
 
   const mission_t empty = {};
@@ -108,19 +108,77 @@ void test_mission_rejects_oversized_and_out_of_range_routes(void) {
   invalid.waypoints[1].coord.lat = 900000001;
   TEST_ASSERT_FALSE(mission_valid(&invalid));
 
-  const float bad_altitudes[] = {1.0f, 5001.0f, NAN, INFINITY};
-  for (float altitude : bad_altitudes) {
+  const int16_t bad_altitudes[] = {4, 5001, -1001};
+  for (int16_t altitude : bad_altitudes) {
     invalid = mission_test_route(3);
     invalid.waypoints[1].altitude = altitude;
     TEST_ASSERT_FALSE(mission_valid(&invalid));
   }
 
-  const float bad_speeds[] = {-1.0f, 31.0f, NAN};
-  for (float speed : bad_speeds) {
-    invalid = mission_test_route(3);
-    invalid.waypoints[0].speed = speed;
-    TEST_ASSERT_FALSE(mission_valid(&invalid));
-  }
+  // Integer CBOR only: a float altitude is not a stored value.
+  cbor_value_t enc;
+  cbor_encoder_init(&enc, buffer, sizeof(buffer));
+  const float fractional = 30.5f;
+  TEST_ASSERT_TRUE(cbor_encode_map_indefinite(&enc) >= CBOR_OK);
+  TEST_ASSERT_TRUE(cbor_encode_str(&enc, "waypoints") >= CBOR_OK);
+  TEST_ASSERT_TRUE(cbor_encode_array(&enc, 1) >= CBOR_OK);
+  TEST_ASSERT_TRUE(cbor_encode_map_indefinite(&enc) >= CBOR_OK);
+  TEST_ASSERT_TRUE(cbor_encode_str(&enc, "alt") >= CBOR_OK);
+  TEST_ASSERT_TRUE(cbor_encode_float(&enc, &fractional) >= CBOR_OK);
+  TEST_ASSERT_TRUE(cbor_encode_end_indefinite(&enc) >= CBOR_OK);
+  TEST_ASSERT_TRUE(cbor_encode_end_indefinite(&enc) >= CBOR_OK);
+  decoded = {};
+  cbor_decoder_init(&codec, buffer, cbor_encoder_len(&enc));
+  TEST_ASSERT_TRUE(cbor_decode_mission_t(&codec, &decoded) < CBOR_OK);
+}
+
+void test_mission_waypoint_types(void) {
+  mission_t route = mission_test_route(3);
+  route.waypoints[1].type = MISSION_WAYPOINT_PASS;
+  route.waypoints[2].type = MISSION_WAYPOINT_PASS; // flown as a stop
+#ifdef VEHICLE_MULTI
+  TEST_ASSERT_TRUE(mission_valid(&route));
+#else
+  // A wing flies through every waypoint without being told.
+  TEST_ASSERT_FALSE(mission_valid(&route));
+#endif
+
+  // The type survives the codec.
+  uint8_t buffer[512] = {};
+  cbor_value_t codec;
+  cbor_encoder_init(&codec, buffer, sizeof(buffer));
+  TEST_ASSERT_TRUE(cbor_encode_mission_t(&codec, &route) >= CBOR_OK);
+  mission_t decoded = {};
+  cbor_decoder_init(&codec, buffer, cbor_encoder_len(&codec));
+  TEST_ASSERT_TRUE(cbor_decode_mission_t(&codec, &decoded) >= CBOR_OK);
+  TEST_ASSERT_EQUAL_UINT8(MISSION_WAYPOINT_PASS, decoded.waypoints[1].type);
+
+  mission_t invalid = mission_test_route(3);
+  invalid.waypoints[1].type = MISSION_WAYPOINT_TYPE_MAX;
+  TEST_ASSERT_FALSE(mission_valid(&invalid));
+
+  mission_t landing = mission_test_route(3);
+  landing.waypoints[0].type = MISSION_WAYPOINT_TAKEOFF;
+  landing.waypoints[2].type = MISSION_WAYPOINT_LAND;
+  // A landing ground may lie below the launch point.
+  landing.waypoints[2].altitude = -20;
+#ifdef VEHICLE_MULTI
+  TEST_ASSERT_TRUE(mission_valid(&landing));
+  // Takeoff only starts a route, landing only ends it.
+  invalid = landing;
+  invalid.waypoints[1].type = MISSION_WAYPOINT_TAKEOFF;
+  TEST_ASSERT_FALSE(mission_valid(&invalid));
+  invalid = landing;
+  invalid.waypoints[1].type = MISSION_WAYPOINT_LAND;
+  TEST_ASSERT_FALSE(mission_valid(&invalid));
+  // Only a landing ground may lie below the waypoint altitude minimum.
+  invalid = landing;
+  invalid.waypoints[2].type = MISSION_WAYPOINT_STOP;
+  TEST_ASSERT_FALSE(mission_valid(&invalid));
+#else
+  // Only a multirotor takes off and lands on its own.
+  TEST_ASSERT_FALSE(mission_valid(&landing));
+#endif
 }
 
 static quic_flag mission_test_reply;
@@ -171,11 +229,11 @@ void test_mission_upload_persists_and_rejects_invalid_routes(void) {
   TEST_ASSERT_EQUAL_UINT8(MISSION_WAYPOINT_MAX, mission.count);
   TEST_ASSERT_EQUAL_INT32(route.waypoints[31].coord.lat, mission.waypoints[31].coord.lat);
   TEST_ASSERT_EQUAL(QUIC_FLAG_NONE, mission_test_command(QUIC_MISSION_GET));
-  TEST_ASSERT_EQUAL_FLOAT(route.waypoints[31].altitude, mission_test_reply_mission.waypoints[31].altitude);
+  TEST_ASSERT_EQUAL_INT16(route.waypoints[31].altitude, mission_test_reply_mission.waypoints[31].altitude);
 
   // A rejected upload keeps the stored route, in RAM and in flash.
   mission_t invalid = mission_test_route(2);
-  invalid.waypoints[1].altitude = 0.0f;
+  invalid.waypoints[1].altitude = 0;
   TEST_ASSERT_EQUAL(QUIC_FLAG_ERROR, mission_test_command(QUIC_MISSION_SET, &invalid));
   TEST_ASSERT_EQUAL_UINT8(MISSION_WAYPOINT_MAX, mission.count);
   mission = {};
@@ -201,9 +259,11 @@ void test_mission_upload_persists_and_rejects_invalid_routes(void) {
 
 // The ground station computes the same CRC from the values it sends.
 void test_mission_crc_covers_the_sent_route(void) {
-  mission_t route = mission_test_route(2);
-  route.waypoints[1].altitude = 31.25f;
-  TEST_ASSERT_EQUAL_HEX16(0x4BAE, mission_crc(&route));
+  const mission_t route = mission_test_route(2);
+  TEST_ASSERT_EQUAL_HEX16(0x24FF, mission_crc(&route));
+  mission_t typed = route;
+  typed.waypoints[0].type = MISSION_WAYPOINT_PASS;
+  TEST_ASSERT_EQUAL_HEX16(0x619C, mission_crc(&typed));
   const mission_t empty = {};
   TEST_ASSERT_EQUAL_HEX16(0x1D0F, mission_crc(&empty));
 
@@ -216,7 +276,7 @@ void test_mission_crc_covers_the_sent_route(void) {
   changed.end_action = MISSION_END_HOLD;
   TEST_ASSERT_NOT_EQUAL(mission_crc(&route), mission_crc(&changed));
   changed = route;
-  changed.waypoints[1].speed = 0.01f;
+  changed.waypoints[1].speed = 1;
   TEST_ASSERT_NOT_EQUAL(mission_crc(&route), mission_crc(&changed));
 }
 
@@ -236,8 +296,9 @@ static void mission_link_items(uint8_t index, const mission_waypoint_t *waypoint
     const quic_rt_mission_item_t item = {
         .lat = waypoints[i].coord.lat,
         .lon = waypoints[i].coord.lon,
-        .altitude_cm = (int32_t)lroundf(waypoints[i].altitude * 100.0f),
-        .speed_cms = (uint16_t)lroundf(waypoints[i].speed * 100.0f),
+        .altitude = waypoints[i].altitude,
+        .speed = waypoints[i].speed,
+        .type = waypoints[i].type,
     };
     memcpy(args + 1 + i * sizeof(item), &item, sizeof(item));
   }
@@ -311,10 +372,10 @@ void test_mission_link_replaces_the_route_and_saves_it_on_the_ground(void) {
     TEST_ASSERT_EQUAL_HEX16(mission_crc(&route), mission_crc(quic_rt_staged()));
     // While Flight owns the staged mission, edits wait.
     uint8_t items[5 + sizeof(quic_rt_mission_item_t)] = {QUIC_RT_VERSION, QUIC_RT_COMMAND, NAV_COMMAND_MISSION_ITEMS, ++mission_link_id, 0};
-    const quic_rt_mission_item_t item = {.lat = route.waypoints[0].coord.lat, .lon = route.waypoints[0].coord.lon, .altitude_cm = 9000};
+    const quic_rt_mission_item_t item = {.lat = route.waypoints[0].coord.lat, .lon = route.waypoints[0].coord.lon, .altitude = 90};
     memcpy(items + 5, &item, sizeof(item));
     quic_rt_receive(0x10, items, sizeof(items));
-    TEST_ASSERT_EQUAL_FLOAT(30.0f, quic_rt_staged()->waypoints[0].altitude);
+    TEST_ASSERT_EQUAL_INT16(30, quic_rt_staged()->waypoints[0].altitude);
     quic_rt_complete(taken.id, NAV_RESULT_OK);
 
     // A newer command replacing an unread commit returns staging to IO.
@@ -328,7 +389,7 @@ void test_mission_link_replaces_the_route_and_saves_it_on_the_ground(void) {
     items[3] = ++mission_link_id;
     quic_rt_receive(0x10, items, sizeof(items));
     TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_OK, mission_link_result());
-    TEST_ASSERT_EQUAL_FLOAT(90.0f, quic_rt_staged()->waypoints[0].altitude);
+    TEST_ASSERT_EQUAL_INT16(90, quic_rt_staged()->waypoints[0].altitude);
     // End staging without changing the route.
     mission_link_commit(&route);
     TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_MISMATCH, mission_link_result());
@@ -336,39 +397,39 @@ void test_mission_link_replaces_the_route_and_saves_it_on_the_ground(void) {
 
   // Only the changed waypoint is sent; the others come from the stored route.
   mission_t intended = mission_test_route(4);
-  intended.waypoints[1].altitude = 50.0f;
+  intended.waypoints[1].altitude = 50;
   mission_link_items(1, &intended.waypoints[1], 1);
   TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_OK, mission_link_result());
-  TEST_ASSERT_EQUAL_FLOAT(31.0f, mission.waypoints[1].altitude);
+  TEST_ASSERT_EQUAL_INT16(31, mission.waypoints[1].altitude);
   mission_link_items(3, &intended.waypoints[3], 1);
   mission_link_commit(&intended);
   quic_rt_status_t status = mission_link_status();
   TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_OK, status.result_index >> QUIC_RT_RESULT_SHIFT);
   TEST_ASSERT_EQUAL_UINT8(4, status.mission_count);
   TEST_ASSERT_EQUAL_HEX16(mission_crc(&intended), status.mission_crc);
-  TEST_ASSERT_EQUAL_FLOAT(50.0f, mission.waypoints[1].altitude);
+  TEST_ASSERT_EQUAL_INT16(50, mission.waypoints[1].altitude);
 
   // A lost item fails the CRC and leaves the stored route; staging then starts
   // over from it.
   mission_t next = intended;
-  next.waypoints[0].altitude = 60.0f;
-  next.waypoints[2].altitude = 60.0f;
+  next.waypoints[0].altitude = 60;
+  next.waypoints[2].altitude = 60;
   mission_link_items(0, &next.waypoints[0], 1);
   mission_link_commit(&next);
   TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_MISMATCH, mission_link_result());
-  TEST_ASSERT_EQUAL_FLOAT(30.0f, mission.waypoints[0].altitude);
+  TEST_ASSERT_EQUAL_INT16(30, mission.waypoints[0].altitude);
   mission_link_items(2, &next.waypoints[2], 1);
   mission_link_commit(&next);
   TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_MISMATCH, mission_link_result());
   mission_link_items(0, next.waypoints, 3);
   mission_link_commit(&next);
   TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_OK, mission_link_result());
-  TEST_ASSERT_EQUAL_FLOAT(60.0f, mission.waypoints[0].altitude);
-  TEST_ASSERT_EQUAL_FLOAT(60.0f, mission.waypoints[2].altitude);
+  TEST_ASSERT_EQUAL_INT16(60, mission.waypoints[0].altitude);
+  TEST_ASSERT_EQUAL_INT16(60, mission.waypoints[2].altitude);
 
   // Out-of-limit waypoints and routes are rejected.
   mission_t low = next;
-  low.waypoints[0].altitude = 1.0f;
+  low.waypoints[0].altitude = 1;
   mission_link_items(0, low.waypoints, 1);
   TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_INVALID, mission_link_result());
   mission_link_items(MISSION_WAYPOINT_MAX - 1, next.waypoints, 2);

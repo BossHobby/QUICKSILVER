@@ -4,6 +4,7 @@
 
 #include "control/control.h"
 #include "control/mission.h"
+#include "control/navigation.h"
 #include "core/profile.h"
 #include "driver/osd/osd.h"
 #include "driver/time.h"
@@ -321,13 +322,21 @@ static const char *osd_rth_message() {
   }
 
   if (state.mission_active) {
+    // The leg to a LAND waypoint is named for the landing it ends in.
+    const bool landing = mission.waypoints[state.mission_index].type == MISSION_WAYPOINT_LAND;
     switch (state.rth_state) {
+    case RTH_STATE_TAKEOFF_READY:
+      return "TAKEOFF: RAISE THR";
+    case RTH_STATE_TAKEOFF:
+      return "TAKEOFF: CLIMBING";
+    case RTH_STATE_LAND:
+      return "LAND: DESCENDING";
     case RTH_STATE_CLIMB:
       return osd_mission_message("CLIMB");
     case RTH_STATE_TURN:
-      return osd_mission_message("TURN");
+      return osd_mission_message(landing ? "LAND" : "TURN");
     case RTH_STATE_NAVIGATE:
-      return osd_mission_message("FLY");
+      return osd_mission_message(landing ? "LAND" : "FLY");
     case RTH_STATE_HOVER_HOME:
       return osd_mission_message("HOLD");
     default:
@@ -351,6 +360,8 @@ static const char *osd_rth_message() {
       return "HEADING FAILED";
     case RTH_STATE_NAV_FAILED:
       return "NAV FAILED";
+    default:
+      break;
     }
   }
 
@@ -371,7 +382,20 @@ static const char *osd_rth_message() {
 
   if (rx_aux_on(AUX_MISSION)) {
     if (mission.count == 0) return osd_no_mission_message();
-    // Starting needs a switch edge in flight, clear of the ground.
+    // Starting needs a switch edge in flight, clear of the ground, or for a
+    // takeoff, at its waypoint after arming and before throttling up.
+    if (mission.waypoints[0].type == MISSION_WAYPOINT_TAKEOFF && !flags.in_air) {
+      // Name what keeps the takeoff from starting; the distance needs a fix.
+      if (!nav_gps_ready())
+        return "TAKEOFF: NO GPS FIX";
+      if (!nav_altitude_ready())
+        return "TAKEOFF: NO BARO";
+      if (!nav_mission_in_takeoff_range(0))
+        return "TAKEOFF: MOVE TO WP 1";
+      if (flags.arm_state && !nav_rth_home_valid())
+        return "TAKEOFF: NO HOME";
+      return flags.arm_state ? "TAKEOFF: TOGGLE SWITCH" : "TAKEOFF: ARM FIRST";
+    }
     return flags.arm_state ? "MISSION: TOGGLE IN AIR" : "ARM FIRST";
   }
   return NULL;

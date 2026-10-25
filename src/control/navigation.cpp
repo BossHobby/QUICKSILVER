@@ -222,6 +222,10 @@ bool nav_mission_in_start_range(uint8_t index) {
   return nav_in_start_range(mission.waypoints[index].coord);
 }
 
+bool nav_mission_in_takeoff_range(uint8_t index) {
+  return nav_distance_between(state.gps_coord, mission.waypoints[index].coord) <= MISSION_TAKEOFF_MAX_DISTANCE;
+}
+
 gps_coord_t nav_target_coord() {
   if (state.guided_active)
     return nav_guided.coord;
