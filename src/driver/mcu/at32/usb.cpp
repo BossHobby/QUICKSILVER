@@ -141,6 +141,7 @@ extern "C" void usb_cdc_tx_handler() {
       // no zlp sent, flush now
       usb_vcp_send_data(&otg_core_struct.dev, 0, 0);
       tx_stalled = false;
+      did_zlp = true;
     } else {
       tx_stalled = true;
     }
