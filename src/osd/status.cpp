@@ -195,14 +195,17 @@ static const char *osd_wing_autotrim_message(void) {
   if (autotrim_state == WING_AUTOTRIM_SAVE_PENDING || autotrim_state == WING_AUTOTRIM_SAVED) {
     return NULL;
   }
-  if (!flags.arm_state) {
-    return "AUTOTRIM: ARM FIRST";
+  if (autotrim_state == WING_AUTOTRIM_NO_SURFACE) {
+    return "AUTOTRIM: NO SURFACES";
   }
   if (autotrim_state == WING_AUTOTRIM_ACTIVE) {
     return "AUTOTRIM: FLY STRAIGHT";
   }
-  // A failsafe, motor test or disarm cancelled the capture, which never
-  // restarts by itself.
+  if (autotrim_state == WING_AUTOTRIM_CENTER_STICKS) {
+    return "AUTOTRIM: CENTER STICKS";
+  }
+  // Only turning the switch on while armed starts a capture; one already on
+  // at arming, or after a failsafe, motor test or disarm, must be cycled.
   return "AUTOTRIM: FLIP IN AIR";
 }
 
