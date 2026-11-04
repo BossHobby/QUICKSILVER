@@ -410,7 +410,7 @@ static_assert(FAILSAFE_PHASE_RECOVERY < 1 << 3);
 #if defined(VEHICLE_WING)
 static_assert(WING_NAV_CRUISE_NO_GPS < 1 << 4);
 static_assert(WING_LAUNCH_ABORTED < 1 << 4);
-static_assert(WING_AUTOTRIM_SAVED < 1 << 2);
+static_assert(WING_AUTOTRIM_SAVED < 1 << 3);
 #elif defined(VEHICLE_MULTI)
 static_assert(RTH_STATE_NAV_FAILED < 1 << 4);
 #endif

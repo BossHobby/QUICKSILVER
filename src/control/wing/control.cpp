@@ -94,10 +94,8 @@ static struct {
 } launch;
 
 static struct {
-  bool ready = true;
-  // The switch was off earlier in this flight, so turning it on asks for a
-  // capture in the air.
-  bool off_in_air;
+  // The switch was seen off while armed, so turning it on asks for a capture.
+  bool ready;
   bool flown; // flight shown since arming; held through slow headwind legs
   bool steady;
   uint32_t last_ms;
@@ -106,6 +104,7 @@ static struct {
   struct {
     bool selected;
     int16_t backup;
+    int16_t trim; // captured, applied once the sticks center
     float sum;
   } outputs[MOTOR_PIN_MAX];
 } autotrim;
@@ -301,34 +300,35 @@ static void wing_cancel_autotrim() {
 }
 
 // in_air latches on a throttle run-up, so flight needs further evidence: ground
-// speed or a climb once since arming, or the switch turned on in the air. The
-// latch holds because a headwind can slow ground speed below the threshold.
+// speed, a climb or a finished autolaunch since arming. The latch holds because
+// a headwind can slow ground speed below the threshold.
 static void wing_autotrim_update_flown() {
   if (!flags.arm_state || !flags.in_air) {
     autotrim.flown = false;
     return;
   }
   if ((state.gps_lock && state.gps_speed >= WING_FLYING_MIN_SPEED) ||
-      (state.baro_valid && fabsf(state.altitude) > WING_FLYING_MIN_ALTITUDE)) {
+      (state.baro_valid && fabsf(state.altitude) > WING_FLYING_MIN_ALTITUDE) ||
+      state.wing_launch_state == WING_LAUNCH_DONE) {
     autotrim.flown = true;
   }
+}
+
+static bool wing_autotrim_sticks_centered() {
+  return fabsf(state.rx_filtered.roll) < AUTOTRIM_STICK_CENTER &&
+         fabsf(state.rx_filtered.pitch) < AUTOTRIM_STICK_CENTER &&
+         fabsf(state.rx_filtered.yaw) < AUTOTRIM_STICK_CENTER;
 }
 
 static bool wing_autotrim_steady(wing_mode_t mode) {
   // Trim is the command that holds straight flight: not on the ground, during
   // autolaunch, while navigating, turning or still rotating.
-  if (!flags.in_air || wing_launch_in_progress() || state.wing_nav_state != WING_NAV_INACTIVE) {
-    return false;
-  }
-  if (!autotrim.flown && !autotrim.off_in_air) {
+  if (!autotrim.flown || wing_launch_in_progress() || state.wing_nav_state != WING_NAV_INACTIVE) {
     return false;
   }
   // Stabilized modes capture the integrator's correction, not stick commands.
   // In Manual the sticks themselves hold the trim.
-  if (mode != WING_MODE_MANUAL &&
-      (fabsf(state.rx_filtered.roll) >= AUTOTRIM_STICK_CENTER ||
-       fabsf(state.rx_filtered.pitch) >= AUTOTRIM_STICK_CENTER ||
-       fabsf(state.rx_filtered.yaw) >= AUTOTRIM_STICK_CENTER)) {
+  if (mode != WING_MODE_MANUAL && !wing_autotrim_sticks_centered()) {
     return false;
   }
   return fabsf(state.gyro.roll) < WING_AUTOTRIM_MAX_RATE &&
@@ -336,21 +336,42 @@ static bool wing_autotrim_steady(wing_mode_t mode) {
          fabsf(state.gyro.yaw) < WING_AUTOTRIM_MAX_RATE;
 }
 
+// In Manual the held sticks are the captured trim, so applying it under them
+// would double the deflection until they center.
+static void wing_autotrim_apply() {
+  if (flags.arm_state && !wing_autotrim_sticks_centered()) {
+    return;
+  }
+  for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    if (autotrim.outputs[i].selected) {
+      profile.outputs[i].trim = autotrim.outputs[i].trim;
+    }
+  }
+  // The trim now holds the correction the integrator carried.
+  pid_reset_i();
+  state.wing_autotrim_state = WING_AUTOTRIM_SAVE_PENDING;
+}
+
 static void wing_update_autotrim(bool armed_at_start, wing_mode_t mode) {
   wing_autotrim_update_flown();
   if (!rx_aux_on(AUX_AUTOTRIM)) {
     wing_cancel_autotrim();
-    autotrim.ready = true;
-    autotrim.off_in_air = flags.in_air;
+    // A switch already on at arming must be cycled, so the pilot chooses
+    // the moment in flight.
+    autotrim.ready = flags.arm_state;
     return;
-  }
-  if (!flags.in_air) {
-    autotrim.off_in_air = false;
   }
   if (flags.failsafe || flags.failsafe_outputs_blocked || flags.motortest_override) {
-    wing_cancel_autotrim();
+    // A captured trim survives a link loss; an interrupted capture needs the
+    // switch cycled.
+    if (state.wing_autotrim_state == WING_AUTOTRIM_ACTIVE) {
+      wing_cancel_autotrim();
+    }
     autotrim.ready = false;
     return;
+  }
+  if (state.wing_autotrim_state == WING_AUTOTRIM_CENTER_STICKS) {
+    wing_autotrim_apply();
   }
   if (state.wing_autotrim_state == WING_AUTOTRIM_SAVE_PENDING) {
     // Flight holds profile_mutex only for passes that start disarmed. The save
@@ -367,10 +388,9 @@ static void wing_update_autotrim(bool armed_at_start, wing_mode_t mode) {
     return;
   }
   if (!flags.arm_state) {
+    // Disarming mid-capture ends the request; cycle the switch in flight.
     if (state.wing_autotrim_state == WING_AUTOTRIM_ACTIVE) {
-      // Disarming mid-capture ends the request; cycle the switch in flight.
       wing_cancel_autotrim();
-      autotrim.ready = false;
     }
     return;
   }
@@ -386,10 +406,7 @@ static void wing_update_autotrim(bool armed_at_start, wing_mode_t mode) {
       autotrim.outputs[i].backup = profile.outputs[i].trim;
       autotrim.outputs[i].sum = 0.0f;
     }
-    if (!has_surface) {
-      return;
-    }
-    state.wing_autotrim_state = WING_AUTOTRIM_ACTIVE;
+    state.wing_autotrim_state = has_surface ? WING_AUTOTRIM_ACTIVE : WING_AUTOTRIM_NO_SURFACE;
   }
   if (state.wing_autotrim_state != WING_AUTOTRIM_ACTIVE) {
     return;
@@ -418,11 +435,11 @@ static void wing_update_autotrim(bool armed_at_start, wing_mode_t mode) {
   if (autotrim.capture_ms >= WING_AUTOTRIM_CAPTURE_MS) {
     for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
       if (autotrim.outputs[i].selected) {
-        profile.outputs[i].trim = constrain((int32_t)lrintf(1000.0f * autotrim.outputs[i].sum / autotrim.samples), -500, 500);
+        autotrim.outputs[i].trim = constrain((int32_t)lrintf(1000.0f * autotrim.outputs[i].sum / autotrim.samples), -500, 500);
       }
     }
-    pid_reset_i();
-    state.wing_autotrim_state = WING_AUTOTRIM_SAVE_PENDING;
+    state.wing_autotrim_state = WING_AUTOTRIM_CENTER_STICKS;
+    wing_autotrim_apply();
   }
 }
 

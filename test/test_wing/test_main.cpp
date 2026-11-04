@@ -375,9 +375,11 @@ static void test_gliding_retains_airborne_state_and_motor_cutoff() {
   TEST_ASSERT_FALSE(flags.in_air);
   TEST_ASSERT_TRUE(flags.on_ground);
 }
-// Without GPS the switch must be turned on in the air.
+// A climb shows flight, and the switch is turned on while armed.
 static void start_autotrim() {
   flags.in_air = 1;
+  state.baro_valid = 1;
+  state.altitude = 10.0f;
   state.aux_active &= ~(1U << AUX_AUTOTRIM);
   control();
   state.aux_active |= (1U << AUX_AUTOTRIM);
@@ -385,9 +387,16 @@ static void start_autotrim() {
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
 }
 
+// In Manual the capture applies once the held sticks center.
 static void finish_autotrim() {
   time_test_advance_us(2000000);
   control();
+  if (state.wing_autotrim_state == WING_AUTOTRIM_CENTER_STICKS) {
+    state.rx_filtered.roll = 0.0f;
+    state.rx_filtered.pitch = 0.0f;
+    state.rx_filtered.yaw = 0.0f;
+    control();
+  }
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_SAVE_PENDING, state.wing_autotrim_state);
 }
 
@@ -415,16 +424,22 @@ static void test_autotrim_requires_switch_and_averages_applied_surfaces_once() {
   TEST_ASSERT_EQUAL_INT(100, profile.outputs[1].trim);
   time_test_advance_us(1000);
   control();
+  // The held sticks are the trim; applying it under them would double it.
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_CENTER_STICKS, state.wing_autotrim_state);
+  TEST_ASSERT_EQUAL_INT(100, profile.outputs[1].trim);
+  TEST_ASSERT_FLOAT_WITHIN(0.0001f, -0.4f, pwm_values[1]);
+  time_test_advance_us(3000000);
+  control();
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_CENTER_STICKS, state.wing_autotrim_state);
+  TEST_ASSERT_FLOAT_WITHIN(0.0001f, -0.4f, pwm_values[1]);
+  state.rx_filtered = {};
+  control();
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_SAVE_PENDING, state.wing_autotrim_state);
   TEST_ASSERT_EQUAL_INT(-333, profile.outputs[1].trim);
   TEST_ASSERT_EQUAL_INT(-167, profile.outputs[2].trim);
   TEST_ASSERT_EQUAL_INT(-80, profile.outputs[3].trim);
   TEST_ASSERT_EQUAL_INT(0, profile.outputs[0].trim);
-  TEST_ASSERT_FLOAT_WITHIN(0.0001f, -0.4f, pwm_values[1]);
-  state.rx_filtered = {};
-  time_test_advance_us(3000000);
   control();
-  TEST_ASSERT_EQUAL_INT(-333, profile.outputs[1].trim);
   TEST_ASSERT_FLOAT_WITHIN(0.0001f, -0.333f, pwm_values[1]);
   state.aux_active &= ~(1U << AUX_AUTOTRIM);
   control();
@@ -514,19 +529,29 @@ static void test_autotrim_saves_on_disarm_with_switch_on() {
   TEST_ASSERT_EQUAL_INT(123, profile.outputs[1].trim);
 }
 
-static void test_autotrim_failsafe_reverts_and_requires_switch_cycle() {
+static void test_autotrim_failsafe_keeps_captured_trim() {
   arm();
   state.rx_filtered.roll = 0.2f;
   start_autotrim();
   finish_autotrim();
   flags.failsafe_signal_lost = 1;
   control();
+  TEST_ASSERT_TRUE(flags.failsafe);
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_SAVE_PENDING, state.wing_autotrim_state);
+  TEST_ASSERT_EQUAL_INT(200, profile.outputs[1].trim);
+}
+
+static void test_autotrim_failsafe_cancels_capture() {
+  arm();
+  state.rx_filtered.roll = 0.2f;
+  start_autotrim();
+  flags.failsafe_signal_lost = 1;
+  control();
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_IDLE, state.wing_autotrim_state);
-  TEST_ASSERT_EQUAL_INT(0, profile.outputs[1].trim);
-  flags.failsafe_signal_lost = 0;
   time_test_advance_us(3000000);
   control();
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_IDLE, state.wing_autotrim_state);
+  TEST_ASSERT_EQUAL_INT(0, profile.outputs[1].trim);
 }
 
 static void test_autotrim_switch_off_on_disarm_cancels_without_saving() {
@@ -584,6 +609,9 @@ static void test_autotrim_waits_for_steady_flight() {
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
   time_test_advance_us(1000);
   control();
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_CENTER_STICKS, state.wing_autotrim_state);
+  state.rx_filtered.roll = 0.0f;
+  control();
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_SAVE_PENDING, state.wing_autotrim_state);
   TEST_ASSERT_EQUAL_INT(200, profile.outputs[1].trim);
 }
@@ -630,23 +658,43 @@ static void test_autotrim_ignores_turns_and_stabilized_stick_input() {
   finish_autotrim();
 }
 
-// Armed with the switch already on, then a throttle run-up that latches in_air.
+// A throttle run-up latches in_air, then the switch is turned on.
 static void run_up_with_autotrim_on() {
+  arm();
+  state.rx_filtered.throttle = 0.5f;
+  state.rx_filtered.roll = 0.2f;
+  control();
+  TEST_ASSERT_TRUE(flags.in_air);
+  state.aux_active |= 1U << AUX_AUTOTRIM;
+  control();
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
+}
+
+static void test_autotrim_switch_on_at_arming_must_be_cycled() {
   state.aux_active = 1U << AUX_PREARM;
   control(); // Disarmed with the switch off, as at boot.
   state.aux_active = (1U << AUX_ARMING) | (1U << AUX_PREARM) | (1U << AUX_AUTOTRIM);
   control();
   TEST_ASSERT_TRUE(flags.arm_state);
   state.rx_filtered.throttle = 0.5f;
-  state.rx_filtered.roll = 0.2f;
+  state.rx_filtered.roll = 0.2f; // Climbing out holding a correction.
+  state.gps_lock = 1;
+  state.gps_speed = 10.0f;
   control();
-  TEST_ASSERT_TRUE(flags.in_air);
+  time_test_advance_us(3000000);
+  control();
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_IDLE, state.wing_autotrim_state);
+  TEST_ASSERT_EQUAL_INT(0, profile.outputs[1].trim);
+
+  start_autotrim();
+  finish_autotrim();
+  TEST_ASSERT_EQUAL_INT(200, profile.outputs[1].trim);
 }
 
 static void test_autotrim_run_up_needs_flight_evidence() {
   run_up_with_autotrim_on();
   time_test_advance_us(3000000);
-  control(); // A run-up is not flight.
+  control(); // A run-up is not flight, even with the switch turned on.
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
   TEST_ASSERT_EQUAL_INT(0, profile.outputs[1].trim);
 
@@ -658,10 +706,22 @@ static void test_autotrim_run_up_needs_flight_evidence() {
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
   state.gps_lock = 0;
 
-  // Turning the switch on in the air is the pilot's evidence.
-  start_autotrim();
+  // A finished autolaunch is.
+  state.wing_launch_state = WING_LAUNCH_DONE;
+  control();
   finish_autotrim();
   TEST_ASSERT_EQUAL_INT(200, profile.outputs[1].trim);
+}
+
+static void test_autotrim_reports_missing_surfaces() {
+  arm();
+  for (unsigned i = 0; i < MIXER_RULE_MAX; i++) {
+    if (profile.mixer[i].source != OUTPUT_SOURCE_THROTTLE)
+      profile.mixer[i] = {};
+  }
+  state.aux_active |= 1U << AUX_AUTOTRIM;
+  control();
+  TEST_ASSERT_EQUAL(WING_AUTOTRIM_NO_SURFACE, state.wing_autotrim_state);
 }
 
 static void test_autotrim_climb_shows_flight_without_gps() {
@@ -737,13 +797,16 @@ int main() {
   RUN_TEST(test_autotrim_captures_integral_correction_before_reset);
   RUN_TEST(test_autotrim_cancel_during_capture_and_on_early_disarm);
   RUN_TEST(test_autotrim_saves_on_disarm_with_switch_on);
-  RUN_TEST(test_autotrim_failsafe_reverts_and_requires_switch_cycle);
+  RUN_TEST(test_autotrim_failsafe_keeps_captured_trim);
+  RUN_TEST(test_autotrim_failsafe_cancels_capture);
   RUN_TEST(test_autotrim_switch_off_on_disarm_cancels_without_saving);
   RUN_TEST(test_autotrim_bounds_centers_and_excludes_throttle_mixes);
   RUN_TEST(test_autotrim_waits_for_steady_flight);
   RUN_TEST(test_autotrim_leaves_channel_mixes_out_of_trim);
   RUN_TEST(test_autotrim_ignores_turns_and_stabilized_stick_input);
+  RUN_TEST(test_autotrim_switch_on_at_arming_must_be_cycled);
   RUN_TEST(test_autotrim_run_up_needs_flight_evidence);
+  RUN_TEST(test_autotrim_reports_missing_surfaces);
   RUN_TEST(test_autotrim_climb_shows_flight_without_gps);
   RUN_TEST(test_autotrim_captures_slow_nose_high_flight);
   RUN_TEST(test_failsafe_stops_surfaces_at_trimmed_center);

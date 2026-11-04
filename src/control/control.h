@@ -84,7 +84,9 @@ typedef enum {
 
 typedef enum {
   WING_AUTOTRIM_IDLE,
-  WING_AUTOTRIM_ACTIVE, // Collecting commanded surface positions for two seconds.
+  WING_AUTOTRIM_NO_SURFACE,    // No PWM output carries a roll, pitch or yaw mix.
+  WING_AUTOTRIM_ACTIVE,        // Collecting commanded surface positions for two seconds.
+  WING_AUTOTRIM_CENTER_STICKS, // Captured in Manual, applied once the sticks center.
   WING_AUTOTRIM_SAVE_PENDING,
   WING_AUTOTRIM_SAVED,
 } wing_autotrim_state_t;

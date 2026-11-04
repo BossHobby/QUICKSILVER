@@ -72,7 +72,7 @@ static constexpr uint32_t BBOX_STATE_FAILSAFE_PHASE_SHIFT = 5;
 #if defined(VEHICLE_WING)
 static constexpr uint32_t BBOX_STATE_WING_NAV_SHIFT = 9;       // 4 bits
 static constexpr uint32_t BBOX_STATE_WING_LAUNCH_SHIFT = 13;   // 4 bits
-static constexpr uint32_t BBOX_STATE_WING_AUTOTRIM_SHIFT = 17; // 2 bits
+static constexpr uint32_t BBOX_STATE_WING_AUTOTRIM_SHIFT = 17; // 3 bits
 #elif defined(VEHICLE_MULTI)
 static constexpr uint32_t BBOX_STATE_RTH_SHIFT = 11; // 4 bits
 #endif
