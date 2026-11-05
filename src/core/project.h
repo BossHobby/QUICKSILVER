@@ -24,6 +24,10 @@
 
 #ifdef USE_DMA_RAM
 #define DMA_RAM __attribute__((section(".dma_ram"), aligned(32)))
+#elif defined(STM32F7)
+// The linker places these first in .bss, inside the uncached DTCM. The .bss
+// prefix keeps the section NOBITS, so it is zeroed with .bss and costs no flash.
+#define DMA_RAM __attribute__((section(".bss.dma_ram"), aligned(32)))
 #else
 #define DMA_RAM
 #endif

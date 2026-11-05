@@ -53,8 +53,13 @@ cbor_result_t cbor_encode_dma_stream_t(cbor_value_t *enc, const dma_stream_t *d)
 
 // Inline, so MCUs without a data cache drop the calls and the others skip a
 // function call for buffers in uncached memory.
-inline bool dma_memory_cached(void *addr) {
-  return !WITHIN_DTCM_RAM(addr) && !WITHIN_DMA_RAM(addr);
+// Both ends are checked: a buffer may straddle uncached and cached RAM.
+inline bool dma_memory_cached(void *addr, uint32_t size) {
+  const uint32_t first = (uint32_t)addr;
+  const uint32_t last = first + (size ? size - 1 : 0);
+  const bool first_uncached = WITHIN_DTCM_RAM(first) || WITHIN_DMA_RAM(first);
+  const bool last_uncached = WITHIN_DTCM_RAM(last) || WITHIN_DMA_RAM(last);
+  return !first_uncached || !last_uncached;
 }
 
 // Every cache line the buffer touches, from its line-aligned start.
@@ -67,11 +72,11 @@ inline int32_t dma_cache_line_span(void *addr, uint32_t size) {
 }
 
 inline void dma_prepare_tx_memory(void *addr, uint32_t size) {
-  if (dma_memory_cached(addr))
+  if (dma_memory_cached(addr, size))
     SCB_CleanDCache_by_Addr((uint32_t *)dma_cache_line_start(addr), dma_cache_line_span(addr, size));
 }
 inline void dma_prepare_rx_memory(void *addr, uint32_t size) {
-  if (dma_memory_cached(addr))
+  if (dma_memory_cached(addr, size))
     SCB_CleanInvalidateDCache_by_Addr((uint32_t *)dma_cache_line_start(addr), dma_cache_line_span(addr, size));
 }
 #else

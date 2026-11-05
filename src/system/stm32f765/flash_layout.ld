@@ -138,6 +138,11 @@ SECTIONS
     /* This is used by the startup in order to initialize the .bss section */
     _sbss = .;         /* define a global symbol at bss start */
     __bss_start__ = _sbss;
+    /* DMA buffers lead .bss so they stay in the uncached first 64K (DTCM). */
+    . = ALIGN(32);
+    *(.bss.dma_ram*)
+    . = ALIGN(32);
+    _dma_ram_end = .;
     *(.bss)
     *(.bss*)
     *(COMMON)
@@ -146,6 +151,7 @@ SECTIONS
     _ebss = .;         /* define a global symbol at bss end */
     __bss_end__ = _ebss;
   } >RAM
+  ASSERT(_dma_ram_end <= ORIGIN(RAM) + 64K, "DMA buffers left DTCM and would be cached")
 
   /* User_heap_stack section, used to check that there is enough "RAM" Ram  type memory left */
   ._user_heap :
