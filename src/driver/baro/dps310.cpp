@@ -21,9 +21,8 @@
 #define DPS310_REG_ID 0x0D
 
 #define DPS310_REG_COEF 0x10
-#define DPS310_REG_COEF_SRCE 0x28
 
-#define DPS310_ID_REV_AND_PROD_ID (0x10) // Infineon DPS310
+#define DPS310_ID_REV_AND_PROD_ID (0x10) // Infineon DPS310 or Goertek SPL06-001
 #define SPL07_003_CHIP_ID (0x11)         // SPL07_003
 
 #define DPS310_RESET_BIT_SOFT_RST (0x09) // 0b1001
@@ -37,14 +36,11 @@
 #define DPS310_PRS_CFG_BIT_PM_RATE_32HZ (0x50) //  101 - 32 measurements pr. sec.
 #define DPS310_PRS_CFG_BIT_PM_PRC_16 (0x04)    // 0100 - 16 times (Standard).
 
-#define DPS310_TMP_CFG_BIT_TMP_EXT (0x80)       //
-#define DPS310_TMP_CFG_BIT_TMP_RATE_32HZ (0x50) //  101 - 32 measurements pr. sec.
-#define DPS310_TMP_CFG_BIT_TMP_PRC_16 (0x04)    // 0100 - 16 times (Standard).
+#define DPS310_TMP_CFG_BIT_TMP_EXT (0x80)      // MEMS element sensor
+#define DPS310_TMP_CFG_BIT_TMP_RATE_4HZ (0x20) //  010 - 4 measurements pr. sec.
+#define DPS310_TMP_CFG_BIT_TMP_PRC_1 (0x00)    // 0000 - single.
 
 #define DPS310_CFG_REG_BIT_P_SHIFT (0x04)
-#define DPS310_CFG_REG_BIT_T_SHIFT (0x08)
-
-#define DPS310_COEF_SRCE_BIT_TMP_COEF_SRCE (0x80)
 
 extern i2c_bus_device_t baro_bus;
 typedef struct {
@@ -125,16 +121,19 @@ static baro_types_t dps310_init() {
   // PRS_CFG: pressure measurement rate (32 Hz) and oversampling (16 time standard)
   dps310_set_bits(&baro_bus, DPS310_REG_PRS_CFG, DPS310_PRS_CFG_BIT_PM_RATE_32HZ | DPS310_PRS_CFG_BIT_PM_PRC_16);
 
-  // TMP_CFG: temperature measurement rate (32 Hz) and oversampling (16 times)
-  if (chip_id == SPL07_003_CHIP_ID) {
-    dps310_set_bits(&baro_bus, DPS310_REG_TMP_CFG, DPS310_TMP_CFG_BIT_TMP_RATE_32HZ | DPS310_TMP_CFG_BIT_TMP_PRC_16);
-  } else {
-    const uint8_t temp_coef_source = i2c_read_reg(&baro_bus, DPS310_REG_COEF_SRCE);
-    dps310_set_bits(&baro_bus, DPS310_REG_TMP_CFG, DPS310_TMP_CFG_BIT_TMP_RATE_32HZ | DPS310_TMP_CFG_BIT_TMP_PRC_16 | (temp_coef_source & DPS310_COEF_SRCE_BIT_TMP_COEF_SRCE));
-  }
+  // TMP_CFG: temperature measurement rate (4 Hz) and single oversampling.
+  // Background conversions must fit rate * time for both in under 1 s:
+  // 32 * 27.6 ms + 4 * 3.6 ms = 0.90 s. The result registers keep the last
+  // temperature for the pressure conversions in between.
+  // ID 0x10 is either a DPS310 or an SPL06-001, which has no COEF_SRCE
+  // register and requires the MEMS (external) sensor, so always use it.
+  uint8_t tmp_cfg = DPS310_TMP_CFG_BIT_TMP_RATE_4HZ | DPS310_TMP_CFG_BIT_TMP_PRC_1;
+  if (chip_id == DPS310_ID_REV_AND_PROD_ID)
+    tmp_cfg |= DPS310_TMP_CFG_BIT_TMP_EXT;
+  dps310_set_bits(&baro_bus, DPS310_REG_TMP_CFG, tmp_cfg);
 
-  // CFG_REG: set pressure and temperature result bit-shift (required when the oversampling rate is >8 times)
-  dps310_set_bits(&baro_bus, DPS310_REG_CFG_REG, DPS310_CFG_REG_BIT_T_SHIFT | DPS310_CFG_REG_BIT_P_SHIFT);
+  // CFG_REG: pressure result bit-shift (required when the oversampling rate is >8 times)
+  dps310_set_bits(&baro_bus, DPS310_REG_CFG_REG, DPS310_CFG_REG_BIT_P_SHIFT);
 
   // MEAS_CFG: Continuous pressure and temperature measurement
   dps310_set_bits(&baro_bus, DPS310_REG_MEAS_CFG, DPS310_MEAS_CFG_MEAS_CTRL_CONT);
@@ -143,11 +142,12 @@ static baro_types_t dps310_init() {
 }
 
 static bool dps310_data_ready(uint8_t status) {
-  return status & (DPS310_MEAS_CFG_PRS_RDY | DPS310_MEAS_CFG_TMP_RDY);
+  // Publish only new pressure conversions; temperature updates in between.
+  return status & DPS310_MEAS_CFG_PRS_RDY;
 }
 
 static float dps310_compensate(const uint8_t data[6]) {
-  static const float kT = 253952; // 16 times (Standard)
+  static const float kT = 524288; // single
   static const float kP = 253952; // 16 times (Standard)
 
   const int32_t Praw = get_twos_complement((data[0] << 16) + (data[1] << 8) + data[2], 24);
