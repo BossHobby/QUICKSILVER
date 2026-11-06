@@ -539,7 +539,7 @@ static void print_osd_crosshair(osd_element_t *el) {
 }
 
 static void print_osd_armtime(osd_element_t *el) {
-  uint32_t time_s = state.armtime;
+  uint32_t time_s = state.armtime_ms / 1000;
 
   // Will only display up to 59:59 as realistically no quad will fly that long (currently).
   // Reset to zero at on reaching 1 hr
