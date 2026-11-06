@@ -207,12 +207,19 @@ typedef struct {
   float gps_speed;
   float gps_vel_north;
   float gps_vel_east;
+  float gps_vel_down; // m/s, receiver NED down velocity (NAV-PVT velD); published only
   float gps_heading;
   float gps_heading_accuracy;
   float gps_horizontal_accuracy;
+  float gps_speed_accuracy; // m/s, receiver 1-sigma velocity estimate (NAV-PVT sAcc)
+  // time_millis() of the latest NAV-PVT epoch: receiver iTOW mapped onto the
+  // local clock at the fastest delivery, so spacing follows the measurement
+  // interval rather than delivery jitter. Never ahead of its delivery.
   uint32_t gps_last_update_ms;
   gps_coord_t gps_coord;
   float gps_altitude;
+  uint8_t gps_jamming;  // gps_jamming_t from the receiver (M9/M10); unknown when stale
+  uint8_t gps_spoofing; // gps_spoofing_t from M10 SEC-SIG; unknown when stale
 
   // Barometer: detection, sample health and filtered outputs.
   bool baro_detected;           // Set by baro_init after probing; enables IO barometer updates.
@@ -317,12 +324,16 @@ typedef struct {
   MEMBER(gps_speed, float)                             \
   MEMBER(gps_vel_north, float)                         \
   MEMBER(gps_vel_east, float)                          \
+  MEMBER(gps_vel_down, float)                          \
   MEMBER(gps_heading, float)                           \
   MEMBER(gps_heading_accuracy, float)                  \
   MEMBER(gps_horizontal_accuracy, float)               \
+  MEMBER(gps_speed_accuracy, float)                    \
   MEMBER(gps_last_update_ms, uint32_t)                 \
   MEMBER(gps_coord, gps_coord_t)                       \
   MEMBER(gps_altitude, float)                          \
+  MEMBER(gps_jamming, uint8_t)                         \
+  MEMBER(gps_spoofing, uint8_t)                        \
   MEMBER(baro_detected, bool)                          \
   MEMBER(baro_valid, bool)                             \
   MEMBER(baro_last_update_ms, uint32_t)                \

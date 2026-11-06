@@ -7,6 +7,10 @@
 // 0.3.2: cpu_load is a percentage 0-100 (was microseconds).
 //        add state field with flags, aux switches, failsafe phase, RTH and wing states.
 //        add the UTC start datetime to each directory entry.
+//        add the attitude field (roll, pitch, yaw in 0.1 degrees) after setpoint, shifting the
+//        later field bits; add the GPS velocity (north, east, down) and GPS fix (status,
+//        satellites, accuracies, RF noise, AGC and CW interference) fields after state.
+//        Frames may exceed 255 bytes.
 // 0.3.1 (95765fe1): add GPS coordinate, home and altitude fields; grow debug to 16 entries.
 //        replace the four-motor field with per-output values (a1887d4f).
 // 0.2.0 (7343f574): delta-encode I/P frames, scale 100 (was 1000), store the profile with each log
@@ -25,6 +29,7 @@ typedef enum {
   BBOX_FIELD_PID_D_TERM,
   BBOX_FIELD_RX,
   BBOX_FIELD_SETPOINT,
+  BBOX_FIELD_ATTITUDE,
   BBOX_FIELD_ACCEL_RAW,
   BBOX_FIELD_ACCEL_FILTER,
   BBOX_FIELD_GYRO_RAW,
@@ -36,6 +41,8 @@ typedef enum {
   BBOX_FIELD_ALTITUDE,
   BBOX_FIELD_DEBUG,
   BBOX_FIELD_STATE,
+  BBOX_FIELD_GPS_VEL,
+  BBOX_FIELD_GPS_FIX,
 
   BBOX_FIELD_MAX,
 } blackbox_field_t;
@@ -69,6 +76,15 @@ typedef enum {
 } blackbox_state_flag_t;
 
 static constexpr uint32_t BBOX_STATE_FAILSAFE_PHASE_SHIFT = 5;
+
+// GPS fix status word, the first gps_fix value.
+typedef enum {
+  BBOX_GPS_LOCK = 0x1 << 0,       // state.gps_lock
+  BBOX_GPS_VALID = 0x1 << 1,      // flags.gps_valid: navigation accepts the fix
+  BBOX_GPS_HOME_VALID = 0x1 << 2, // flags.home_valid
+} blackbox_gps_flag_t;
+static constexpr uint32_t BBOX_GPS_JAMMING_SHIFT = 4;  // gps_jamming_t, 2 bits
+static constexpr uint32_t BBOX_GPS_SPOOFING_SHIFT = 6; // gps_spoofing_t, 2 bits
 #if defined(VEHICLE_WING)
 static constexpr uint32_t BBOX_STATE_WING_NAV_SHIFT = 9;       // 4 bits
 static constexpr uint32_t BBOX_STATE_WING_LAUNCH_SHIFT = 13;   // 4 bits
@@ -83,6 +99,19 @@ typedef struct {
 
 cbor_result_t cbor_encode_compact_output_t(cbor_value_t *enc, const compact_output_t *output);
 
+// Logged as int16 members so P-frames carry wrapping int16 deltas like the vectors.
+typedef struct {
+  int16_t status;     // blackbox_gps_flag_t with the jamming and spoofing states
+  int16_t satellites; // used in the solution
+  int16_t h_acc;      // horizontal accuracy, cm (saturated)
+  int16_t s_acc;      // speed accuracy, cm/s (saturated)
+  // Receiver RF monitor (MON-RF), which shows interference where the receiver
+  // reports no jamming state, as the M10 does without SEC-SIG.
+  int16_t rf_noise; // noise level per millisecond
+  int16_t rf_agc;   // AGC monitor, 0-8191 of full gain
+  int16_t rf_cw;    // continuous-wave interference, 0 (none) to 255 (strong)
+} blackbox_gps_fix_t;
+
 typedef struct {
   uint32_t loop;
   uint32_t time;
@@ -93,6 +122,8 @@ typedef struct {
 
   compact_vec4_t rx;
   compact_vec4_t setpoint;
+
+  compact_vec3_t attitude; // state.attitude roll, pitch (positive nose-down), yaw; 0.1 degrees
 
   compact_vec3_t accel_raw;
   compact_vec3_t accel_filter;
@@ -113,6 +144,9 @@ typedef struct {
   // State field; both stay below 2^31, so P-frame deltas fit int32.
   uint32_t state; // blackbox_state_flag_t bits and packed states
   uint32_t aux;   // state.aux_active, bit per aux_function_t of the recording vehicle
+
+  compact_vec3_t gps_vel; // GPS north, east, down velocity; m/s scaled like other vec3 fields
+  blackbox_gps_fix_t gps_fix;
 } blackbox_t;
 
 // Frame types for I-frame/P-frame encoding

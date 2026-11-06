@@ -11,6 +11,7 @@
 #include "core/tasks.h"
 #include "driver/time.h"
 #include "io/blackbox_device.h"
+#include "io/gps.h"
 #include "io/usb_configurator.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
@@ -66,6 +67,12 @@ static int16_t blackbox_compress_float(float value) {
     return -32768;
   }
   return scaled;
+}
+
+// Radians to 0.1 degrees: finer than the BLACKBOX_SCALE vec3 resolution of 0.57 degrees.
+static void blackbox_compress_angles(compact_vec3_t *out, const vec3_t *in) {
+  for (uint32_t i = 0; i < 3; i++)
+    out->axis[i] = (int16_t)constrain(in->axis[i] * RADTODEG * 10.0f, -32768.0f, 32767.0f);
 }
 
 static void blackbox_compress_vec3(compact_vec3_t *out, const vec3_t *in) {
@@ -141,6 +148,17 @@ static bool compact_output_is_zero(const compact_output_t *output) {
 }
 
 // Check if debug array has changed
+static bool compute_and_check_gps_fix_delta(blackbox_gps_fix_t *delta, const blackbox_gps_fix_t *current, const blackbox_gps_fix_t *previous) {
+  delta->status = delta_int16(current->status, previous->status);
+  delta->satellites = delta_int16(current->satellites, previous->satellites);
+  delta->h_acc = delta_int16(current->h_acc, previous->h_acc);
+  delta->s_acc = delta_int16(current->s_acc, previous->s_acc);
+  delta->rf_noise = delta_int16(current->rf_noise, previous->rf_noise);
+  delta->rf_agc = delta_int16(current->rf_agc, previous->rf_agc);
+  delta->rf_cw = delta_int16(current->rf_cw, previous->rf_cw);
+  return delta->status || delta->satellites || delta->h_acc || delta->s_acc || delta->rf_noise || delta->rf_agc || delta->rf_cw;
+}
+
 static bool debug_has_changed(const int16_t *current, const int16_t *previous, uint32_t size) {
   for (uint32_t i = 0; i < size; i++) {
     if (current[i] != previous[i]) {
@@ -229,6 +247,9 @@ cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *cu
     if ((field_flags & (1 << BBOX_FIELD_SETPOINT)) && compute_and_check_vec4_delta(&deltas.setpoint, &current->setpoint, &previous->setpoint)) {
       active_fields |= (1 << BBOX_FIELD_SETPOINT);
     }
+    if ((field_flags & (1 << BBOX_FIELD_ATTITUDE)) && compute_and_check_vec3_delta(&deltas.attitude, &current->attitude, &previous->attitude)) {
+      active_fields |= (1 << BBOX_FIELD_ATTITUDE);
+    }
     if ((field_flags & (1 << BBOX_FIELD_ACCEL_RAW)) && compute_and_check_vec3_delta(&deltas.accel_raw, &current->accel_raw, &previous->accel_raw)) {
       active_fields |= (1 << BBOX_FIELD_ACCEL_RAW);
     }
@@ -285,6 +306,12 @@ cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *cu
       if (deltas.state || deltas.aux)
         active_fields |= 1 << BBOX_FIELD_STATE;
     }
+    if ((field_flags & (1 << BBOX_FIELD_GPS_VEL)) && compute_and_check_vec3_delta(&deltas.gps_vel, &current->gps_vel, &previous->gps_vel)) {
+      active_fields |= 1 << BBOX_FIELD_GPS_VEL;
+    }
+    if ((field_flags & (1 << BBOX_FIELD_GPS_FIX)) && compute_and_check_gps_fix_delta(&deltas.gps_fix, &current->gps_fix, &previous->gps_fix)) {
+      active_fields |= 1 << BBOX_FIELD_GPS_FIX;
+    }
     encoded_field_flags = active_fields | BLACKBOX_FRAME_TYPE_BIT;
   }
   
@@ -312,6 +339,7 @@ cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *cu
   CBOR_CHECK_ERROR(res = encode_vec3_field_if_present(enc, active_flags, BBOX_FIELD_PID_D_TERM, &source->pid_d_term));
   CBOR_CHECK_ERROR(res = encode_vec4_field_if_present(enc, active_flags, BBOX_FIELD_RX, &source->rx));
   CBOR_CHECK_ERROR(res = encode_vec4_field_if_present(enc, active_flags, BBOX_FIELD_SETPOINT, &source->setpoint));
+  CBOR_CHECK_ERROR(res = encode_vec3_field_if_present(enc, active_flags, BBOX_FIELD_ATTITUDE, &source->attitude));
   CBOR_CHECK_ERROR(res = encode_vec3_field_if_present(enc, active_flags, BBOX_FIELD_ACCEL_RAW, &source->accel_raw));
   CBOR_CHECK_ERROR(res = encode_vec3_field_if_present(enc, active_flags, BBOX_FIELD_ACCEL_FILTER, &source->accel_filter));
   CBOR_CHECK_ERROR(res = encode_vec3_field_if_present(enc, active_flags, BBOX_FIELD_GYRO_RAW, &source->gyro_raw));
@@ -359,6 +387,18 @@ cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *cu
     CBOR_CHECK_ERROR(res = cbor_encode_array(enc, 2));
     CBOR_CHECK_ERROR(res = cbor_encode_int32_t(enc, &state_word));
     CBOR_CHECK_ERROR(res = cbor_encode_int32_t(enc, &aux));
+  }
+  CBOR_CHECK_ERROR(res = encode_vec3_field_if_present(enc, active_flags, BBOX_FIELD_GPS_VEL, &source->gps_vel));
+  if (active_flags & (1 << BBOX_FIELD_GPS_FIX)) {
+    const blackbox_gps_fix_t &fix = source->gps_fix;
+    CBOR_CHECK_ERROR(res = cbor_encode_array(enc, 7));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.status));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.satellites));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.h_acc));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.s_acc));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.rf_noise));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.rf_agc));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.rf_cw));
   }
   CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
   return res;
@@ -520,6 +560,10 @@ void blackbox_capture() {
     blackbox.setpoint.throttle = blackbox_compress_float(state.throttle);
   }
 
+  if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_ATTITUDE)) {
+    blackbox_compress_angles(&blackbox.attitude, &state.attitude);
+  }
+
   if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_GYRO_FILTER)) {
     blackbox_compress_vec3(&blackbox.gyro_filter, &state.gyro);
   }
@@ -549,6 +593,25 @@ void blackbox_capture() {
   if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_STATE)) {
     blackbox.state = blackbox_state_word();
     blackbox.aux = state.aux_active;
+  }
+
+  if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_GPS_VEL)) {
+    const vec3_t gps_vel = {.axis = {state.gps_vel_north, state.gps_vel_east, state.gps_vel_down}};
+    blackbox_compress_vec3(&blackbox.gps_vel, &gps_vel);
+  }
+
+  if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_GPS_FIX)) {
+    blackbox.gps_fix = {
+        .status = (int16_t)((state.gps_lock ? BBOX_GPS_LOCK : 0) |
+                            (state.gps_jamming & 0x3) << BBOX_GPS_JAMMING_SHIFT |
+                            (state.gps_spoofing & 0x3) << BBOX_GPS_SPOOFING_SHIFT),
+        .satellites = state.gps_sats,
+        .h_acc = (int16_t)constrain(state.gps_horizontal_accuracy * 100.0f, 0.0f, 32767.0f),
+        .s_acc = (int16_t)constrain(state.gps_speed_accuracy * 100.0f, 0.0f, 32767.0f),
+        .rf_noise = (int16_t)MIN(gps_status.noise_per_ms, (uint16_t)32767),
+        .rf_agc = (int16_t)gps_status.agc_count,
+        .rf_cw = gps_status.cw_jamming,
+    };
   }
 
   mailbox.pending.store(true, std::memory_order_release);

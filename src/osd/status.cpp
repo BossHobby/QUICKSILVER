@@ -30,6 +30,7 @@ typedef enum {
   STATUS_AUTOLAUNCH,
   STATUS_AUTOTRIM,
   STATUS_RTH,
+  STATUS_GPS,
   STATUS_MAX,
 } osd_status_entries_t;
 
@@ -75,6 +76,7 @@ const char *default_system_status_labels[STATUS_MAX] = {
     [STATUS_AUTOLAUNCH] = "AUTO LAUNCH",
     [STATUS_AUTOTRIM] = "AUTOTRIM",
     [STATUS_RTH] = "RTH",
+    [STATUS_GPS] = "GPS",
 };
 
 const char *guac_system_status_labels[STATUS_MAX] = {
@@ -92,6 +94,7 @@ const char *guac_system_status_labels[STATUS_MAX] = {
     [STATUS_AUTOLAUNCH] = "AUTO LAUNCH",
     [STATUS_AUTOTRIM] = "AUTOTRIM",
     [STATUS_RTH] = "RTH",
+    [STATUS_GPS] = "GPS",
 };
 
 static void osd_status_write_label(osd_element_t *el) {
@@ -432,6 +435,17 @@ bool osd_status_update(osd_element_t *el) {
     return osd_status_print(el);
   }
 
+  // Spoofing can keep a valid-looking fix; critical jamming has lost it.
+  // Either outranks navigation phases, which would still trust GPS.
+  if (state.gps_spoofing >= GPS_SPOOFING_INDICATED) {
+    osd_status_show_text(MODE_HOLD, STATUS_GPS, "GPS: SPOOFING");
+    return osd_status_print(el);
+  }
+  if (state.gps_jamming == GPS_JAMMING_CRITICAL) {
+    osd_status_show_text(MODE_HOLD, STATUS_GPS, "GPS: JAMMED");
+    return osd_status_print(el);
+  }
+
 #ifdef VEHICLE_WING
   const char *result_message = osd_wing_result_message();
   if (result_message) {
@@ -477,6 +491,13 @@ bool osd_status_update(osd_element_t *el) {
     return osd_status_print(el);
   }
 #endif
+
+  // Interference with the fix intact can last a whole flight near a
+  // transmitter, so it yields to every navigation message.
+  if (state.gps_jamming == GPS_JAMMING_WARNING) {
+    osd_status_show_text(MODE_HOLD, STATUS_GPS, "GPS: INTERFERENCE");
+    return osd_status_print(el);
+  }
 
   if (current_status.mode != MODE_TEMP && current_status.entry != STATUS_MAX) {
     current_status.entry = STATUS_MAX;

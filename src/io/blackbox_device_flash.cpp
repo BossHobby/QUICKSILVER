@@ -206,7 +206,7 @@ bool blackbox_device_flash_ready() {
   return state == STATE_IDLE && phase == PHASE_IDLE;
 }
 
-bool blackbox_device_flash_write(const uint8_t *buffer, const uint8_t size) {
+bool blackbox_device_flash_write(const uint8_t *buffer, const uint16_t size) {
   if (size > ring_buffer_free(&blackbox_encode_buffer)) {
     return false;
   }
