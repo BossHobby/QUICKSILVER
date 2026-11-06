@@ -108,7 +108,7 @@ struct blackbox_test_t {
     blackbox_device_simulator.start = []() { starts++; };
     blackbox_device_simulator.stop = []() { stops++; flushing = 3; };
     blackbox_device_simulator.reset = []() {};
-    blackbox_device_simulator.write = [](const uint8_t *bytes, uint8_t size) {
+    blackbox_device_simulator.write = [](const uint8_t *bytes, uint16_t size) {
       if (reject_write || writes >= 64) return false;
       memcpy(recorded[writes].bytes, bytes, size);
       recorded[writes++].size = size;
@@ -349,7 +349,7 @@ void test_blackbox_runs_in_own_freertos_task() {
       while (!worker_preempted.load()) {}
       return true;
     };
-    blackbox_device_simulator.write = [](const uint8_t *, uint8_t) {
+    blackbox_device_simulator.write = [](const uint8_t *, uint16_t) {
       worker_encoded.store(true);
       return true;
     };
@@ -477,6 +477,110 @@ void test_blackbox_state_roundtrip_and_unchanged_state(void) {
     }
     previous = current;
   }
+}
+
+void test_blackbox_gps_velocity_follows_state(void) {
+  const uint32_t fields = (1 << BBOX_FIELD_STATE) | (1 << BBOX_FIELD_GPS_VEL);
+  blackbox_t previous = {};
+  previous.state = BBOX_STATE_IN_AIR;
+  previous.gps_vel = {.axis = {1250, -300, 75}};
+  for (int pass = 0; pass < 3; pass++) {
+    blackbox_t current = previous;
+    if (pass == 1) current.gps_vel.axis[2] = -40; // only down changes, sign flips
+    uint8_t buffer[BLACKBOX_MAX_SIZE];
+    cbor_value_t codec;
+    cbor_encoder_init(&codec, buffer, sizeof(buffer));
+    TEST_ASSERT_EQUAL(CBOR_OK, cbor_encode_blackbox_frame(&codec, &current, &previous,
+        pass == 0 ? BLACKBOX_FRAME_I : BLACKBOX_FRAME_P, fields));
+    const auto length = cbor_encoder_len(&codec);
+    cbor_decoder_init(&codec, buffer, length);
+    cbor_container_t array;
+    TEST_ASSERT_TRUE(cbor_decode_array(&codec, &array) >= CBOR_OK);
+    uint32_t flags;
+    TEST_ASSERT_TRUE(cbor_decode_uint32_t(&codec, &flags) >= CBOR_OK);
+    TEST_ASSERT_EQUAL(pass == 0, (flags & (1 << BBOX_FIELD_STATE)) != 0);
+    TEST_ASSERT_EQUAL(pass != 2, (flags & (1 << BBOX_FIELD_GPS_VEL)) != 0);
+    TEST_ASSERT_TRUE(cbor_decode_skip(&codec) >= CBOR_OK); // loop
+    TEST_ASSERT_TRUE(cbor_decode_skip(&codec) >= CBOR_OK); // time
+    if (pass == 0) TEST_ASSERT_TRUE(cbor_decode_skip(&codec) >= CBOR_OK); // state precedes velocity
+    if (pass == 2) {
+      previous = current;
+      continue;
+    }
+    TEST_ASSERT_TRUE(cbor_decode_array(&codec, &array) >= CBOR_OK);
+    for (int i = 0; i < 3; i++) {
+      int16_t value;
+      TEST_ASSERT_TRUE(cbor_decode_int16_t(&codec, &value) >= CBOR_OK);
+      TEST_ASSERT_EQUAL_INT16(current.gps_vel.axis[i], pass == 1 ? previous.gps_vel.axis[i] + value : value);
+    }
+    previous = current;
+  }
+}
+
+void test_blackbox_gps_fix_records_navigation_status(void) {
+  const uint32_t fields = 1 << BBOX_FIELD_GPS_FIX;
+  blackbox_t previous = {};
+  previous.gps_fix = {.status = BBOX_GPS_LOCK | BBOX_GPS_VALID, .satellites = 14, .h_acc = 180, .s_acc = 25,
+                      .rf_noise = 85, .rf_agc = 2046, .rf_cw = 5};
+  for (int pass = 0; pass < 2; pass++) {
+    blackbox_t current = previous;
+    if (pass == 0) {
+      current.gps_fix.status = BBOX_GPS_LOCK; // navigation rejected the fix
+      current.gps_fix.satellites = 9;
+      current.gps_fix.rf_cw = 60; // a transmitter close to the antenna
+    }
+    uint8_t buffer[BLACKBOX_MAX_SIZE];
+    cbor_value_t codec;
+    cbor_encoder_init(&codec, buffer, sizeof(buffer));
+    TEST_ASSERT_EQUAL(CBOR_OK, cbor_encode_blackbox_frame(&codec, &current, &previous, BLACKBOX_FRAME_P, fields));
+    cbor_decoder_init(&codec, buffer, cbor_encoder_len(&codec));
+    cbor_container_t array;
+    TEST_ASSERT_TRUE(cbor_decode_array(&codec, &array) >= CBOR_OK);
+    uint32_t flags;
+    TEST_ASSERT_TRUE(cbor_decode_uint32_t(&codec, &flags) >= CBOR_OK);
+    TEST_ASSERT_EQUAL(pass == 0, (flags & (1 << BBOX_FIELD_GPS_FIX)) != 0); // unchanged, it costs nothing
+    if (pass == 1) break;
+    TEST_ASSERT_TRUE(cbor_decode_skip(&codec) >= CBOR_OK); // loop
+    TEST_ASSERT_TRUE(cbor_decode_skip(&codec) >= CBOR_OK); // time
+    TEST_ASSERT_TRUE(cbor_decode_array(&codec, &array) >= CBOR_OK);
+    TEST_ASSERT_EQUAL_UINT32(7, cbor_decode_array_size(&codec, &array));
+    int16_t deltas[7];
+    for (auto &delta : deltas)
+      TEST_ASSERT_TRUE(cbor_decode_int16_t(&codec, &delta) >= CBOR_OK);
+    TEST_ASSERT_EQUAL_INT16(-BBOX_GPS_VALID, deltas[0]);
+    TEST_ASSERT_EQUAL_INT16(-5, deltas[1]);
+    TEST_ASSERT_EQUAL_INT16(0, deltas[2]);
+    TEST_ASSERT_EQUAL_INT16(0, deltas[5]);
+    TEST_ASSERT_EQUAL_INT16(55, deltas[6]);
+    previous = current;
+  }
+}
+
+void test_blackbox_attitude_yaw_crosses_south(void) {
+  const uint32_t fields = 1 << BBOX_FIELD_ATTITUDE;
+  blackbox_t previous = {};
+  previous.attitude = {.axis = {-450, 125, 1795}};
+  blackbox_t current = previous;
+  current.attitude.axis[2] = -1795; // heading crossed south
+  uint8_t buffer[BLACKBOX_MAX_SIZE];
+  cbor_value_t codec;
+  cbor_encoder_init(&codec, buffer, sizeof(buffer));
+  TEST_ASSERT_EQUAL(CBOR_OK, cbor_encode_blackbox_frame(&codec, &current, &previous, BLACKBOX_FRAME_P, fields));
+  cbor_decoder_init(&codec, buffer, cbor_encoder_len(&codec));
+  cbor_container_t array;
+  TEST_ASSERT_TRUE(cbor_decode_array(&codec, &array) >= CBOR_OK);
+  uint32_t flags;
+  TEST_ASSERT_TRUE(cbor_decode_uint32_t(&codec, &flags) >= CBOR_OK);
+  TEST_ASSERT_TRUE(flags & (1 << BBOX_FIELD_ATTITUDE));
+  TEST_ASSERT_TRUE(cbor_decode_skip(&codec) >= CBOR_OK); // loop
+  TEST_ASSERT_TRUE(cbor_decode_skip(&codec) >= CBOR_OK); // time
+  TEST_ASSERT_TRUE(cbor_decode_array(&codec, &array) >= CBOR_OK);
+  int16_t deltas[3];
+  for (auto &delta : deltas)
+    TEST_ASSERT_TRUE(cbor_decode_int16_t(&codec, &delta) >= CBOR_OK);
+  TEST_ASSERT_EQUAL_INT16(0, deltas[0]);
+  // A wrap is just a large delta; it still fits int16 and decodes exactly.
+  TEST_ASSERT_EQUAL_INT16(current.attitude.axis[2], (int16_t)(previous.attitude.axis[2] + deltas[2]));
 }
 
 void test_blackbox_full_frame_fits_device_buffer(void) {

@@ -75,6 +75,9 @@ extern void test_sdcard_transport_busy_and_timer_wrap();
 extern void test_sdcard_device_samples_during_write();
 extern void test_blackbox_navigation_roundtrip_and_unchanged_home(void);
 extern void test_blackbox_state_roundtrip_and_unchanged_state(void);
+extern void test_blackbox_gps_velocity_follows_state(void);
+extern void test_blackbox_attitude_yaw_crosses_south(void);
+extern void test_blackbox_gps_fix_records_navigation_status(void);
 extern void test_blackbox_full_frame_fits_device_buffer(void);
 extern void test_flash_streams_without_startup_erase_and_commits_at_stop();
 extern void test_flash_flushes_last_page_at_capacity();
@@ -290,6 +293,9 @@ extern void test_gps_configuration_and_fix_validity(void);
 extern void test_gps_burst_resumes_partial_packet(void);
 extern void test_gps_ground_and_airborne_configuration(void);
 extern void test_gps_satellite_and_fix_loss_remain_visible_armed(void);
+extern void test_gps_stamps_solutions_by_receiver_epoch(void);
+extern void test_gps_m10_constellations_select_rate_and_fall_back(void);
+extern void test_gps_interference_reports(void);
 
 // Navigation tests
 extern void test_attitude_gps_reacquisition_does_not_snap_yaw(void);
@@ -492,6 +498,9 @@ int main(int argc, char **argv) {
   RUN_TEST(test_blackbox_debug_change_detection);
   RUN_TEST(test_blackbox_navigation_roundtrip_and_unchanged_home);
   RUN_TEST(test_blackbox_state_roundtrip_and_unchanged_state);
+  RUN_TEST(test_blackbox_gps_velocity_follows_state);
+  RUN_TEST(test_blackbox_attitude_yaw_crosses_south);
+  RUN_TEST(test_blackbox_gps_fix_records_navigation_status);
   RUN_TEST(test_blackbox_full_frame_fits_device_buffer);
   RUN_TEST(test_flash_streams_without_startup_erase_and_commits_at_stop);
   RUN_TEST(test_flash_flushes_last_page_at_capacity);
@@ -590,6 +599,9 @@ int main(int argc, char **argv) {
   RUN_TEST(test_gps_burst_resumes_partial_packet);
   RUN_TEST(test_gps_ground_and_airborne_configuration);
   RUN_TEST(test_gps_satellite_and_fix_loss_remain_visible_armed);
+  RUN_TEST(test_gps_stamps_solutions_by_receiver_epoch);
+  RUN_TEST(test_gps_m10_constellations_select_rate_and_fall_back);
+  RUN_TEST(test_gps_interference_reports);
   RUN_TEST(test_datetime_epoch_conversion);
   RUN_TEST(test_gps_time_sets_free_running_clock);
   RUN_TEST(test_attitude_gps_reacquisition_does_not_snap_yaw);

@@ -224,7 +224,7 @@ bool blackbox_device_sdcard_ready() {
   return state == STATE_IDLE && !flush_pending;
 }
 
-bool blackbox_device_sdcard_write(const uint8_t *buffer, const uint8_t size) {
+bool blackbox_device_sdcard_write(const uint8_t *buffer, const uint16_t size) {
   if (size > ring_buffer_free(&blackbox_encode_buffer)) {
     return false;
   }

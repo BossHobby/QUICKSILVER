@@ -34,6 +34,30 @@ typedef enum {
   GPS_NOT_DETECTED = 13,
 } gps_config_state_t;
 
+// Receiver interference reports (MON-RF or SEC-SIG jammingState/spoofingState).
+typedef enum {
+  GPS_JAMMING_UNKNOWN = 0, // not reported, detection disabled or stale
+  GPS_JAMMING_OK = 1,
+  GPS_JAMMING_WARNING = 2,  // interference visible, fix still OK
+  GPS_JAMMING_CRITICAL = 3, // interference visible, no fix
+} gps_jamming_t;
+
+typedef enum {
+  GPS_SPOOFING_UNKNOWN = 0, // not reported, detection disabled or stale
+  GPS_SPOOFING_OK = 1,
+  GPS_SPOOFING_INDICATED = 2, // indicated by a single source
+  GPS_SPOOFING_MULTIPLE = 3,  // indicated by multiple sources
+} gps_spoofing_t;
+
+// MON-RF antenna supervisor state.
+typedef enum {
+  GPS_ANTENNA_INIT = 0,
+  GPS_ANTENNA_UNKNOWN = 1,
+  GPS_ANTENNA_OK = 2,
+  GPS_ANTENNA_SHORT = 3,
+  GPS_ANTENNA_OPEN = 4,
+} gps_antenna_status_t;
+
 typedef enum {
   GPS_POWER_FULL = 0,
   GPS_POWER_BALANCED = 1,
@@ -69,8 +93,13 @@ typedef struct {
   uint32_t speed_acc;
   uint32_t head_acc;
   uint8_t power_mode;
-  uint8_t update_rate;
+  uint8_t update_rate; // Hz, measured from delivered solutions; 0 until two arrive
   uint8_t avg_cno;
+  // MON-RF diagnostics (M9/M10), refreshed at 1 Hz.
+  uint8_t antenna_status; // gps_antenna_status_t
+  uint16_t noise_per_ms;  // RF noise level
+  uint16_t agc_count;     // AGC monitor, 0-8191 of full gain
+  uint8_t cw_jamming;     // continuous-wave interference, 0 (none) to 255 (strong)
 } gps_status_t;
 
 #define GPS_CONSTELLATION_MEMBERS   \
@@ -105,6 +134,10 @@ typedef struct {
   MEMBER(power_mode, uint8_t)          \
   MEMBER(update_rate, uint8_t)         \
   MEMBER(avg_cno, uint8_t)             \
+  MEMBER(antenna_status, uint8_t)      \
+  MEMBER(noise_per_ms, uint16_t)       \
+  MEMBER(agc_count, uint16_t)          \
+  MEMBER(cw_jamming, uint8_t)          \
   END_STRUCT()
 
 extern gps_status_t gps_status;

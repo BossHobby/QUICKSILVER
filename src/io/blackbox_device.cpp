@@ -231,7 +231,7 @@ bool blackbox_device_write_frame(const uint32_t field_flags, const blackbox_t *c
   return dev->write(buffer, cbor_encoder_len(&enc));
 }
 
-bool blackbox_device_write(const uint8_t *buffer, const uint8_t size) {
+bool blackbox_device_write(const uint8_t *buffer, const uint16_t size) {
   if (dev == NULL) {
     return false;
   }

@@ -11,7 +11,7 @@
 #define BLACKBOX_HEADER_MAGIC (0xdeadbeef ^ (sizeof(blackbox_t) << 24) ^ (sizeof(blackbox_device_header_t) << 12) ^ BLACKBOX_VERSION)
 
 // max size for a given entry
-#define BLACKBOX_MAX_SIZE 255
+#define BLACKBOX_MAX_SIZE 320
 
 #define BLACKBOX_WRITE_BUFFER_SIZE 512
 #define BLACKBOX_ENCODE_BUFFER_SIZE 8192
@@ -41,7 +41,7 @@ typedef struct {
   bool (*ready)();
 
   void (*read)(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size);
-  bool (*write)(const uint8_t *buffer, const uint8_t size);
+  bool (*write)(const uint8_t *buffer, const uint16_t size);
 } blackbox_device_vtable_t;
 
 typedef struct {
@@ -101,4 +101,4 @@ void blackbox_device_finish();
 
 void blackbox_device_read(const uint32_t file_index, const uint32_t offset, uint8_t *buffer, const uint32_t size);
 bool blackbox_device_write_frame(const uint32_t field_flags, const blackbox_t *current, const blackbox_t *previous, blackbox_frame_type_t frame_type);
-bool blackbox_device_write(const uint8_t *buffer, const uint8_t size);
+bool blackbox_device_write(const uint8_t *buffer, const uint16_t size);
