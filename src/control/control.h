@@ -145,8 +145,8 @@ typedef struct {
   uint32_t loop_counter;     // number of loops ran
   uint8_t looptime_warning;  // Scheduler rate reductions since init; nonzero means fallback occurred.
 
-  float uptime;      // running sum of looptimes
-  float armtime;     // running sum of looptimes (while armed)
+  uint32_t uptime_ms;  // ms of Flight loop periods since timing init
+  uint32_t armtime_ms; // ms of those periods spent armed; never reset
   uint32_t cpu_load; // System load percentage 0-100 from the idle task's cycle share; ISR time is charged to the interrupted task. Published by Flight on a fixed window.
 
   uint32_t failsafe_time_ms; // time the current failsafe started in ms
@@ -272,8 +272,8 @@ typedef struct {
   MEMBER(looptime_inverse, float)                      \
   MEMBER(loop_counter, uint32_t)                       \
   MEMBER(looptime_warning, uint8_t)                    \
-  MEMBER(uptime, float)                                \
-  MEMBER(armtime, float)                               \
+  MEMBER(uptime_ms, uint32_t)                          \
+  MEMBER(armtime_ms, uint32_t)                         \
   MEMBER(cpu_load, uint32_t)                           \
   MEMBER(failsafe_time_ms, uint32_t)                   \
   MEMBER(failsafe_phase, uint8_t)                      \

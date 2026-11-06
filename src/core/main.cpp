@@ -53,6 +53,9 @@ static constexpr uint32_t GYRO_PHASE_MARGIN = US_TO_CYCLES(4);
 
 static timer_index_t flight_timer;
 static uint32_t last_loop_cycles;
+// Loop cycles not yet counted into state.uptime_ms and state.armtime_ms.
+static uint32_t uptime_remainder;
+static uint32_t armtime_remainder;
 static uint32_t runtime_sum;
 static uint8_t runtime_samples;
 static std::atomic<bool> skip_loop_sample;
@@ -115,6 +118,10 @@ static void flight_timing_init() {
   state.looptime_us = target;
   state.looptime_autodetect = target;
   state.looptime_warning = 0;
+  state.uptime_ms = 0;
+  state.armtime_ms = 0;
+  uptime_remainder = 0;
+  armtime_remainder = 0;
   runtime_sum = 0;
   runtime_samples = 0;
   skip_loop_sample = false;
@@ -191,18 +198,26 @@ static void flight_update_load() {
   state.cpu_load = 100 - (uint32_t)(((uint64_t)idle_delta * 100) / clock_delta);
 }
 
+static void flight_time_add(uint32_t *ms, uint32_t *remainder, uint32_t cycles) {
+  static constexpr uint32_t CYCLES_PER_MS = SYS_CLOCK_FREQ_HZ / 1000;
+  *remainder += cycles;
+  *ms += *remainder / CYCLES_PER_MS;
+  *remainder %= CYCLES_PER_MS;
+}
+
 static void flight_update_loop(uint32_t elapsed_cycles) {
   const uint32_t now = time_cycles();
-  state.looptime_us = CYCLES_TO_US(now - last_loop_cycles);
+  const uint32_t loop_cycles = now - last_loop_cycles;
+  state.looptime_us = CYCLES_TO_US(loop_cycles);
   state.looptime = state.looptime_us * 1e-6f;
   state.looptime_inverse = state.looptime > 0.0f ? 1.0f / state.looptime : 0.0f;
   state.loop_counter++;
   last_loop_cycles = now;
   flight_update_load();
   flight_update_rate(CYCLES_TO_US(elapsed_cycles));
-  state.uptime += state.looptime;
+  flight_time_add(&state.uptime_ms, &uptime_remainder, loop_cycles);
   if (flags.arm_state)
-    state.armtime += state.looptime;
+    flight_time_add(&state.armtime_ms, &armtime_remainder, loop_cycles);
 }
 
 #ifdef PIO_UNIT_TESTING

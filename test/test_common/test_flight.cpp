@@ -30,8 +30,6 @@ static void begin_timing() {
   flight_test_timing_init();
   state.loop_counter = 0;
   state.looptime_autodetect = 125;
-  state.uptime = 0;
-  state.armtime = 0;
   flags.arm_state = 0;
   TEST_ASSERT_EQUAL_UINT8(0, state.looptime_warning);
 }
@@ -50,11 +48,16 @@ void test_flight_timing_separates_runtime_and_period_across_wrap() {
     TEST_ASSERT_EQUAL_UINT32(125, state.looptime_us);
     TEST_ASSERT_FLOAT_WITHIN(0.000001f, 0.000125f, state.looptime);
     TEST_ASSERT_FLOAT_WITHIN(1, 8000, state.looptime_inverse);
-    TEST_ASSERT_EQUAL_FLOAT(0, state.armtime);
     flags.arm_state = 1;
     next_loop(80, 250);
-    TEST_ASSERT_FLOAT_WITHIN(0.000001f, 0.000375f, state.uptime);
-    TEST_ASSERT_FLOAT_WITHIN(0.000001f, 0.000250f, state.armtime);
+    for (unsigned i = 0; i < 5; i++)
+      next_loop(70, 125);
+    // 1000 us of loops carry exactly into one ms; 875 us of them were armed.
+    TEST_ASSERT_EQUAL_UINT32(1, state.uptime_ms);
+    TEST_ASSERT_EQUAL_UINT32(0, state.armtime_ms);
+    next_loop(70, 125);
+    TEST_ASSERT_EQUAL_UINT32(1, state.uptime_ms);
+    TEST_ASSERT_EQUAL_UINT32(1, state.armtime_ms);
     flags.arm_state = 0;
   }
 }
