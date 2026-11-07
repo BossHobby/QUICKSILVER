@@ -747,6 +747,8 @@ FAST_RAM profile_t profile;
 // Hardware pin/timer allocation still follows the existing initialization path.
 static uint8_t output_protocol_slots[OUTPUT_PROTOCOL_PWM + 1];
 static uint8_t output_protocols;
+// Outputs fed by a weighted throttle mixer rule, by output index.
+static uint8_t output_throttle_outputs;
 static_assert(MOTOR_PIN_MAX <= 8);
 
 void profile_output_update() {
@@ -762,11 +764,23 @@ void profile_output_update() {
       output_protocol_slots[output->protocol] |= 1U << output->target_output;
     }
   }
+
+  output_throttle_outputs = 0;
+  for (uint32_t i = 0; i < MIXER_RULE_MAX; i++) {
+    const profile_mixer_rule_t *rule = &profile.mixer[i];
+    if (rule->source == OUTPUT_SOURCE_THROTTLE && rule->weight != 0 && rule->output_index < MOTOR_PIN_MAX) {
+      output_throttle_outputs |= 1U << rule->output_index;
+    }
+  }
 }
 
 bool profile_output_slot_uses_protocol(uint8_t target_output, output_protocol_t protocol) {
   return target_output < MOTOR_PIN_MAX && protocol <= OUTPUT_PROTOCOL_PWM &&
          (output_protocol_slots[protocol] & (1U << target_output)) != 0;
+}
+
+bool profile_output_has_throttle(uint8_t output_index) {
+  return output_index < MOTOR_PIN_MAX && (output_throttle_outputs & (1U << output_index)) != 0;
 }
 
 bool profile_outputs_use_protocol(output_protocol_t protocol) {
