@@ -54,8 +54,8 @@ typedef struct {
 
 static attitude_state_t attitude_state;
 static bool gps_enabled; // GPS heading correction is configured at IMU initialization.
-static filter_lp_pt1 accel_filter;
-static filter_state_t accel_filter_state[2][3];
+// Two PT1 passes, not one PT2: the cutoff correction would differ.
+static filter_t<vec3_t> accel_filter[2];
 
 static vec3_t mahony_correct(vec3_t gyro, vec3_t gravity_estimate) {
   // Compare normalized measured gravity with the quaternion's predicted gravity.
@@ -250,7 +250,9 @@ static void imu_reset_attitude() {
 }
 
 void imu_filter_update() {
-  filter_lp_pt1_coeff(&accel_filter, ACCEL_FILTER_HZ, state.looptime_autodetect);
+  for (auto &pass : accel_filter) {
+    pass.coeff(FILTER_LP_PT1, ACCEL_FILTER_HZ, state.looptime_autodetect);
+  }
 }
 
 void imu_init() {
@@ -264,8 +266,8 @@ void imu_init() {
     time_delay_us(1000);
   }
 
-  for (auto &pass : accel_filter_state) {
-    filter_lp_pt1_init(&accel_filter, pass, 3, ACCEL_FILTER_HZ, state.looptime_autodetect);
+  for (auto &pass : accel_filter) {
+    pass.init(FILTER_LP_PT1, ACCEL_FILTER_HZ, state.looptime_autodetect);
   }
   imu_reset_attitude();
 }
@@ -330,10 +332,7 @@ void imu_calc() {
   }};
   state.GEstG = vec3_rotate(state.GEstG, rot);
 
-  for (int axis = 0; axis < 3; axis++) {
-    const float first_pass = filter_lp_pt1_step(&accel_filter, &accel_filter_state[0][axis], state.accel_raw.axis[axis]);
-    state.accel.axis[axis] = filter_lp_pt1_step(&accel_filter, &accel_filter_state[1][axis], first_pass);
-  }
+  state.accel = accel_filter[1].step(accel_filter[0].step(state.accel_raw));
 
   const vec3_t gravity_reference = imu_gravity_reference(state.accel);
 

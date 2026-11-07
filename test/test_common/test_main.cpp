@@ -108,6 +108,7 @@ extern void test_sdft_resets_history_on_sample_rate_change();
 
 // Filter tests
 extern void test_filter_init(void);
+extern void test_filter_coeff_applies_type_change(void);
 extern void test_output_protocol_snapshot_updates_explicitly(void);
 extern void test_atan2approx_accuracy(void);
 extern void test_filter_reconfigure_type(void);
@@ -116,6 +117,7 @@ extern void test_filter_lowpass_pt1(void);
 extern void test_filter_highfreq_attenuation(void);
 extern void test_filter_reset(void);
 extern void test_filter_types(void);
+extern void test_filter_channels_independent(void);
 extern void test_filter_cascade(void);
 
 // IMU tests
@@ -390,6 +392,7 @@ int main(int argc, char **argv) {
 
   // Filter tests
   RUN_TEST(test_filter_init);
+  RUN_TEST(test_filter_coeff_applies_type_change);
   RUN_TEST(test_output_protocol_snapshot_updates_explicitly);
   RUN_TEST(test_atan2approx_accuracy);
   RUN_TEST(test_filter_reconfigure_type);
@@ -398,6 +401,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_filter_highfreq_attenuation);
   RUN_TEST(test_filter_reset);
   RUN_TEST(test_filter_types);
+  RUN_TEST(test_filter_channels_independent);
   RUN_TEST(test_filter_cascade);
 
   // IMU tests
