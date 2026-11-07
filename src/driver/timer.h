@@ -93,6 +93,21 @@
   TIMER(13)    \
   TIMER(14)    \
   TIMER(20)
+#elif defined(RP2350)
+// The PWM slices 0 to 11; channels A and B are TIMER_CH1 and TIMER_CH2.
+#define TIMERS \
+  TIMER(1)     \
+  TIMER(2)     \
+  TIMER(3)     \
+  TIMER(4)     \
+  TIMER(5)     \
+  TIMER(6)     \
+  TIMER(7)     \
+  TIMER(8)     \
+  TIMER(9)     \
+  TIMER(10)    \
+  TIMER(11)    \
+  TIMER(12)
 #elif defined(SIMULATOR)
 #define TIMERS TIMER(1)
 #endif

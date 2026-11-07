@@ -12,6 +12,10 @@
 #define USE_GYRO
 #define USE_BARO
 #define USE_SOFT_SERIAL
+// STM32 and AT32 bit-bang soft serial from timer interrupts; RP2350 uses PIO.
+#ifndef RP2350
+#define USE_SOFT_SERIAL_BITBANG
+#endif
 #define USE_SDCARD
 #define USE_DATA_FLASH
 #define USE_I2C
@@ -19,10 +23,17 @@
 #define USE_VTX
 #define USE_DIGITAL_VTX
 #define USE_MAX7456
+#ifdef RP2350
+#define USE_VIDEO_OSD
+#endif
 #define USE_RGB_LED
 
 #ifndef VEHICLE_ROVER
 #define USE_MOTOR_DSHOT
+// STM32 and AT32 bit-bang DShot through GPIO port DMA; RP2350 uses PIO.
+#ifndef RP2350
+#define USE_DSHOT_BITBANG
+#endif
 #define USE_MOTOR_PWM
 #endif
 #define USE_SERIAL_4WAY

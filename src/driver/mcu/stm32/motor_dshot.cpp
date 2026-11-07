@@ -10,7 +10,7 @@
 #include "driver/interrupt.h"
 #include "driver/rcc.h"
 
-#ifdef USE_MOTOR_DSHOT
+#ifdef USE_DSHOT_BITBANG
 
 void dshot_init_gpio_port(dshot_gpio_port_t *port) {
   const timer_def_t *tim = &timer_defs[TIMER_TAG_TIM(port->timer_tag)];

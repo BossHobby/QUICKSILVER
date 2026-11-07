@@ -46,6 +46,7 @@ typedef enum {
   OSD_DEVICE_NONE,
   OSD_DEVICE_MAX7456,
   OSD_DEVICE_DISPLAYPORT,
+  OSD_DEVICE_VIDEO,
   OSD_DEVICE_SIMULATOR,
 } osd_device_t;
 
@@ -106,3 +107,6 @@ void osd_write_int(int32_t val, uint8_t width);
 void osd_write_float(float val, uint8_t width, uint8_t precision);
 
 cbor_result_t cbor_encode_osd_screen_t(cbor_value_t *enc, const osd_screen_t *o);
+// Font access on analog OSD devices: 54 bytes per character, MAX7456 format.
+void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size);
+void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size);

@@ -1,0 +1,26 @@
+; One DShot output per state machine. A bit is three slots of five cycles:
+; active, the data bit, idle. Bidirectional DShot inverts the pad output, so
+; the same frame goes out inverted and the line idles high.
+;
+; Y holds the reply sample count minus one, or zero without bidirectional
+; DShot. After the frame the pin is released and the line sampled every four
+; cycles: three samples per GCR bit, which runs at 5/4 of the DShot bit rate.
+; Each sample is pushed on its own for the reply DMA.
+
+.program dshot
+.wrap_target
+start:
+    pull block                  ; the packet, in the upper half word
+    set pindirs, 1
+bit:
+    set pins, 1             [4]
+    out pins, 1             [4]
+    set pins, 0             [3]
+    jmp !osre bit
+    jmp !y start
+    set pindirs, 0
+    mov x, y
+sample:
+    in pins, 1              [2]
+    jmp x-- sample
+.wrap

@@ -5,7 +5,7 @@
 #include "driver/interrupt.h"
 #include "driver/timer.h"
 
-#ifdef USE_SOFT_SERIAL
+#ifdef USE_SOFT_SERIAL_BITBANG
 
 #define BAUD_DIVIDER 4
 

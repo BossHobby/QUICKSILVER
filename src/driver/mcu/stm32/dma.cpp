@@ -8,7 +8,7 @@
 #include "driver/timer.h"
 
 #ifdef STM32F4
-#ifdef USE_MOTOR_DSHOT
+#ifdef USE_DSHOT_BITBANG
 #include "driver/motor_dshot.h"
 #endif
 #include "driver/spi.h"
@@ -107,7 +107,7 @@ static void handle_dma_stream_isr(const dma_stream_t stream) {
   case DMA_DEVICE_DSHOT_CH1:
   case DMA_DEVICE_DSHOT_CH2:
   case DMA_DEVICE_DSHOT_CH3:
-#ifdef USE_MOTOR_DSHOT
+#ifdef USE_DSHOT_BITBANG
     dshot_dma_isr(dev);
 #endif
     break;
@@ -141,7 +141,7 @@ bool dma_can_use_dma2(dma_device_t device) {
     }
   }
 
-#ifdef USE_MOTOR_DSHOT
+#ifdef USE_DSHOT_BITBANG
   if (dshot_phase != 0) {
     return false;
   }
