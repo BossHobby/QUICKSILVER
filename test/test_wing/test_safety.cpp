@@ -220,11 +220,11 @@ static void test_wing_launch_delay_ramp_and_timed_handoff() {
   TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[1]);
   TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[2]);
   tick();
-  TEST_ASSERT_FALSE(state.wing_launch_available);
+  TEST_ASSERT_FALSE(flags.wing_launch_available);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, (0.5f - 0.05f) * 1.0526316f, state.throttle);
   tick(1000);
   TEST_ASSERT_EQUAL(WING_LAUNCH_DONE, state.wing_launch_state);
-  TEST_ASSERT_FALSE(state.wing_launch_available);
+  TEST_ASSERT_FALSE(flags.wing_launch_available);
 }
 
 static void test_wing_launch_keeps_cruise_gains_until_done() {
@@ -253,7 +253,7 @@ static void test_wing_launch_keeps_cruise_gains_until_done() {
 static void test_wing_launch_failsafe_stops_motor_and_disarms() {
   launch_to_active();
   profile.navigation.rth_on_failsafe = false;
-  state.last_frame_time_us = time_micros();
+  state.rx_frame_time_us = time_micros();
   flags.failsafe_signal_lost = 1;
   tick(3000);
   TEST_ASSERT_FALSE(flags.arm_state);
@@ -276,16 +276,16 @@ static void test_wing_launch_abort_returns_surfaces_to_manual() {
 
 static void test_wing_launch_stage1_recovery_requires_disarm_before_relaunch() {
   launch_to_active();
-  state.last_frame_time_us = time_micros();
+  state.rx_frame_time_us = time_micros();
   flags.failsafe_signal_lost = 1;
   tick(FAILSAFE_HOLD_TIME_US / 1000 - 1);
   TEST_ASSERT_EQUAL(WING_LAUNCH_ACTIVE, state.wing_launch_state);
-  TEST_ASSERT_TRUE(state.wing_launch_available);
+  TEST_ASSERT_TRUE(flags.wing_launch_available);
   tick(1);
   TEST_ASSERT_EQUAL(FAILSAFE_PHASE_STAGE1_GUARD, state.failsafe_phase);
   TEST_ASSERT_TRUE(flags.arm_state);
   TEST_ASSERT_EQUAL(WING_LAUNCH_ABORTED, state.wing_launch_state);
-  TEST_ASSERT_FALSE(state.wing_launch_available);
+  TEST_ASSERT_FALSE(flags.wing_launch_available);
 
   flags.failsafe_signal_lost = 0;
   state.rx_filtered.throttle = 0.5f;
@@ -293,7 +293,7 @@ static void test_wing_launch_stage1_recovery_requires_disarm_before_relaunch() {
   tick(2000);
   TEST_ASSERT_TRUE(flags.arm_state);
   TEST_ASSERT_FALSE(flags.failsafe);
-  TEST_ASSERT_FALSE(state.wing_launch_available);
+  TEST_ASSERT_FALSE(flags.wing_launch_available);
   TEST_ASSERT_EQUAL(WING_LAUNCH_ABORTED, state.wing_launch_state);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, (0.5f - 0.05f) * 1.0526316f, state.throttle);
   TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[1]);
@@ -304,7 +304,7 @@ static void test_wing_launch_stage1_recovery_requires_disarm_before_relaunch() {
   state.accel_raw.pitch = 0;
   tick(2);
   TEST_ASSERT_FALSE(flags.arm_state);
-  TEST_ASSERT_TRUE(state.wing_launch_available);
+  TEST_ASSERT_TRUE(flags.wing_launch_available);
   state.aux_active |= 1U << AUX_ARMING;
   tick();
   TEST_ASSERT_TRUE(flags.arm_state);
@@ -317,7 +317,7 @@ static void test_wing_launch_switch_reenabled_in_flight_does_not_restart() {
   prepare_launch();
   state.aux_active &= ~(1U << AUX_AUTOLAUNCH);
   tick();
-  TEST_ASSERT_FALSE(state.wing_launch_available);
+  TEST_ASSERT_FALSE(flags.wing_launch_available);
   state.aux_active |= 1U << AUX_AUTOLAUNCH;
   state.GEstG = {{0.5f, 0, 0.8660254f}};
   tick(2000);
@@ -333,7 +333,7 @@ static void test_wing_launch_always_on_leaves_disarmed_surfaces_on_sticks() {
   state.rx_filtered.throttle = 0;
   tick(2);
   TEST_ASSERT_FALSE(flags.arm_state);
-  TEST_ASSERT_TRUE(state.wing_launch_available);
+  TEST_ASSERT_TRUE(flags.wing_launch_available);
 
   state.GEstG = {{0.5f, 0, 0.8660254f}};
   state.rx_filtered.roll = 0.2f;
@@ -351,7 +351,7 @@ static void test_wing_launch_always_on_leaves_disarmed_surfaces_on_sticks() {
 
 static void test_wing_launch_gps_requires_launch_attitude() {
   prepare_launch();
-  state.gps_lock = 1;
+  state.gps_health.lock = 1;
   state.gps_speed = profile.wing.autolaunch.velocity_threshold + 1.0f;
   state.attitude.pitch = 60.0f * DEGTORAD; // Nose down.
   tick(100);
@@ -380,7 +380,7 @@ static void test_wing_failsafe_stage1_levels_manual_mode() {
   state.rx_filtered.throttle = 0.5f;
   tick();
   state.GEstG = {{0.5f, 0, 0.8660254f}};
-  state.last_frame_time_us = time_micros();
+  state.rx_frame_time_us = time_micros();
   flags.failsafe_signal_lost = 1;
   tick(FAILSAFE_HOLD_TIME_US / 1000 + 1);
   TEST_ASSERT_EQUAL(FAILSAFE_PHASE_STAGE1_GUARD, state.failsafe_phase);
@@ -443,24 +443,47 @@ static void test_wing_default_rate_response_across_profiles_and_loop_times() {
   }
 }
 
+// One 10 ms navigation pass with a fresh GPS fix.
+static void gps_fix_step() {
+  time_test_advance_us(10000);
+  state.gps_last_update_ms = time_millis();
+  nav_update();
+}
+
+// Fly from the current fix by (lat, lon) units of 1e-7 degrees over one
+// second at the matching velocity, then hold still for one second so the
+// estimate settles on the fix. Longitude wraps across 180 degrees.
+static void gps_move(int32_t lat_units, int32_t lon_units) {
+  const float lon_scale = METERS_PER_DEGREE_LAT * cosf(state.gps_coord.lat * 1e-7f * DEGTORAD);
+  state.gps_velocity = {{lat_units * 1e-7f * METERS_PER_DEGREE_LAT, lon_units * 1e-7f * lon_scale, 0.0f}};
+  state.gps_speed = vec2_magnitude(vec3_horizontal(state.gps_velocity));
+  for (int i = 1; i <= 100; i++) {
+    state.gps_coord.lat += lat_units / 100;
+    int64_t lon = int64_t(state.gps_coord.lon) + lon_units / 100;
+    if (lon > 1800000000)
+      lon -= 3600000000LL;
+    state.gps_coord.lon = int32_t(lon);
+    gps_fix_step();
+  }
+  state.gps_velocity = {};
+  state.gps_speed = 0.0f;
+  for (int i = 0; i < 100; i++)
+    gps_fix_step();
+}
+
 static void test_wing_gps_home_latches_on_arm() {
   prepare(0);
   nav_init();
   profile.serial.gps = SERIAL_PORT1;
-  state.gps_lock = true;
-  state.gps_sats = GPS_MIN_SATS_FOR_LOCK;
+  state.gps_health.lock = true;
+  state.gps_sats = 12; // a good fix, as the plant reports
   state.gps_horizontal_accuracy = 1.0f;
   state.gps_coord = {.lon = 1142000000, .lat = 223000000};
-  time_test_advance_us(10000);
-  state.gps_last_update_ms = time_millis();
-  nav_update(); // First armed pass latches home.
-  TEST_ASSERT_EQUAL_INT32(223000000, state.gps_home.lat);
+  gps_fix_step(); // First armed pass latches home.
+  TEST_ASSERT_EQUAL_INT32(223000000, state.home.lat);
 
-  state.gps_coord.lat += 899; // About 10 m north.
-  time_test_advance_us(10000);
-  state.gps_last_update_ms = time_millis();
-  nav_update();
-  TEST_ASSERT_EQUAL_INT32(223000000, state.gps_home.lat);
+  gps_move(900, 0); // About 10 m north.
+  TEST_ASSERT_EQUAL_INT32(223000000, state.home.lat);
   TEST_ASSERT_FLOAT_WITHIN(0.5f, 10.0f, state.home_distance);
   TEST_ASSERT_FLOAT_WITHIN(1.0f, 180.0f, state.home_bearing);
 }
@@ -469,18 +492,14 @@ static void test_wing_gps_home_vector_crosses_antimeridian() {
   prepare(0);
   nav_init();
   profile.serial.gps = SERIAL_PORT1;
-  state.gps_lock = true;
-  state.gps_sats = GPS_MIN_SATS_FOR_LOCK;
+  state.gps_health.lock = true;
+  state.gps_sats = 10;
   state.gps_horizontal_accuracy = 1.0f;
   state.gps_coord = {.lon = 1799999500, .lat = -177000000};
-  time_test_advance_us(10000);
-  state.gps_last_update_ms = time_millis();
-  nav_update(); // First armed pass latches home.
+  gps_fix_step(); // First armed pass latches home.
 
-  state.gps_coord.lon = -1799999500; // 1e-4 degrees east, across 180.
-  time_test_advance_us(10000);
-  state.gps_last_update_ms = time_millis();
-  nav_update();
+  gps_move(0, 1000); // 1e-4 degrees east, across 180.
+  TEST_ASSERT_EQUAL_INT32(-1799999500, state.gps_coord.lon);
   const float expected = 1e-4f * METERS_PER_DEGREE_LAT * cosf(-17.7f * DEGTORAD);
   TEST_ASSERT_FLOAT_WITHIN(0.5f, expected, state.home_distance);
   TEST_ASSERT_FLOAT_WITHIN(1.0f, 270.0f, state.home_bearing);

@@ -10,6 +10,11 @@
 // RESET opens a session and is answered with RESET once both streams are clear.
 // Its sequence field carries a session id chosen by the peer and echoed back;
 // a repeated RESET with the current id does not reopen the session.
+//
+// Sessions exist only on the ground. Arming ends the session without notice
+// and the flight controller ignores 0x83 frames until it disarms; the peer
+// then needs a new RESET. In flight the ground station uses QUIC_RT,
+// see io/quic_rt.h.
 #define QUIC_CRSF_CONTROL_RESET 0x01
 #define QUIC_CRSF_HEADER_SIZE 3
 
@@ -17,7 +22,8 @@
 void quic_crsf_receive(uint8_t origin, const uint8_t *payload, uint8_t size);
 // Called by IO when it may queue a frame; returns the frame size or 0.
 uint32_t quic_crsf_frame(uint8_t *buf);
-// A session exchanged frames recently; normal arming stays disabled.
+// A ground session exchanged frames recently; telemetry yields its slots to
+// it. Always false while armed.
 bool quic_crsf_active();
 // Ground maintenance service, run by the USB thread.
 void quic_crsf_update();

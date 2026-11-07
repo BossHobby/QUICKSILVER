@@ -9,6 +9,7 @@
 constexpr float M_PI_F = 3.14159265358979323846f;
 constexpr float DEGTORAD = M_PI_F / 180.0f;
 constexpr float RADTODEG = 180.0f / M_PI_F;
+constexpr float GRAVITY = 9.80665f; // m/s^2
 
 #define MEMORY_ALIGN(offset, size) (((offset) + ((size) - 1)) & -(size))
 
@@ -49,6 +50,11 @@ constexpr auto MAX(T a, U b) {
   return common_type(a) > common_type(b) ? +a : +b;
 }
 
+// Move current toward target by at most step.
+constexpr float slew(float current, float target, float step) {
+  return constrain(target, current - step, current + step);
+}
+
 // Hardware builds use -Ofast, which can remove ordinary isfinite() checks.
 inline bool float_is_finite(float value) {
   const union { float value; uint32_t bits; } sample = {.value = value};
@@ -73,6 +79,14 @@ float fastcos(float x);
 
 float normalize_deg(float deg);
 float normalize_rad(float rad);
+// Wrap radians from -3pi..3pi into -pi..pi.
+static inline float wrap_rad(float rad) {
+  if (rad > M_PI_F)
+    return rad - 2.0f * M_PI_F;
+  if (rad < -M_PI_F)
+    return rad + 2.0f * M_PI_F;
+  return rad;
+}
 
 int8_t buf_equal(const uint8_t *str1, size_t len1, const uint8_t *str2, size_t len2);
 int8_t buf_equal_string(const uint8_t *str1, size_t len1, const char *str2);

@@ -26,6 +26,10 @@
 //            retiring unified serial (now serial autodetect) and Bayang; add receiver.invert.
 //        rx: drop receiver.bind.bind_saved; bind data is kept as-is and DSM bind is requested in it.
 //        meta: encode the firmware build (git version); it is not persisted or decoded.
+//        navigation: add waypoint mission switch before the PINIO switches.
+//        navigation: add mission_on_failsafe.
+//        navigation: name the multirotor speed and throttle limits travel_speed and throttle_*
+//            (were rth_cruise_speed and rth_throttle_*); they apply to every target.
 // 0.3.0 (1e5b55c3): feat: add full 16-bit aux channel resolution with range-based function mapping.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
@@ -678,10 +682,12 @@ typedef struct {
   // RTH parameters
   float rth_altitude;        // Altitude offset from current position
   bool rth_on_failsafe;      // Activate RTH on failsafe
-  float rth_cruise_speed;    // m/s target horizontal return speed
-  float rth_throttle_min;
-  float rth_throttle_hover;
-  float rth_throttle_max;
+  bool mission_on_failsafe;  // A mission flying when the link is lost continues
+  // Multirotor navigation parameters, for every target
+  float travel_speed;   // m/s horizontal, unless a waypoint sets its own
+  float throttle_min;   // navigation throttle range and the hover until one is learned
+  float throttle_hover;
+  float throttle_max;
   // Wing navigation parameters
   float cruise_throttle;    // 0..1 in level flight while navigating; wing PID speed-scaling reference, 0 disables
   float cruise_speed;       // m/s airspeed at cruise throttle, for wing turn coordination; set by the user, refined from GPS in turns and saved on disarm
@@ -694,10 +700,11 @@ typedef struct {
   START_STRUCT(profile_navigation_t)  \
   MEMBER(rth_altitude, float)         \
   MEMBER(rth_on_failsafe, bool)       \
-  MEMBER(rth_cruise_speed, float)     \
-  MEMBER(rth_throttle_min, float)     \
-  MEMBER(rth_throttle_hover, float)   \
-  MEMBER(rth_throttle_max, float)     \
+  MEMBER(mission_on_failsafe, bool)   \
+  MEMBER(travel_speed, float)         \
+  MEMBER(throttle_min, float)         \
+  MEMBER(throttle_hover, float)       \
+  MEMBER(throttle_max, float)         \
   MEMBER(cruise_throttle, float)      \
   MEMBER(cruise_speed, float)         \
   MEMBER(max_bank_angle, float)       \

@@ -657,7 +657,7 @@ static float osd_throttle() {
   if (state.wing_nav_state != WING_NAV_INACTIVE)
     return state.throttle;
 #elif defined(VEHICLE_MULTI)
-  if (flags.controls_override && (state.rth_active || state.failsafe_hold))
+  if (flags.controls_override && (state.nav_state >= NAV_STATE_CLIMB || flags.failsafe_hold))
     return state.throttle;
 #endif
   return state.rx_filtered.throttle;
@@ -667,6 +667,27 @@ static void print_heading(float heading_deg) {
   // Bearings run clockwise; font arrows run from south toward east and north.
   const uint8_t direction = (uint8_t)((normalize_deg(heading_deg) + 11.25f) / 22.5f) % 16;
   osd_write_char(ICON_ARROW_SOUTH + (24 - direction) % 16);
+}
+
+char *osd_format_distance(char *text, float distance) {
+  if (distance >= 999.5f && distance < 9950.0f) {
+    // Tenths of a kilometer, 1.0 to 9.9.
+    const uint32_t tenths = (uint32_t)(distance / 100.0f + 0.5f);
+    *text++ = '0' + tenths / 10;
+    *text++ = '.';
+    *text++ = '0' + tenths % 10;
+    *text++ = ICON_KILOMETERS;
+    return text;
+  }
+  // Whole meters below a kilometer, whole kilometers from 10, right-aligned
+  // so the label does not shift as the distance changes.
+  const bool kilometers = distance >= 999.5f;
+  const uint32_t value = (uint32_t)constrain((kilometers ? distance / 1000.0f : distance) + 0.5f, 0.0f, 999.0f);
+  *text++ = value >= 100 ? '0' + value / 100 : ' ';
+  *text++ = value >= 10 ? '0' + value / 10 % 10 : ' ';
+  *text++ = '0' + value % 10;
+  *text++ = kilometers ? ICON_KILOMETERS : ICON_METERS;
+  return text;
 }
 
 void osd_init() {
@@ -785,7 +806,7 @@ static void osd_display_regular() {
     }
 
     case OSD_GPS_SATS: {
-      osd_start(osd_attr(el) | (state.gps_lock ? 0x0 : OSD_ATTR_BLINK), pos_x(el), pos_y(el));
+      osd_start(osd_attr(el) | (state.gps_health.lock ? 0x0 : OSD_ATTR_BLINK), pos_x(el), pos_y(el));
       osd_write_char(ICON_SAT_L);
       osd_write_char(ICON_SAT_R);
       osd_write_int(state.gps_sats, 2);
@@ -842,8 +863,8 @@ static void osd_display_regular() {
     case OSD_VARIO: {
       // m/s; the arrow carries the direction.
       osd_start_el(el);
-      osd_write_char(state.vertical_speed < 0.0f ? ICON_DOWN : ICON_UP);
-      osd_write_float(fabsf(state.vertical_speed), 4, 1);
+      osd_write_char(state.velocity.up < 0.0f ? ICON_DOWN : ICON_UP);
+      osd_write_float(fabsf(state.velocity.up), 4, 1);
       break;
     }
 
@@ -1319,6 +1340,7 @@ TickType_t osd_display() {
       osd_menu_select_aux_adjust(4, OSD_AUTO, "LOITER", 17, 22, &profile.receiver.aux[AUX_LOITER]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "CRUISE", 17, 22, &profile.receiver.aux[AUX_CRUISE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "RETURN HOME", 17, 22, &profile.receiver.aux[AUX_RETURN_TO_HOME]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "MISSION", 17, 22, &profile.receiver.aux[AUX_MISSION]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BUZZER", 17, 22, &profile.receiver.aux[AUX_BUZZER_ENABLE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
@@ -1338,6 +1360,7 @@ TickType_t osd_display() {
       osd_menu_select_aux_adjust(4, OSD_AUTO, "MOTOR TEST", 17, 22, &profile.receiver.aux[AUX_MOTOR_TEST]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "RETURN HOME", 17, 22, &profile.receiver.aux[AUX_RETURN_TO_HOME]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "MISSION", 17, 22, &profile.receiver.aux[AUX_MISSION]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
 #endif
       osd_menu_aux_outputs();
@@ -1660,68 +1683,73 @@ TickType_t osd_display() {
       nav->rth_on_failsafe = osd_menu_adjust_int(nav->rth_on_failsafe, 1, 0, 1);
     }
 
+    osd_menu_select(2, 4, "MISSION ON FAILSAFE");
+    if (osd_menu_select_enum(22, 4, nav->mission_on_failsafe, on_off_labels)) {
+      nav->mission_on_failsafe = osd_menu_adjust_int(nav->mission_on_failsafe, 1, 0, 1);
+    }
+
 #ifdef VEHICLE_WING
     const char *loiter_direction_labels[] = {
         "RIGHT",
         " LEFT",
     };
 
-    osd_menu_select(2, 4, "RTH CLIMB M");
-    if (osd_menu_select_float(21, 4, nav->rth_altitude, 5, 0)) {
+    osd_menu_select(2, 5, "RTH CLIMB M");
+    if (osd_menu_select_float(21, 5, nav->rth_altitude, 5, 0)) {
       nav->rth_altitude = osd_menu_adjust_float(nav->rth_altitude, 5, 0, 200);
     }
 
-    osd_menu_select(2, 5, "CRUISE THROTTLE");
-    if (osd_menu_select_float(21, 5, nav->cruise_throttle, 5, 2)) {
+    osd_menu_select(2, 6, "CRUISE THROTTLE");
+    if (osd_menu_select_float(21, 6, nav->cruise_throttle, 5, 2)) {
       nav->cruise_throttle = osd_menu_adjust_float(nav->cruise_throttle, 0.01, 0, 1);
     }
 
     // A starting value; GPS turns refine it in flight.
-    osd_menu_select(2, 6, "CRUISE SPEED KM/H");
+    osd_menu_select(2, 7, "CRUISE SPEED KM/H");
     const float cruise_speed_kph = nav->cruise_speed * 3.6f;
-    if (osd_menu_select_float(21, 6, cruise_speed_kph, 5, 0)) {
+    if (osd_menu_select_float(21, 7, cruise_speed_kph, 5, 0)) {
       nav->cruise_speed = osd_menu_adjust_float(cruise_speed_kph, 1, 18, 180) / 3.6f;
     }
 
-    osd_menu_select(2, 7, "MAX BANK DEG");
-    if (osd_menu_select_float(21, 7, nav->max_bank_angle, 5, 0)) {
+    osd_menu_select(2, 8, "MAX BANK DEG");
+    if (osd_menu_select_float(21, 8, nav->max_bank_angle, 5, 0)) {
       nav->max_bank_angle = osd_menu_adjust_float(nav->max_bank_angle, 1, 0, 40);
     }
 
-    osd_menu_select(2, 8, "LOITER RADIUS M");
-    if (osd_menu_select_float(21, 8, nav->loiter_radius, 5, 0)) {
+    osd_menu_select(2, 9, "LOITER RADIUS M");
+    if (osd_menu_select_float(21, 9, nav->loiter_radius, 5, 0)) {
       nav->loiter_radius = osd_menu_adjust_float(nav->loiter_radius, 5, 5, 1000);
     }
 
-    osd_menu_select(2, 9, "LOITER DIRECTION");
-    if (osd_menu_select_enum(21, 9, nav->loiter_direction, loiter_direction_labels)) {
+    osd_menu_select(2, 10, "LOITER DIRECTION");
+    if (osd_menu_select_enum(21, 10, nav->loiter_direction, loiter_direction_labels)) {
       nav->loiter_direction = osd_menu_adjust_int(nav->loiter_direction, 1, NAV_LOITER_RIGHT, NAV_LOITER_LEFT);
     }
 #else
-    osd_menu_select(2, 4, "RTH CLIMB M");
-    if (osd_menu_select_float(21, 4, nav->rth_altitude, 5, 0)) {
+    osd_menu_select(2, 5, "RTH CLIMB M");
+    if (osd_menu_select_float(21, 5, nav->rth_altitude, 5, 0)) {
       nav->rth_altitude = osd_menu_adjust_float(nav->rth_altitude, 1, 0, 100);
     }
 
-    osd_menu_select(2, 5, "RTH SPEED KM/H");
-    const float rth_speed_kph = nav->rth_cruise_speed * 3.6f;
-    if (osd_menu_select_float(21, 5, rth_speed_kph, 5, 0)) {
-      nav->rth_cruise_speed = osd_menu_adjust_float(rth_speed_kph, 1, 2, 108) / 3.6f;
+    osd_menu_select(2, 6, "RTH SPEED KM/H");
+    const float rth_speed_kph = nav->travel_speed * 3.6f;
+    if (osd_menu_select_float(21, 6, rth_speed_kph, 5, 0)) {
+      nav->travel_speed = osd_menu_adjust_float(rth_speed_kph, 1, 2, 108) / 3.6f;
     }
 
-    osd_menu_select(2, 6, "THROTTLE MIN");
-    if (osd_menu_select_float(21, 6, nav->rth_throttle_min, 5, 2)) {
-      nav->rth_throttle_min = osd_menu_adjust_float(nav->rth_throttle_min, 0.01, 0, 1);
+    osd_menu_select(2, 7, "THROTTLE MIN");
+    if (osd_menu_select_float(21, 7, nav->throttle_min, 5, 2)) {
+      nav->throttle_min = osd_menu_adjust_float(nav->throttle_min, 0.01, 0, 1);
     }
 
-    osd_menu_select(2, 7, "THROTTLE HOVER");
-    if (osd_menu_select_float(21, 7, nav->rth_throttle_hover, 5, 2)) {
-      nav->rth_throttle_hover = osd_menu_adjust_float(nav->rth_throttle_hover, 0.01, 0, 1);
+    osd_menu_select(2, 8, "THROTTLE HOVER");
+    if (osd_menu_select_float(21, 8, nav->throttle_hover, 5, 2)) {
+      nav->throttle_hover = osd_menu_adjust_float(nav->throttle_hover, 0.01, 0, 1);
     }
 
-    osd_menu_select(2, 8, "THROTTLE MAX");
-    if (osd_menu_select_float(21, 8, nav->rth_throttle_max, 5, 2)) {
-      nav->rth_throttle_max = osd_menu_adjust_float(nav->rth_throttle_max, 0.01, 0, 1);
+    osd_menu_select(2, 9, "THROTTLE MAX");
+    if (osd_menu_select_float(21, 9, nav->throttle_max, 5, 2)) {
+      nav->throttle_max = osd_menu_adjust_float(nav->throttle_max, 0.01, 0, 1);
     }
 #endif
 

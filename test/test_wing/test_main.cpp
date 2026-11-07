@@ -263,16 +263,16 @@ static void fly_gps(float bank, float airspeed, float wind_north, float wind_eas
   state.attitude.roll = bank;
   state.GEstG = {{sinf(bank), 0.0f, cosf(bank)}};
   state.gyro = {{0.0f, -turn_rate * sinf(bank), turn_rate * cosf(bank)}};
-  state.gps_lock = true;
+  state.gps_health.lock = true;
   state.rx_filtered.throttle = profile.navigation.cruise_throttle / 1.0526316f + 0.05f;
   for (int i = 0; i < loops; i++) {
     time_test_advance_us((uint32_t)(state.looptime * 1e6f));
     if (i % (int)(0.1f / state.looptime) == 0) {
       const float heading = start_heading + turn_rate * (i + 1) * state.looptime;
-      state.gps_vel_north = airspeed * cosf(heading) + wind_north + gps_glitch_north;
+      state.gps_velocity.north = airspeed * cosf(heading) + wind_north + gps_glitch_north;
       gps_glitch_north = 0.0f;
-      state.gps_vel_east = airspeed * sinf(heading) + wind_east;
-      state.gps_speed = hypotf(state.gps_vel_north, state.gps_vel_east);
+      state.gps_velocity.east = airspeed * sinf(heading) + wind_east;
+      state.gps_speed = vec2_magnitude(vec3_horizontal(state.gps_velocity));
       state.gps_last_update_ms = time_millis();
     }
     control();
@@ -378,7 +378,7 @@ static void test_gliding_retains_airborne_state_and_motor_cutoff() {
 // A climb shows flight, and the switch is turned on while armed.
 static void start_autotrim() {
   flags.in_air = 1;
-  state.baro_valid = 1;
+  flags.altitude_valid = 1;
   state.altitude = 10.0f;
   state.aux_active &= ~(1U << AUX_AUTOTRIM);
   control();
@@ -508,7 +508,7 @@ static void test_autotrim_saves_on_disarm_with_switch_on() {
   control();
   // The disarming pass started armed, without configuration ownership.
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_SAVE_PENDING, state.wing_autotrim_state);
-  state.gps_lock = 1;
+  state.gps_health.lock = 1;
   state.gps_speed = 10.0f; // A disarmed wing still gliding defers the save.
   control();
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_SAVE_PENDING, state.wing_autotrim_state);
@@ -585,7 +585,7 @@ static void test_autotrim_bounds_centers_and_excludes_throttle_mixes() {
 
 static void test_autotrim_waits_for_steady_flight() {
   arm();
-  state.gps_lock = 1;
+  state.gps_health.lock = 1;
   state.gps_speed = 10.0f;
   state.rx_filtered.roll = 0.2f;
   state.aux_active |= (1U << AUX_AUTOTRIM);
@@ -678,7 +678,7 @@ static void test_autotrim_switch_on_at_arming_must_be_cycled() {
   TEST_ASSERT_TRUE(flags.arm_state);
   state.rx_filtered.throttle = 0.5f;
   state.rx_filtered.roll = 0.2f; // Climbing out holding a correction.
-  state.gps_lock = 1;
+  state.gps_health.lock = 1;
   state.gps_speed = 10.0f;
   control();
   time_test_advance_us(3000000);
@@ -699,12 +699,12 @@ static void test_autotrim_run_up_needs_flight_evidence() {
   TEST_ASSERT_EQUAL_INT(0, profile.outputs[1].trim);
 
   // Neither is a GPS fix while standing.
-  state.gps_lock = 1;
+  state.gps_health.lock = 1;
   control();
   time_test_advance_us(3000000);
   control();
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
-  state.gps_lock = 0;
+  state.gps_health.lock = 0;
 
   // A finished autolaunch is.
   state.wing_launch_state = WING_LAUNCH_DONE;
@@ -726,7 +726,7 @@ static void test_autotrim_reports_missing_surfaces() {
 
 static void test_autotrim_climb_shows_flight_without_gps() {
   run_up_with_autotrim_on();
-  state.baro_valid = 1;
+  flags.altitude_valid = 1;
   state.altitude = 10.0f;
   control();
   // Descending back toward launch height keeps the flight latched.
@@ -740,7 +740,7 @@ static void test_autotrim_captures_slow_nose_high_flight() {
   state.rx_filtered.roll = 0.2f;
   state.aux_active |= 1U << AUX_AUTOTRIM;
   flags.in_air = 1;
-  state.gps_lock = 1;
+  state.gps_health.lock = 1;
   state.gps_speed = 10.0f;
   control();
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_ACTIVE, state.wing_autotrim_state);
