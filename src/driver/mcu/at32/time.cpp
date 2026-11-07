@@ -6,8 +6,15 @@
 
 static volatile bool kernel_tick_active;
 volatile uint32_t systick_count = 0;
-static volatile uint32_t systick_val = 0;
-static volatile uint32_t systick_pending = 0;
+
+// Whole microseconds since the cycle counter was zeroed, written only by
+// SysTick_Handler and read by the inline time_micros() in time.h. Advancing it
+// in whole microseconds keeps its cycle anchor at micros_base * TICKS_PER_US
+// (mod 2^32), so one word describes the pair and readers in any context see
+// either the old or the new value. Any published
+// value stays valid while the counter has advanced less than 2^32 cycles past
+// it; the 1 ms tick keeps that far below the wraparound.
+volatile uint32_t micros_base = 0;
 
 // Run-time stats clock for the FreeRTOS kernel (FreeRTOSConfig.h).
 extern "C" uint32_t rtos_runtime_clock(void) {
@@ -24,11 +31,11 @@ static void debug_time_init() {
 void time_init() {
   crm_periph_clock_enable(CRM_SCFG_PERIPH_CLOCK, TRUE);
 
+  debug_time_init();
+
   // interrupt only every 1ms
   systick_clock_source_config(SYSTICK_CLOCK_SOURCE_AHBCLK_NODIV);
   SysTick_Config(SYS_CLOCK_FREQ_HZ / 1000);
-
-  debug_time_init();
 }
 
 // Keep the existing running 1 ms timebase through kernel startup. Resetting
@@ -43,45 +50,10 @@ extern "C" void xPortSysTickHandler();
 
 extern "C" void SysTick_Handler() {
   systick_count = systick_count + 1;
-  systick_val = SysTick->VAL;
-  systick_pending = 0;
-  (void)(SysTick->CTRL);
+  micros_base = time_micros();
   if (kernel_tick_active) {
     xPortSysTickHandler();
   }
-}
-
-uint32_t time_micros_isr() {
-  uint32_t ticks = SysTick->VAL;
-
-  if (SysTick->CTRL & SysTick_CTRL_COUNTFLAG_Msk) {
-    systick_pending = 1;
-    ticks = SysTick->VAL;
-  }
-
-  uint32_t count = systick_count;
-  uint32_t pending = systick_pending;
-
-  return ((count + pending) * 1000) + (TICKS_PER_US * 1000 - ticks) / TICKS_PER_US;
-}
-
-uint32_t time_micros() {
-  if ((SCB->ICSR & SCB_ICSR_VECTACTIVE_Msk) || (__get_BASEPRI())) {
-    return time_micros_isr();
-  }
-
-  uint32_t count = 0;
-  uint32_t ticks = 0;
-
-  do {
-    // number of 1ms systicks
-    count = systick_count;
-
-    // number of ticks _between_ 1ms systicks
-    ticks = SysTick->VAL;
-  } while (count != systick_count || ticks > systick_val);
-
-  return (count * 1000) + (TICKS_PER_US * 1000 - ticks) / TICKS_PER_US;
 }
 
 void time_delay_us(uint32_t us) {
