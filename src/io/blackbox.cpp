@@ -485,42 +485,9 @@ static uint32_t blackbox_state_word() {
   return result;
 }
 
-void blackbox_capture() {
-  const bool requested = (target_info.features & FEATURE_BLACKBOX) && flags.arm_state && rx_aux_on(AUX_BLACKBOX);
-  if (!requested) {
-    if (mailbox.recording.load(std::memory_order_relaxed) != 0) {
-      mailbox.recording.store(0, std::memory_order_release);
-      xTaskNotifyGive(threads[THREAD_BLACKBOX].handle);
-    }
-    return;
-  }
-  if (mailbox.recording.load(std::memory_order_relaxed) == 0) {
-    if (flags.turtle_ready) {
-      return;
-    }
-    // Session metadata stays fixed, including when the worker is delayed.
-    if (++capture.session_id == 0) {
-      ++capture.session_id;
-    }
-    capture.settings.field_flags = profile.blackbox.field_flags;
-    capture.settings.rate = blackbox_rate_div();
-    capture.settings.looptime = state.looptime_autodetect;
-    capture.sequence = 0;
-    capture.last_loop = state.loop_counter;
-    mailbox.recording.store(capture.session_id, std::memory_order_release);
-    xTaskNotifyGive(threads[THREAD_BLACKBOX].handle);
-    return;
-  }
-  if ((uint32_t)(state.loop_counter - capture.last_loop) < capture.settings.rate) {
-    return;
-  }
-  capture.last_loop = state.loop_counter;
-  // Count attempts so a busy mailbox leaves a visible sequence gap.
-  capture.sequence++;
-  if (mailbox.pending.load(std::memory_order_acquire)) {
-    return;
-  }
-
+// Fills the mailbox on logged passes; kept out of line so the per-pass gate
+// stays small.
+__attribute__((noinline)) static void blackbox_capture_frame() {
   const uint32_t field_flags = capture.settings.field_flags;
   if (mailbox.session_id != capture.session_id) mailbox.profile = profile;
   mailbox.session_id = capture.session_id;
@@ -616,6 +583,44 @@ void blackbox_capture() {
 
   mailbox.pending.store(true, std::memory_order_release);
   xTaskNotifyGive(threads[THREAD_BLACKBOX].handle);
+}
+
+void blackbox_capture() {
+  const bool requested = (target_info.features & FEATURE_BLACKBOX) && flags.arm_state && rx_aux_on(AUX_BLACKBOX);
+  if (!requested) {
+    if (mailbox.recording.load(std::memory_order_relaxed) != 0) {
+      mailbox.recording.store(0, std::memory_order_release);
+      xTaskNotifyGive(threads[THREAD_BLACKBOX].handle);
+    }
+    return;
+  }
+  if (mailbox.recording.load(std::memory_order_relaxed) == 0) {
+    if (flags.turtle_ready) {
+      return;
+    }
+    // Session metadata stays fixed, including when the worker is delayed.
+    if (++capture.session_id == 0) {
+      ++capture.session_id;
+    }
+    capture.settings.field_flags = profile.blackbox.field_flags;
+    capture.settings.rate = blackbox_rate_div();
+    capture.settings.looptime = state.looptime_autodetect;
+    capture.sequence = 0;
+    capture.last_loop = state.loop_counter;
+    mailbox.recording.store(capture.session_id, std::memory_order_release);
+    xTaskNotifyGive(threads[THREAD_BLACKBOX].handle);
+    return;
+  }
+  if ((uint32_t)(state.loop_counter - capture.last_loop) < capture.settings.rate) {
+    return;
+  }
+  capture.last_loop = state.loop_counter;
+  // Count attempts so a busy mailbox leaves a visible sequence gap.
+  capture.sequence++;
+  if (mailbox.pending.load(std::memory_order_acquire)) {
+    return;
+  }
+  blackbox_capture_frame();
 }
 
 void blackbox_thread(void *) {
