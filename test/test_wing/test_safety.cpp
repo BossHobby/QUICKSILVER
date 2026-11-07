@@ -465,6 +465,27 @@ static void test_wing_gps_home_latches_on_arm() {
   TEST_ASSERT_FLOAT_WITHIN(1.0f, 180.0f, state.home_bearing);
 }
 
+static void test_wing_gps_home_vector_crosses_antimeridian() {
+  prepare(0);
+  nav_init();
+  profile.serial.gps = SERIAL_PORT1;
+  state.gps_lock = true;
+  state.gps_sats = GPS_MIN_SATS_FOR_LOCK;
+  state.gps_horizontal_accuracy = 1.0f;
+  state.gps_coord = {.lon = 1799999500, .lat = -177000000};
+  time_test_advance_us(10000);
+  state.gps_last_update_ms = time_millis();
+  nav_update(); // First armed pass latches home.
+
+  state.gps_coord.lon = -1799999500; // 1e-4 degrees east, across 180.
+  time_test_advance_us(10000);
+  state.gps_last_update_ms = time_millis();
+  nav_update();
+  const float expected = 1e-4f * METERS_PER_DEGREE_LAT * cosf(-17.7f * DEGTORAD);
+  TEST_ASSERT_FLOAT_WITHIN(0.5f, expected, state.home_distance);
+  TEST_ASSERT_FLOAT_WITHIN(1.0f, 270.0f, state.home_bearing);
+}
+
 static void test_wing_default_level_response_has_no_derivative_kick_or_voltage_boost() {
   prepare(1U << AUX_LEVELMODE);
   state.GEstG = {{0.5f, 0, 0.8660254f}}; // 30-degree bank, zero angular rate.
@@ -501,5 +522,6 @@ void run_wing_safety_tests() {
   RUN_TEST(test_wing_imu_tracks_scripted_bank);
   RUN_TEST(test_wing_default_rate_response_across_profiles_and_loop_times);
   RUN_TEST(test_wing_gps_home_latches_on_arm);
+  RUN_TEST(test_wing_gps_home_vector_crosses_antimeridian);
   RUN_TEST(test_wing_default_level_response_has_no_derivative_kick_or_voltage_boost);
 }

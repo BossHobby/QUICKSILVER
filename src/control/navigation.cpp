@@ -29,6 +29,7 @@
 
 static constexpr float NAV_GPS_MAX_HORIZONTAL_ACCURACY = 30.0f; // meters
 static constexpr float NAV_GPS_MAX_POSITION_JUMP = 50.0f;       // meters per fix
+static constexpr int64_t GPS_LON_HALF_TURN = 1800000000;        // 180 degrees * 1e7
 
 static struct {
   uint32_t last_update_us;
@@ -198,7 +199,13 @@ void nav_update_gps_accel() {
 void nav_position_delta(gps_coord_t start, gps_coord_t end, float *north, float *east) {
   const float scale = 1.0f / 10000000.0f;
   const float lat_diff = (end.lat - start.lat) * scale;
-  const float lon_diff = (end.lon - start.lon) * scale;
+  // Subtract in 64 bits and take the short way across the antimeridian.
+  int64_t lon_delta = int64_t(end.lon) - start.lon;
+  if (lon_delta > GPS_LON_HALF_TURN)
+    lon_delta -= 2 * GPS_LON_HALF_TURN;
+  else if (lon_delta < -GPS_LON_HALF_TURN)
+    lon_delta += 2 * GPS_LON_HALF_TURN;
+  const float lon_diff = lon_delta * scale;
   const float lat_rad = start.lat * scale * DEGTORAD;
   *north = lat_diff * METERS_PER_DEGREE_LAT;
   *east = lon_diff * (METERS_PER_DEGREE_LAT * cosf(lat_rad));
@@ -242,34 +249,13 @@ static void nav_update_gps_sanity(void) {
   gps.valid = true;
 }
 
+// Flat-earth vector from integer coordinate differences. Float haversine on
+// absolute coordinates loses ~0.5 m and several degrees of bearing near home.
 static void nav_update_home_vector(const gps_coord_t start, const gps_coord_t end) {
-  const float scale = M_PI_F / (180.0f * 10000000.0f);
-
-  const float lat_start_rad = (float)start.lat * scale;
-  const float lon_start_rad = (float)start.lon * scale;
-  const float lat_end_rad = (float)end.lat * scale;
-  const float lon_end_rad = (float)end.lon * scale;
-
-  const float cos_lat_start = cosf(lat_start_rad);
-  const float sin_lat_start = sinf(lat_start_rad);
-  const float cos_lat_end = cosf(lat_end_rad);
-  const float sin_lat_end = sinf(lat_end_rad);
-
-  const float delta_lon = lon_end_rad - lon_start_rad;
-  const float cos_delta_lon = cosf(delta_lon);
-  const float sin_delta_lon = sinf(delta_lon);
-
-  const float sin_half_delta_lat = sinf((lat_end_rad - lat_start_rad) * 0.5f);
-  const float sin_half_delta_lon = sinf(delta_lon * 0.5f);
-  const float a = sin_half_delta_lat * sin_half_delta_lat +
-                  cos_lat_start * cos_lat_end * sin_half_delta_lon * sin_half_delta_lon;
-
-  state.home_distance = EARTH_RADIUS * 2.0f * atan2f(sqrtf(a), sqrtf(1.0f - a));
-
-  const float y = sin_delta_lon * cos_lat_end;
-  const float x = cos_lat_start * sin_lat_end - sin_lat_start * cos_lat_end * cos_delta_lon;
-
-  state.home_bearing = normalize_rad(atan2f(y, x)) * RADTODEG;
+  float north, east;
+  nav_position_delta(start, end, &north, &east);
+  state.home_distance = sqrtf(north * north + east * east);
+  state.home_bearing = normalize_rad(atan2approx_rad(east, north)) * RADTODEG;
 }
 
 static void nav_update_home(bool arming) {
