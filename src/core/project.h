@@ -28,7 +28,7 @@
 // zero-wait ITCM RAM; elsewhere it is marked hot. F7 omits hot: GCC then
 // inlines far more into these functions, overflowing ITCM by about 7 KiB.
 // Code inlined into a caller outside it runs from the caller's section, so
-// tag the callers too.
+// tag the callers too. RP2350 runs all code except COLD_CODE from SRAM.
 #ifdef USE_FAST_CODE
 #define HOT_CODE __attribute__((section(".fast_code")))
 #else

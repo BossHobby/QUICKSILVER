@@ -57,12 +57,22 @@ uint32_t rtos_runtime_clock(void);
 #define configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY 1
 #define configKERNEL_INTERRUPT_PRIORITY (configLIBRARY_LOWEST_INTERRUPT_PRIORITY << (8 - configPRIO_BITS))
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY (configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8 - configPRIO_BITS))
+#ifdef RP2350
+// Cortex-M33 port, run entirely in the secure state without TrustZone or MPU.
+#define configENABLE_FPU 1
+#define configENABLE_MPU 0
+#define configENABLE_TRUSTZONE 0
+#define configRUN_FREERTOS_SECURE_ONLY 1
+#endif
 #define vPortSVCHandler SVC_Handler
 #define xPortPendSVHandler PendSV_Handler
 #ifdef __cplusplus
 extern "C" {
 #endif
-#ifdef AT32
+#if defined(RP2350)
+// Only the default tick setup reads it, and time.cpp replaces that.
+#define configCPU_CLOCK_HZ 150000000
+#elif defined(AT32)
 extern unsigned int system_core_clock;
 #define configCPU_CLOCK_HZ system_core_clock
 #else

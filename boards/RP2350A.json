@@ -1,0 +1,37 @@
+{
+    "build": {
+        "core": "rp2350",
+        "cpu": "cortex-m33",
+        "extra_flags": "-DRP2350A -DRP2350 -DMCU_NAME=rp2350a -DUSE_SLOW_FLASH -DPICO_RP2350=1 -DPICO_FLASH_SIZE_BYTES=2097152",
+        "f_cpu": "150000000L",
+        "mcu": "rp2350a",
+        "product_line": "RP2350A",
+        "variant": "RP2350A",
+        "picosdk": {
+            "board_header": "pico2.h"
+        }
+    },
+    "debug": {
+        "jlink_device": "RP2350_M33_0",
+        "openocd_target": "rp2350.cfg",
+        "svd_path": "rp2350.svd"
+    },
+    "frameworks": [
+        "picosdk"
+    ],
+    "name": "RP2350A (30 GPIO, 520k RAM, external flash)",
+    "upload": {
+        "maximum_ram_size": 524288,
+        "maximum_size": 2097152,
+        "protocol": "picotool",
+        "protocols": [
+            "picotool",
+            "cmsis-dap",
+            "jlink",
+            "raspberrypi-swd",
+            "blackmagic"
+        ]
+    },
+    "url": "https://www.raspberrypi.com/products/rp2350/",
+    "vendor": "Raspberry Pi"
+}
