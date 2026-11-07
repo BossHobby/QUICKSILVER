@@ -32,6 +32,8 @@ volatile DMA_RAM uint32_t dshot_output_buffer[DSHOT_MAX_PORT_COUNT][DSHOT_DMA_BU
 
 static uint16_t dshot_packet[MOTOR_PIN_MAX];
 static dshot_pin_t dshot_pins[MOTOR_PIN_MAX];
+// Outputs whose pins motor_dshot_init() configured.
+static uint32_t dshot_motor_mask = 0;
 
 static motor_direction_t motor_dir = MOTOR_FORWARD;
 static bool dir_change_done = true;
@@ -102,6 +104,12 @@ static void dshot_init_motor_pin(uint32_t index) {
   }
 }
 
+// Configured outputs the profile still assigns to DShot. A USB profile change
+// can move an output to another protocol without re-initializing the motors.
+static uint32_t dshot_active_mask() {
+  return dshot_motor_mask & profile_output_protocol_slots(OUTPUT_PROTOCOL_DSHOT);
+}
+
 static void dshot_make_packet(uint8_t number, uint16_t value, bool telemetry) {
   const uint16_t packet = (value << 1) | (telemetry ? 1 : 0);
 
@@ -121,44 +129,52 @@ static void dshot_make_packet(uint8_t number, uint16_t value, bool telemetry) {
 }
 
 static void dshot_make_packet_all(uint16_t value, bool telemetry) {
+  const uint32_t active = dshot_active_mask();
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    if (!dshot_motor_slot_active(i)) {
-      continue;
-    }
-    dshot_make_packet(i, value, telemetry);
+    if (active & (1U << i))
+      dshot_make_packet(i, value, telemetry);
   }
 }
 
-// make dshot dma packet, then fire
+// Decodes the replies to the previous frame, then returns the pins to output.
+// Bidirectional DShot runs this every pass, but state.dshot_rpm only reaches
+// the Configurator today, so it stays cold. Once eRPM drives flight control
+// (an RPM filter), this and dshot_decode_gcr() become hot and worth optimizing.
+COLD_CODE static void dshot_read_telemetry(uint32_t active) {
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    if (!(active & (1U << i)))
+      continue;
+    const uint32_t port = dshot_pins[i].dshot_port;
+    state.dshot_rpm[i] = dshot_decode_gcr((uint16_t *)dshot_input_buffer[port], dshot_pins[i].pin_mask);
+    dshot_gpio_init_output(target.outputs[i].pin);
+  }
+}
+
+// Make the DMA frame from dshot_packet, then fire. dshot_packet is left
+// intact; every caller builds the packets for a frame before starting it.
 void dshot_dma_start() {
+  const uint32_t active = dshot_active_mask();
   if (profile.motor.dshot_telemetry) {
-    for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-      if (!dshot_motor_slot_active(i)) {
-        continue;
-      }
-      const uint32_t port = dshot_pins[i].dshot_port;
-      state.dshot_rpm[i] = dshot_decode_eRPM_telemetry_value(dshot_decode_gcr((uint16_t *)dshot_input_buffer[port], dshot_pins[i].pin_mask));
-      dshot_gpio_init_output(target.outputs[i].pin);
-    }
+    dshot_read_telemetry(active);
   }
 
-  for (uint8_t i = 0; i < 16; i++) {
-    for (uint32_t j = 0; j < dshot_gpio_port_count; j++) {
+  for (uint32_t j = 0; j < dshot_gpio_port_count; j++) {
+    for (uint32_t i = 0; i < DSHOT_DMA_SYMBOLS; i++) {
       dshot_output_buffer[j][i * 3 + 1] = 0; // clear middle bit
     }
   }
-  for (uint8_t motor = 0; motor < MOTOR_PIN_MAX; motor++) {
-    if (!dshot_motor_slot_active(motor)) {
+  for (uint32_t motor = 0; motor < MOTOR_PIN_MAX; motor++) {
+    if (!(active & (1U << motor)))
       continue;
-    }
-    const uint32_t port = dshot_pins[motor].dshot_port;
-    for (uint8_t i = 0; i < 16; i++) {
+    const dshot_pin_t &pin = dshot_pins[motor];
+    uint32_t packet = dshot_packet[motor];
+    // Partial unroll: most of the speed at a quarter of the full unroll's size.
+#pragma GCC unroll 4
+    for (uint32_t i = 0; i < DSHOT_DMA_SYMBOLS; i++) {
       // for 1 hold the line high for two timeunits
       // first timeunit is already applied
-      const bool bit = dshot_packet[motor] & 0x8000;
-      dshot_output_buffer[port][i * 3 + 1] |= bit ? dshot_pins[motor].set_mask : dshot_pins[motor].reset_mask;
-
-      dshot_packet[motor] <<= 1;
+      dshot_output_buffer[pin.dshot_port][i * 3 + 1] |= packet & 0x8000 ? pin.set_mask : pin.reset_mask;
+      packet <<= 1;
     }
   }
 
@@ -184,11 +200,10 @@ void motor_dshot_wait_for_ready() {
 static void dshot_send_packet(uint8_t index, uint16_t value, bool telemetry) {
   motor_dshot_wait_for_ready();
 
+  const uint32_t active = dshot_active_mask();
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    if (!dshot_motor_slot_active(i)) {
-      continue;
-    }
-    dshot_make_packet(i, i == index ? value : DSHOT_CMD_MOTOR_STOP, telemetry && i == index);
+    if (active & (1U << i))
+      dshot_make_packet(i, i == index ? value : DSHOT_CMD_MOTOR_STOP, telemetry && i == index);
   }
 
   dshot_dma_start();
@@ -266,12 +281,14 @@ static uint16_t dshot_encode_motor_value(float value) {
 
 void motor_dshot_init() {
   dshot_gpio_port_count = 0;
+  dshot_motor_mask = 0;
   motor_dir = MOTOR_FORWARD;
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
     if (!dshot_motor_slot_active(i)) {
       continue;
     }
     dshot_init_motor_pin(i);
+    dshot_motor_mask |= 1U << i;
   }
 
   for (uint32_t j = 0; j < dshot_gpio_port_count; j++) {
@@ -299,12 +316,10 @@ void motor_dshot_write(float *values) {
     return dshot_handle_dir_change();
   }
 
+  const uint32_t active = dshot_active_mask();
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
-    if (!dshot_motor_slot_active(i)) {
-      continue;
-    }
-    const uint16_t value = dshot_encode_motor_value(values[i]);
-    dshot_make_packet(i, value, false);
+    if (active & (1U << i))
+      dshot_make_packet(i, dshot_encode_motor_value(values[i]), false);
   }
 
   dshot_dma_start();
@@ -322,7 +337,7 @@ bool motor_dshot_direction_change_done() {
 }
 
 bool motor_dshot_configure_direction(uint8_t index, motor_direction_t dir) {
-  if (!dir_change_done || index >= MOTOR_PIN_MAX || !dshot_motor_slot_active(index)) {
+  if (!dir_change_done || index >= MOTOR_PIN_MAX || !(dshot_active_mask() & (1U << index))) {
     return false;
   }
 
