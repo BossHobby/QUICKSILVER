@@ -701,6 +701,19 @@ void test_attitude_imu_pipeline_yaw_while_tilted(void) {
   TEST_ASSERT_FLOAT_WITHIN(0.5f * DEGTORAD, 90 * DEGTORAD, state.attitude.yaw - initial_yaw);
 }
 
+void test_attitude_euler_pitch_saturates_at_vertical(void) {
+  // Pointing straight up or down, rounding can leave sin(pitch) just above 1.
+  const float c = 0.70710683f;
+  const float signs[] = {1.0f, -1.0f};
+  for (const float sign : signs) {
+    const quat_t q = {c, 0.0f, sign * c, 0.0f};
+    TEST_ASSERT_TRUE(2.0f * c * c > 1.0f);
+    float roll, pitch, yaw;
+    quat_to_euler(&q, &roll, &pitch, &yaw);
+    TEST_ASSERT_FLOAT_WITHIN(1e-4f, sign * M_PI_F / 2.0f, pitch);
+  }
+}
+
 void test_attitude_imu_pipeline_drag_deceleration_stays_level(void) {
   imu_pipeline_setup(0, 0);
   flags.arm_state = 1;

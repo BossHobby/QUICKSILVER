@@ -49,6 +49,13 @@ static void sim_vertical(float accel_up, float dt) {
   nav_test_vertical_update(dt);
 }
 
+// Tilt the attitude and the gravity estimate that tilt compensation reads.
+static void set_tilt(float roll, float pitch) {
+  state.attitude.roll = roll;
+  state.attitude.pitch = pitch;
+  state.GEstG = (vec3_t){{sinf(roll) * cosf(pitch), sinf(pitch), cosf(roll) * cosf(pitch)}};
+}
+
 static void navigation_test_setup(void) {
   mock_hardware_reset_all();
   time_test_reset();
@@ -386,7 +393,7 @@ void test_navigation_altitude_integral_unwinds_after_saturation(void) {
   }
   TEST_ASSERT_FLOAT_WITHIN(0.04f, 0.5f, state.rx_override.throttle);
   profile.navigation.rth_throttle_max = 0.75f;
-  state.attitude.pitch = 30 * DEGTORAD;
+  set_tilt(0, 30 * DEGTORAD);
   for (int i = 0; i < 100; i++) {
     nav_test_altitude_control(0, 2, 0.01f);
   }
@@ -803,11 +810,11 @@ void test_navigation_failsafe_rth_disarms_after_crash(void) {
   TEST_ASSERT_TRUE(state.rth_failsafe_active);
 
   // A brief upset while flying is not a crash.
-  state.attitude.roll = 100 * DEGTORAD;
+  set_tilt(100 * DEGTORAD, 0);
   for (int i = 0; i < 90; i++) failsafe_step(10000);
-  state.attitude.roll = 0;
+  set_tilt(0, 0);
   failsafe_step(10000);
-  state.attitude.roll = 100 * DEGTORAD;
+  set_tilt(100 * DEGTORAD, 0);
   for (int i = 0; i < 90; i++) failsafe_step(10000);
   TEST_ASSERT_TRUE(flags.arm_state);
   TEST_ASSERT_FALSE(flags.failsafe_outputs_blocked);
@@ -873,8 +880,7 @@ void test_navigation_failsafe_hold_levels_in_acro(void) {
   flags.failsafe_signal_lost = 1;
   for (int i = 0; i < 31; i++) failsafe_step(10000);
   state.rx_filtered = state.rx_override;
-  state.attitude.roll = 20 * DEGTORAD;
-  state.GEstG = (vec3_t){{sinf(20 * DEGTORAD), 0, cosf(20 * DEGTORAD)}};
+  set_tilt(20 * DEGTORAD, 0);
   control_test_flight_mode();
   // Angle mode drives the tilt back toward level instead of holding it.
   TEST_ASSERT_TRUE(fabsf(state.setpoint.roll) > 0.01f);
@@ -1011,9 +1017,9 @@ void test_navigation_hover_learning(void) {
   state.vertical_speed = 2;
   for (int i = 0; i < 300; i++) nav_test_update_hover(0.01f);
   state.vertical_speed = 0;
-  state.attitude.pitch = 30 * DEGTORAD;
+  set_tilt(0, 30 * DEGTORAD);
   for (int i = 0; i < 300; i++) nav_test_update_hover(0.01f);
-  state.attitude.pitch = 0;
+  set_tilt(0, 0);
   flags.controls_override = 1;
   for (int i = 0; i < 300; i++) nav_test_update_hover(0.01f);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.4f, state.hover_throttle);
@@ -1102,8 +1108,7 @@ void test_navigation_closed_loop_return_with_irregular_samples(void) {
       next_baro_ms += baro_samples++ % 2 ? 40 : 60;
     }
     state.heading = normalize_deg(heading * RADTODEG);
-    state.attitude.pitch = pitch;
-    state.attitude.roll = roll;
+    set_tilt(roll, pitch);
     const auto phase = state.rth_state;
     nav_test_update_rth();
     char context[120];

@@ -101,6 +101,16 @@ static void test_loiter_left_direction_banks_left() {
   TEST_ASSERT_TRUE(state.setpoint.roll < 0.0f);
 }
 
+static void test_loiter_tight_circle_banks_for_v2_over_r() {
+  // About 30 degrees, where a small-angle bank would be 3 degrees too steep.
+  profile.navigation.loiter_radius = 40.0f;
+  fly(1U << AUX_LOITER);
+  step(1000);
+  TEST_ASSERT_EQUAL(WING_NAV_LOITER, state.wing_nav_state);
+  const float expected = atanf(15.0f * 15.0f / (9.80665f * profile.navigation.loiter_radius)) * RADTODEG;
+  TEST_ASSERT_FLOAT_WITHIN(0.5f, expected, roll_command_deg());
+}
+
 static void test_loiter_turns_back_when_flying_away() {
   fly(1U << AUX_LOITER);
   // The circle center is one loiter radius south of the entry point. Fly north away from it.
@@ -781,6 +791,7 @@ void run_wing_navigation_tests() {
   RUN_TEST(test_loiter_requires_switch_and_flight);
   RUN_TEST(test_loiter_enters_tangentially_on_turn_side);
   RUN_TEST(test_loiter_left_direction_banks_left);
+  RUN_TEST(test_loiter_tight_circle_banks_for_v2_over_r);
   RUN_TEST(test_loiter_turns_back_when_flying_away);
   RUN_TEST(test_loiter_caps_configured_bank);
   RUN_TEST(test_loiter_banks_without_gps_and_recenters_on_recovery);

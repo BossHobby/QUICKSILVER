@@ -202,7 +202,7 @@ static void failsafe_update_rth_ownership(uint32_t now_us) {
       failsafe_rth = {};
     }
   }
-  if (!failsafe_rth.owns_link_loss || cosf(state.attitude.roll) * cosf(state.attitude.pitch) > FAILSAFE_CRASH_MIN_TILT) {
+  if (!failsafe_rth.owns_link_loss || state.GEstG.yaw / ACC_1G > FAILSAFE_CRASH_MIN_TILT) {
     failsafe_rth.upright_us = now_us;
   }
   state.rth_failsafe_active = failsafe_rth.owns_link_loss;

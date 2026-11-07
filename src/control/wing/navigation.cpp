@@ -166,6 +166,12 @@ static void circle_place_home() {
   circle.center = {};
 }
 
+// sin(nu) with nu clamped to +-90 degrees, from its sine and cosine both scaled
+// by length. Beyond 90 degrees nu clamps to the turn side.
+static float l1_sin_nu(float sin_scaled, float cos_scaled, float length) {
+  return cos_scaled > 0.0f ? sin_scaled / length : copysignf(1.0f, sin_scaled);
+}
+
 // L1 loiter guidance on the GPS ground track, as in ArduPlane's
 // AP_L1_Control::update_loiter(). Returns lateral acceleration in m/s^2,
 // positive to the right.
@@ -192,8 +198,7 @@ static float circle_lateral_accel() {
   // Capture: steer the velocity vector toward the center from outside.
   const float cross_velocity = vec2_cross(radial, vel);
   const float inward_velocity = -vec2_dot(radial, vel);
-  const float nu = constrain(atan2f(cross_velocity, inward_velocity), -M_PI_F / 2.0f, M_PI_F / 2.0f);
-  const float capture = 4.0f * L1_DAMPING * L1_DAMPING * speed * speed / l1_distance * sinf(nu);
+  const float capture = 4.0f * L1_DAMPING * L1_DAMPING * speed * speed / l1_distance * l1_sin_nu(cross_velocity, inward_velocity, speed);
 
   // Circle: PD on the radial error plus the centripetal demand of the turn.
   const float radial_error = distance - radius;
@@ -221,10 +226,8 @@ static float l1_lateral_accel(float sin_nu, float speed) {
 // L1 waypoint guidance toward a bearing, as in ArduPlane's
 // AP_L1_Control::update_waypoint(). Course and bearing in radians.
 static float waypoint_lateral_accel(float bearing, float course, float speed) {
-  // Signed bearing error in -pi..pi; normalize_rad() wraps to 0..2pi.
   const float error = bearing - course;
-  const float nu = constrain(atan2f(sinf(error), cosf(error)), -M_PI_F / 2.0f, M_PI_F / 2.0f);
-  return l1_lateral_accel(sinf(nu), speed);
+  return l1_lateral_accel(l1_sin_nu(fastsin(error), fastcos(error), 1.0f), speed);
 }
 
 static void cruise_lock() {
@@ -241,10 +244,9 @@ static float cruise_lateral_accel() {
   const vec2_t los = cruise.dir * ahead - position;
 
   // Cross and dot products of ground velocity and line of sight scale sin(nu)
-  // and cos(nu) by both lengths; beyond 90 degrees nu clamps to the turn side.
+  // and cos(nu) by both lengths.
   const vec2_t vel = {{state.gps_vel_north, state.gps_vel_east}};
-  const float cross = vec2_cross(vel, los);
-  const float sin_nu = vec2_dot(vel, los) > 0.0f ? cross / (nav.speed * vec2_magnitude(los)) : copysignf(1.0f, cross);
+  const float sin_nu = l1_sin_nu(vec2_cross(vel, los), vec2_dot(vel, los), nav.speed * vec2_magnitude(los));
 
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 5, (int16_t)constrain(vec2_cross(cruise.dir, position), -32768.0f, 32767.0f)); // cross-track meters, right positive
   return l1_lateral_accel(sin_nu, nav.speed);
@@ -354,20 +356,20 @@ void nav_update_wing(bool gps_valid, bool home_valid) {
     roll = state.attitude.roll;
     break;
   case WING_NAV_CRUISE:
-    roll = atanf(cruise_lateral_accel() / GRAVITY);
+    roll = atan2approx_rad(cruise_lateral_accel(), GRAVITY);
     break;
   case WING_NAV_LOITER:
   case WING_NAV_RTH_HOME:
-    roll = atanf(circle_lateral_accel() / GRAVITY);
+    roll = atan2approx_rad(circle_lateral_accel(), GRAVITY);
     break;
   case WING_NAV_RTH_RETURN: {
-    const float course = atan2f(state.gps_vel_east, state.gps_vel_north);
-    roll = atanf(waypoint_lateral_accel(state.home_bearing * DEGTORAD, course, nav.speed) / GRAVITY);
+    const float course = atan2approx_rad(state.gps_vel_east, state.gps_vel_north);
+    roll = atan2approx_rad(waypoint_lateral_accel(state.home_bearing * DEGTORAD, course, nav.speed), GRAVITY);
     break;
   }
   case WING_NAV_RTH_HEADING:
     // Last home bearing and ground speed, steered on the GPS-aided IMU heading.
-    roll = atanf(waypoint_lateral_accel(state.home_bearing * DEGTORAD, state.heading * DEGTORAD, nav.speed) / GRAVITY);
+    roll = atan2approx_rad(waypoint_lateral_accel(state.home_bearing * DEGTORAD, state.heading * DEGTORAD, nav.speed), GRAVITY);
     break;
   default:
     break;

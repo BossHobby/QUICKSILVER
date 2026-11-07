@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "control/control.h"
+#include "control/imu.h"
 #include "control/navigation.h"
 #include "core/profile.h"
 #include "driver/baro/baro.h"
@@ -118,8 +119,9 @@ static bool nav_rth_can_start(void) {
          profile.navigation.rth_throttle_min < profile.navigation.rth_throttle_max;
 }
 
+// Up component of the normalized gravity estimate: cos(roll) * cos(pitch).
 static float nav_tilt(void) {
-  return MAX(cosf(state.attitude.roll) * cosf(state.attitude.pitch), 0.5f);
+  return MAX(state.GEstG.yaw / ACC_1G, 0.5f);
 }
 
 static bool nav_hover_learned(void) {
@@ -139,7 +141,7 @@ static void nav_update_hover(float dt) {
   // throttle on the ground would otherwise learn as a low hover.
   const bool airborne = flags.in_air && !flags.on_ground &&
                         nav_altitude_source_ok() && state.altitude > HOVER_LEARN_MIN_ALTITUDE;
-  const float tilt = cosf(state.attitude.roll) * cosf(state.attitude.pitch);
+  const float tilt = state.GEstG.yaw / ACC_1G;
   const bool steady = airborne && !flags.controls_override && !flags.failsafe &&
                       state.throttle > 0.05f && state.throttle < 0.95f &&
                       tilt > HOVER_LEARN_MIN_TILT &&
@@ -284,8 +286,8 @@ static void nav_update_horizontal_control(float dt) {
   const vec2_t vel_error = desired_vel - gps_vel;
 
   const float heading_rad = state.heading * DEGTORAD;
-  const float cos_heading = cosf(heading_rad);
-  const float sin_heading = sinf(heading_rad);
+  const float cos_heading = fastcos(heading_rad);
+  const float sin_heading = fastsin(heading_rad);
 
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 10, (int16_t)(desired_vel.north * 10));
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 11, (int16_t)(desired_vel.east * 10));

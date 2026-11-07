@@ -207,7 +207,7 @@ vec2_t nav_position_delta(gps_coord_t start, gps_coord_t end) {
     lon_delta += 2 * GPS_LON_HALF_TURN;
   const float lon_diff = lon_delta * scale;
   const float lat_rad = start.lat * scale * DEGTORAD;
-  return {{lat_diff * METERS_PER_DEGREE_LAT, lon_diff * (METERS_PER_DEGREE_LAT * cosf(lat_rad))}};
+  return {{lat_diff * METERS_PER_DEGREE_LAT, lon_diff * (METERS_PER_DEGREE_LAT * fastcos(lat_rad))}};
 }
 
 static bool nav_gps_quality_ok(void) {

@@ -43,9 +43,9 @@ static inline void quat_normalize(quat_t *q) {
 // Create quaternion from axis-angle representation
 static inline quat_t quat_from_axis_angle(const vec3_t *axis, float angle) {
   const float half_angle = angle * 0.5f;
-  const float s = sinf(half_angle);
+  const float s = fastsin(half_angle);
   return (quat_t){
-      .w = cosf(half_angle),
+      .w = fastcos(half_angle),
       .x = axis->axis[0] * s,
       .y = axis->axis[1] * s,
       .z = axis->axis[2] * s};
@@ -69,32 +69,13 @@ static inline void quat_to_euler(const quat_t *q, float *roll, float *pitch, flo
   const float cosr_cosp = 1.0f - 2.0f * (q->x * q->x + q->y * q->y);
   *roll = atan2approx_rad(sinr_cosp, cosr_cosp);
 
+  // asin(sinp) as atan2; clamping the cosine to zero saturates at +-90 degrees.
   const float sinp = 2.0f * (q->w * q->y - q->z * q->x);
-  if (fabsf(sinp) >= 1.0f) {
-    *pitch = copysignf(M_PI_F / 2.0f, sinp);
-  } else {
-    *pitch = asinf(sinp);
-  }
+  *pitch = atan2approx_rad(sinp, sqrtf(MAX(1.0f - sinp * sinp, 0.0f)));
 
   const float siny_cosp = 2.0f * (q->w * q->z + q->x * q->y);
   const float cosy_cosp = 1.0f - 2.0f * (q->y * q->y + q->z * q->z);
   *yaw = atan2approx_rad(siny_cosp, cosy_cosp);
-}
-
-// Create quaternion from Euler angles (ZYX convention)
-static inline quat_t quat_from_euler(float roll, float pitch, float yaw) {
-  const float cr = cosf(roll * 0.5f);
-  const float sr = sinf(roll * 0.5f);
-  const float cp = cosf(pitch * 0.5f);
-  const float sp = sinf(pitch * 0.5f);
-  const float cy = cosf(yaw * 0.5f);
-  const float sy = sinf(yaw * 0.5f);
-
-  return (quat_t){
-      .w = cr * cp * cy + sr * sp * sy,
-      .x = sr * cp * cy - cr * sp * sy,
-      .y = cr * sp * cy + sr * cp * sy,
-      .z = cr * cp * sy - sr * sp * cy};
 }
 
 // Get rotation matrix from quaternion
