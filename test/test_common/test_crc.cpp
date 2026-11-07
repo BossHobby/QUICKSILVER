@@ -125,3 +125,10 @@ void test_crc8_known_values(void) {
   // This would need to be verified with a reference implementation
   TEST_ASSERT_NOT_EQUAL(0, crc_pattern);
 }
+void test_crc16_ccitt_check_value(void) {
+  const uint8_t check[] = {'1', '2', '3', '4', '5', '6', '7', '8', '9'};
+  TEST_ASSERT_EQUAL_HEX16(0x29B1, crc16_ccitt_data(0xFFFF, check, sizeof(check)));
+  // Chained over parts like over the whole.
+  const uint16_t first = crc16_ccitt_data(0xFFFF, check, 4);
+  TEST_ASSERT_EQUAL_HEX16(0x29B1, crc16_ccitt_data(first, check + 4, sizeof(check) - 4));
+}

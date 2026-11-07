@@ -237,32 +237,32 @@ void test_flight_navigation_cadence_configuration_and_wrap() {
     nav_init();
     profile.serial.gps = SERIAL_PORT_INVALID;
     state.gps_coord = {100, 200};
-    state.gps_home = {};
+    state.home = {};
     time_test_advance_us(10000);
     nav_update();
-    TEST_ASSERT_EQUAL_INT32(0, state.gps_home.lat);
+    TEST_ASSERT_EQUAL_INT32(0, state.home.lat);
 
     // A configured receiver must run even before it has acquired a fix.
     profile.serial.gps = SERIAL_PORT1;
-    state.gps_lock = false;
+    state.gps_health.lock = false;
     time_test_advance_us(10000);
     nav_update();
-    TEST_ASSERT_EQUAL_INT32(200, state.gps_home.lat);
+    TEST_ASSERT_EQUAL_INT32(200, state.home.lat);
     state.gps_coord.lat = 300;
     time_test_advance_us(9999);
     nav_update();
-    TEST_ASSERT_EQUAL_INT32(200, state.gps_home.lat);
+    TEST_ASSERT_EQUAL_INT32(200, state.home.lat);
     time_test_advance_us(1);
     nav_update();
-    TEST_ASSERT_EQUAL_INT32(300, state.gps_home.lat);
+    TEST_ASSERT_EQUAL_INT32(300, state.home.lat);
 
     time_test_advance_us(35000);
     state.gps_coord.lat = 400;
     nav_update();
-    TEST_ASSERT_EQUAL_INT32(400, state.gps_home.lat);
+    TEST_ASSERT_EQUAL_INT32(400, state.home.lat);
     state.gps_coord.lat = 500;
     nav_update(); // No catch-up passes after a delay.
-    TEST_ASSERT_EQUAL_INT32(400, state.gps_home.lat);
+    TEST_ASSERT_EQUAL_INT32(400, state.home.lat);
   }
   nav_test_reset();
   profile = saved_profile;

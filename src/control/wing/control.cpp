@@ -49,7 +49,6 @@ typedef enum {
 // integrator holds the trim, so the sticks must also be centered.
 static constexpr float AUTOTRIM_STICK_CENTER = 0.05f;
 
-static constexpr float GRAVITY = 9.80665f; // m/s^2
 // Cruise-to-current airspeed ratio limits; the throttle proxy is coarse. Idle
 // glides read slow although they keep near cruise airspeed, so the slow limit
 // stays close.
@@ -176,7 +175,7 @@ static wing_mode_t wing_active_mode() {
 // Launch takes over from arming, so an always-on switch leaves the disarmed
 // surfaces on the sticks for preflight checks and OSD menus.
 static bool wing_launch_in_progress() {
-  return flags.arm_state && rx_aux_on(AUX_AUTOLAUNCH) && state.wing_launch_available &&
+  return flags.arm_state && rx_aux_on(AUX_AUTOLAUNCH) && flags.wing_launch_available &&
          !flags.failsafe && state.wing_launch_state < WING_LAUNCH_DONE;
 }
 
@@ -307,8 +306,8 @@ static void wing_autotrim_update_flown() {
     autotrim.flown = false;
     return;
   }
-  if ((state.gps_lock && state.gps_speed >= WING_FLYING_MIN_SPEED) ||
-      (state.baro_valid && fabsf(state.altitude) > WING_FLYING_MIN_ALTITUDE) ||
+  if ((state.gps_health.lock && state.gps_speed >= WING_FLYING_MIN_SPEED) ||
+      (flags.altitude_valid && fabsf(state.altitude) > WING_FLYING_MIN_ALTITUDE) ||
       state.wing_launch_state == WING_LAUNCH_DONE) {
     autotrim.flown = true;
   }
@@ -376,7 +375,7 @@ static void wing_update_autotrim(bool armed_at_start, wing_mode_t mode) {
   if (state.wing_autotrim_state == WING_AUTOTRIM_SAVE_PENDING) {
     // Flight holds profile_mutex only for passes that start disarmed. The save
     // blocks with interrupts masked, so wait while GPS shows a gliding wing.
-    const bool moving = state.gps_lock && state.gps_speed >= WING_FLYING_MIN_SPEED;
+    const bool moving = state.gps_health.lock && state.gps_speed >= WING_FLYING_MIN_SPEED;
     if (!flags.arm_state && !armed_at_start && !moving) {
       flash_save();
       flight_reset_runtime();
@@ -459,7 +458,7 @@ static void wing_launch_set_state(wing_launch_state_t next_state) {
   }
   if (next_state == WING_LAUNCH_MOTOR_DELAY || next_state == WING_LAUNCH_ACTIVE) {
     launch.takeoff_altitude = state.gps_altitude;
-    launch.takeoff_altitude_valid = state.gps_lock;
+    launch.takeoff_altitude_valid = state.gps_health.lock;
   }
 }
 
@@ -477,7 +476,7 @@ static bool wing_launch_is_flying() {
   const bool throttle_condition = state.throttle >= profile.wing.autolaunch.throttle;
   const bool altitude_condition = launch.takeoff_altitude_valid && fabsf(state.gps_altitude - launch.takeoff_altitude) > WING_FLYING_MIN_ALTITUDE;
 
-  return state.gps_lock && throttle_condition && altitude_condition;
+  return state.gps_health.lock && throttle_condition && altitude_condition;
 }
 
 static void wing_launch_update_flying_detected(uint32_t now_ms) {
@@ -509,7 +508,7 @@ static bool wing_launch_probably_not_flying() {
 }
 
 static void wing_launch_reset_pids_if_needed() {
-  if (!rx_aux_on(AUX_AUTOLAUNCH) || !state.wing_launch_available || state.wing_launch_state >= WING_LAUNCH_DONE) {
+  if (!rx_aux_on(AUX_AUTOLAUNCH) || !flags.wing_launch_available || state.wing_launch_state >= WING_LAUNCH_DONE) {
     return;
   }
   if (state.wing_launch_state < WING_LAUNCH_SPINUP || wing_launch_probably_not_flying()) {
@@ -531,7 +530,7 @@ static bool wing_launch_detected() {
   // Attitude is positive nose-down: accept level to 45 degrees nose-up.
   const bool launch_attitude = state.attitude.pitch <= 0.0f && state.attitude.pitch >= -WING_LAUNCH_GPS_MAX_PITCH;
   // A held airframe has no ground speed regardless of wind.
-  const bool gps_launched = state.gps_lock && state.gps_speed > profile.wing.autolaunch.velocity_threshold && launch_attitude;
+  const bool gps_launched = state.gps_health.lock && state.gps_speed > profile.wing.autolaunch.velocity_threshold && launch_attitude;
 
   return wing_launch_throw_accelerating() || gps_launched;
 }
@@ -539,13 +538,13 @@ static bool wing_launch_detected() {
 static bool wing_launch_max_altitude_reached() {
   return profile.wing.autolaunch.max_altitude > 0.0f &&
          launch.takeoff_altitude_valid &&
-         state.gps_lock &&
+         state.gps_health.lock &&
           state.gps_altitude - launch.takeoff_altitude >= profile.wing.autolaunch.max_altitude;
 }
 
 // Disarmed, launch only tracks the switch and stays idle.
 COLD_CODE static void wing_launch_disarmed(bool launch_aux_on) {
-  state.wing_launch_available = launch_aux_on;
+  flags.wing_launch_available = launch_aux_on;
   wing_launch_set_state(WING_LAUNCH_IDLE);
 }
 
@@ -558,21 +557,21 @@ static float wing_autolaunch_throttle() {
   // Launch runs at most once per arm: DONE or ABORTED holds until disarm, so
   // neither a recovered link nor a re-enabled switch may restart it in flight.
   if (state.wing_launch_state >= WING_LAUNCH_DONE) {
-    state.wing_launch_available = false;
+    flags.wing_launch_available = false;
     return state.throttle;
   }
   if (flags.failsafe || !launch_aux_on) {
-    if (state.wing_launch_available) {
+    if (flags.wing_launch_available) {
       // Throttle already latched in_air before release. A link loss must not
       // let navigation bypass the throw detection or hand-clear delay.
       if (flags.failsafe && state.wing_launch_state < WING_LAUNCH_SPINUP)
         control_failsafe_disarm();
       wing_launch_set_state(WING_LAUNCH_ABORTED);
     }
-    state.wing_launch_available = false;
+    flags.wing_launch_available = false;
     return state.throttle;
   }
-  if (!state.wing_launch_available) {
+  if (!flags.wing_launch_available) {
     return state.throttle;
   }
 
@@ -766,7 +765,7 @@ static void wing_learn_cruise_speed() {
   speed_learn.heading_change += heading_rate * state.looptime;
 
   const uint32_t gps_ms = state.gps_last_update_ms;
-  if (!state.gps_lock || time_millis() - gps_ms > NAV_GPS_STALE_MS || wing_launch_in_progress()) {
+  if (!state.gps_health.lock || time_millis() - gps_ms > NAV_GPS_STALE_MS || wing_launch_in_progress()) {
     speed_learn.turn_start_valid = false;
     return;
   }
@@ -785,8 +784,7 @@ static void wing_learn_cruise_speed() {
     return;
 
   if (!restart) {
-    const vec2_t gps_vel = {{state.gps_vel_north, state.gps_vel_east}};
-    const float velocity_change = vec2_magnitude(gps_vel - speed_learn.turn_start_vel);
+    const float velocity_change = vec2_magnitude(vec3_horizontal(state.gps_velocity) - speed_learn.turn_start_vel);
     const float nose_change = 2.0f * fabsf(fastsin(0.5f * heading_change));
     const float scale = 0.5f * (state.wing_speed_scale + speed_learn.turn_start_scale);
     speed_learn.samples[speed_learn.sample_next] = velocity_change / nose_change * scale;
@@ -805,7 +803,7 @@ static void wing_learn_cruise_speed() {
   speed_learn.turn_start_valid = true;
   speed_learn.turn_start_gps_ms = gps_ms;
   speed_learn.heading_change = 0.0f;
-  speed_learn.turn_start_vel = {{state.gps_vel_north, state.gps_vel_east}};
+  speed_learn.turn_start_vel = vec3_horizontal(state.gps_velocity);
   speed_learn.turn_start_scale = state.wing_speed_scale;
 }
 
@@ -814,7 +812,7 @@ static void wing_learn_cruise_speed() {
 // interrupts masked, so wait while GPS shows a gliding wing. The caller checks
 // save_pending.
 COLD_CODE static void wing_save_cruise_speed(bool armed_at_start) {
-  const bool moving = state.gps_lock && state.gps_speed >= WING_FLYING_MIN_SPEED;
+  const bool moving = state.gps_health.lock && state.gps_speed >= WING_FLYING_MIN_SPEED;
   if (flags.arm_state || armed_at_start || moving)
     return;
   flash_save();

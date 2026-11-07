@@ -14,6 +14,10 @@
 //         state: add RTH heading acquisition and heading-failed phases; reorder RTH phase values.
 //         profile: add GPS constellation selection.
 //         blackbox: files carry their start datetime.
+//         mission: add waypoint mission get/set/clear command and mission state.
+//         state: navigation publishes nav_target and failsafe_owner enums; RTH phases reorder so
+//         every phase from climb on owns the controls; navigation status bits move out of state.
+//         crsf: sessions no longer block arming; arming ends them. Missions work over CRSF.
 // 0.2.9 (30cde6a5e): profile: move bind and vtx settings into profile.
 // 0.2.8 (fab52980): rx: add CRSF bind command.
 // 0.2.7 (399b96c5): blackbox: harden logging and transfer handling.
@@ -40,6 +44,7 @@ typedef enum {
   QUIC_CMD_SERIAL,
   QUIC_CMD_OSD,
   QUIC_CMD_RX,
+  QUIC_CMD_MISSION,
 } __attribute__((__packed__)) quic_command;
 
 typedef enum {
@@ -70,6 +75,12 @@ typedef enum {
 typedef enum {
   QUIC_RX_BIND,
 } __attribute__((__packed__)) quic_rx_command;
+
+typedef enum {
+  QUIC_MISSION_GET,
+  QUIC_MISSION_SET,
+  QUIC_MISSION_CLEAR,
+} __attribute__((__packed__)) quic_mission_command;
 
 typedef enum {
   QUIC_FLAG_NONE,

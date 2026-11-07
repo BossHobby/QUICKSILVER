@@ -45,7 +45,7 @@ void rx_lqi_lost_packet() {
 void rx_lqi_got_packet() {
   const uint32_t now_us = time_micros();
   frames_received++;
-  state.last_frame_time_us = now_us;
+  state.rx_frame_time_us = now_us;
   flags.failsafe_signal_lost = 0;
 }
 
@@ -65,7 +65,7 @@ static void rx_lqi_update_from_fps(float expected_fps) {
 void rx_lqi_update(float expected_fps) {
   const uint32_t time = time_micros();
 
-  if (flags.rx_ready && time - state.last_frame_time_us > FAILSAFE_DETECT_TIME_US)
+  if (flags.rx_ready && time - state.rx_frame_time_us > FAILSAFE_DETECT_TIME_US)
     flags.failsafe_signal_lost = 1;
 
   if (flags.failsafe_signal_lost)
@@ -376,7 +376,7 @@ TickType_t rx_update() {
 HOT_CODE void rx_process() {
 #ifndef SIMULATOR
   // Signal-loss detection stays in Flight even when the IO worker is delayed.
-  if (flags.rx_ready && time_micros() - state.last_frame_time_us > FAILSAFE_DETECT_TIME_US) {
+  if (flags.rx_ready && time_micros() - state.rx_frame_time_us > FAILSAFE_DETECT_TIME_US) {
     flags.failsafe_signal_lost = 1;
     state.rx_rssi = 0.0f;
   }

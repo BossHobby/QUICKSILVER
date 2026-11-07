@@ -8,6 +8,7 @@
 #include <task.h>
 
 #include "control/control.h"
+#include "control/mission.h"
 #include "core/tasks.h"
 #include "driver/time.h"
 #include "io/blackbox_device.h"
@@ -156,7 +157,9 @@ static bool compute_and_check_gps_fix_delta(blackbox_gps_fix_t *delta, const bla
   delta->rf_noise = delta_int16(current->rf_noise, previous->rf_noise);
   delta->rf_agc = delta_int16(current->rf_agc, previous->rf_agc);
   delta->rf_cw = delta_int16(current->rf_cw, previous->rf_cw);
-  return delta->status || delta->satellites || delta->h_acc || delta->s_acc || delta->rf_noise || delta->rf_agc || delta->rf_cw;
+  delta->trust = delta_int16(current->trust, previous->trust);
+  return delta->status || delta->satellites || delta->h_acc || delta->s_acc || delta->rf_noise || delta->rf_agc || delta->rf_cw ||
+         delta->trust;
 }
 
 static bool debug_has_changed(const int16_t *current, const int16_t *previous, uint32_t size) {
@@ -391,7 +394,7 @@ cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *cu
   CBOR_CHECK_ERROR(res = encode_vec3_field_if_present(enc, active_flags, BBOX_FIELD_GPS_VEL, &source->gps_vel));
   if (active_flags & (1 << BBOX_FIELD_GPS_FIX)) {
     const blackbox_gps_fix_t &fix = source->gps_fix;
-    CBOR_CHECK_ERROR(res = cbor_encode_array(enc, 7));
+    CBOR_CHECK_ERROR(res = cbor_encode_array(enc, 8));
     CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.status));
     CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.satellites));
     CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.h_acc));
@@ -399,6 +402,7 @@ cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *cu
     CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.rf_noise));
     CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.rf_agc));
     CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.rf_cw));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.trust));
   }
   CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
   return res;
@@ -448,11 +452,14 @@ static uint32_t blackbox_rate_div() {
 static_assert(AUX_FUNCTION_MAX < 32, "aux bits must stay below 2^31 for int32 state deltas");
 static_assert(FAILSAFE_PHASE_RECOVERY < 1 << 3);
 #if defined(VEHICLE_WING)
-static_assert(WING_NAV_CRUISE_NO_GPS < 1 << 4);
+static_assert(WING_NAV_MISSION_HOLD < 1 << 4);
 static_assert(WING_LAUNCH_ABORTED < 1 << 4);
 static_assert(WING_AUTOTRIM_SAVED < 1 << 3);
 #elif defined(VEHICLE_MULTI)
-static_assert(RTH_STATE_NAV_FAILED < 1 << 4);
+static_assert(NAV_STATE_LAND < 1 << 4);
+#endif
+#ifndef VEHICLE_ROVER
+static_assert(MISSION_WAYPOINT_MAX <= 1 << 5);
 #endif
 
 static uint32_t blackbox_state_word() {
@@ -468,19 +475,23 @@ static uint32_t blackbox_state_word() {
   if (flags.lowbatt)
     result |= BBOX_STATE_LOWBATT;
 #if defined(VEHICLE_WING)
-  if (state.wing_nav_failsafe)
+  if (flags.wing_nav_failsafe)
     result |= BBOX_STATE_WING_NAV_FAILSAFE;
   result |= (uint32_t)state.wing_nav_state << BBOX_STATE_WING_NAV_SHIFT;
   result |= (uint32_t)state.wing_launch_state << BBOX_STATE_WING_LAUNCH_SHIFT;
   result |= (uint32_t)state.wing_autotrim_state << BBOX_STATE_WING_AUTOTRIM_SHIFT;
 #elif defined(VEHICLE_MULTI)
-  if (state.rth_active)
+  if (state.nav_state >= NAV_STATE_CLIMB)
     result |= BBOX_STATE_RTH_ACTIVE;
-  if (state.rth_failsafe_active)
+  if (state.failsafe_owner == FAILSAFE_OWNER_RTH)
     result |= BBOX_STATE_RTH_FAILSAFE;
-  if (state.failsafe_hold)
+  if (flags.failsafe_hold)
     result |= BBOX_STATE_FAILSAFE_HOLD;
-  result |= (uint32_t)state.rth_state << BBOX_STATE_RTH_SHIFT;
+  result |= (uint32_t)state.nav_state << BBOX_STATE_NAV_SHIFT;
+#endif
+#ifndef VEHICLE_ROVER
+  result |= (uint32_t)state.nav_target << BBOX_STATE_NAV_TARGET_SHIFT;
+  result |= (uint32_t)state.mission_index << BBOX_STATE_MISSION_INDEX_SHIFT;
 #endif
   return result;
 }
@@ -500,8 +511,8 @@ __attribute__((noinline)) static void blackbox_capture_frame() {
     blackbox.gps_coord[1] = state.gps_coord.lon;
   }
   if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_GPS_HOME)) {
-    blackbox.gps_home[0] = state.gps_home.lat;
-    blackbox.gps_home[1] = state.gps_home.lon;
+    blackbox.gps_home[0] = state.home.lat;
+    blackbox.gps_home[1] = state.home.lon;
   }
   if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_ALTITUDE)) {
     blackbox.altitude = (int16_t)constrain(state.altitude * 10.0f, -32768.0f, 32767.0f);
@@ -563,21 +574,26 @@ __attribute__((noinline)) static void blackbox_capture_frame() {
   }
 
   if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_GPS_VEL)) {
-    const vec3_t gps_vel = {.axis = {state.gps_vel_north, state.gps_vel_east, state.gps_vel_down}};
+    // Logged north, east, down as the receiver reports it.
+    const vec3_t gps_vel = {{state.gps_velocity.north, state.gps_velocity.east, -state.gps_velocity.up}};
     blackbox_compress_vec3(&blackbox.gps_vel, &gps_vel);
   }
 
   if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_GPS_FIX)) {
     blackbox.gps_fix = {
-        .status = (int16_t)((state.gps_lock ? BBOX_GPS_LOCK : 0) |
-                            (state.gps_jamming & 0x3) << BBOX_GPS_JAMMING_SHIFT |
-                            (state.gps_spoofing & 0x3) << BBOX_GPS_SPOOFING_SHIFT),
+        .status = (int16_t)((state.gps_health.lock ? BBOX_GPS_LOCK : 0) |
+                            (flags.gps_valid ? BBOX_GPS_VALID : 0) |
+                            (flags.home_valid ? BBOX_GPS_HOME_VALID : 0) |
+                            (flags.gps_glitch ? BBOX_GPS_GLITCH : 0) |
+                            state.gps_health.jamming << BBOX_GPS_JAMMING_SHIFT |
+                            state.gps_health.spoofing << BBOX_GPS_SPOOFING_SHIFT),
         .satellites = state.gps_sats,
         .h_acc = (int16_t)constrain(state.gps_horizontal_accuracy * 100.0f, 0.0f, 32767.0f),
         .s_acc = (int16_t)constrain(state.gps_speed_accuracy * 100.0f, 0.0f, 32767.0f),
         .rf_noise = (int16_t)MIN(gps_status.noise_per_ms, (uint16_t)32767),
         .rf_agc = (int16_t)gps_status.agc_count,
         .rf_cw = gps_status.cw_jamming,
+        .trust = (int16_t)(constrain(state.gps_trust, 0.0f, 1.0f) * 100.0f + 0.5f),
     };
   }
 

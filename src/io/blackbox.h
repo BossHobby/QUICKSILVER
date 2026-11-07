@@ -5,12 +5,20 @@
 
 // BLACKBOX version changelog (log format compatibility):
 // 0.3.2: cpu_load is a percentage 0-100 (was microseconds).
-//        add state field with flags, aux switches, failsafe phase, RTH and wing states.
+//        add state field with flags, aux switches, failsafe phase, RTH, wing and navigation target states;
+//        multirotor RTH states include mission takeoff and landing. Navigation debug 9 carries
+//        the land detector checks while landing.
+//        the RTH state, named nav_state with its hover home phase named hold, orders aborted
+//        after inactive; every phase from climb on owns the controls.
+//        add the brake nav_state before a guided hold.
 //        add the UTC start datetime to each directory entry.
 //        add the attitude field (roll, pitch, yaw in 0.1 degrees) after setpoint, shifting the
 //        later field bits; add the GPS velocity (north, east, down) and GPS fix (status,
-//        satellites, accuracies, RF noise, AGC and CW interference) fields after state.
+//        satellites, accuracies, RF noise, AGC and CW interference, navigation GPS trust) fields
+//        after state; the GPS fix status carries the navigation GPS glitch.
 //        Frames may exceed 255 bytes.
+//        the altitude field records the fused estimate (was the filtered barometer) and
+//        navigation debug 2 the barometer height; accel_filter keeps its magnitude.
 // 0.3.1 (95765fe1): add GPS coordinate, home and altitude fields; grow debug to 16 entries.
 //        replace the four-motor field with per-output values (a1887d4f).
 // 0.2.0 (7343f574): delta-encode I/P frames, scale 100 (was 1000), store the profile with each log
@@ -71,17 +79,19 @@ typedef enum {
   BBOX_STATE_RTH_ACTIVE = 0x1 << 8,
   BBOX_STATE_RTH_FAILSAFE = 0x1 << 9,
   BBOX_STATE_FAILSAFE_HOLD = 0x1 << 10,
-  // rth_state_t at BBOX_STATE_RTH_SHIFT
+  // nav_state_t at BBOX_STATE_NAV_SHIFT
 #endif
+  // Multirotors and wings: nav_target_t and the waypoint index at their shifts.
 } blackbox_state_flag_t;
 
 static constexpr uint32_t BBOX_STATE_FAILSAFE_PHASE_SHIFT = 5;
 
 // GPS fix status word, the first gps_fix value.
 typedef enum {
-  BBOX_GPS_LOCK = 0x1 << 0,       // state.gps_lock
+  BBOX_GPS_LOCK = 0x1 << 0,       // state.gps_health.lock
   BBOX_GPS_VALID = 0x1 << 1,      // flags.gps_valid: navigation accepts the fix
   BBOX_GPS_HOME_VALID = 0x1 << 2, // flags.home_valid
+  BBOX_GPS_GLITCH = 0x1 << 3,     // flags.gps_glitch
 } blackbox_gps_flag_t;
 static constexpr uint32_t BBOX_GPS_JAMMING_SHIFT = 4;  // gps_jamming_t, 2 bits
 static constexpr uint32_t BBOX_GPS_SPOOFING_SHIFT = 6; // gps_spoofing_t, 2 bits
@@ -90,7 +100,11 @@ static constexpr uint32_t BBOX_STATE_WING_NAV_SHIFT = 9;       // 4 bits
 static constexpr uint32_t BBOX_STATE_WING_LAUNCH_SHIFT = 13;   // 4 bits
 static constexpr uint32_t BBOX_STATE_WING_AUTOTRIM_SHIFT = 17; // 3 bits
 #elif defined(VEHICLE_MULTI)
-static constexpr uint32_t BBOX_STATE_RTH_SHIFT = 11; // 4 bits
+static constexpr uint32_t BBOX_STATE_NAV_SHIFT = 11; // 4 bits
+#endif
+#ifndef VEHICLE_ROVER
+static constexpr uint32_t BBOX_STATE_NAV_TARGET_SHIFT = 20;    // 2 bits, nav_target_t
+static constexpr uint32_t BBOX_STATE_MISSION_INDEX_SHIFT = 22; // 5 bits, active waypoint from 0
 #endif
 
 typedef struct {
@@ -110,6 +124,7 @@ typedef struct {
   int16_t rf_noise; // noise level per millisecond
   int16_t rf_agc;   // AGC monitor, 0-8191 of full gain
   int16_t rf_cw;    // continuous-wave interference, 0 (none) to 255 (strong)
+  int16_t trust;    // state.gps_trust, percent
 } blackbox_gps_fix_t;
 
 typedef struct {

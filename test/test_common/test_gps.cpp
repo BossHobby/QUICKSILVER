@@ -111,11 +111,11 @@ void test_gps_burst_resumes_partial_packet() {
   gps_task(); // Finish that solution, leaving the next packet queued.
   TEST_ASSERT_EQUAL_UINT32(100, ring_buffer_available(serial_gps.rx_buffer));
   TEST_ASSERT_EQUAL_UINT8(12, state.gps_sats);
-  TEST_ASSERT_TRUE(state.gps_lock);
+  TEST_ASSERT_TRUE(state.gps_health.lock);
   gps_task();
   TEST_ASSERT_EQUAL_UINT32(0, ring_buffer_available(serial_gps.rx_buffer));
   TEST_ASSERT_EQUAL_UINT8(10, state.gps_sats);
-  TEST_ASSERT_TRUE(state.gps_lock);
+  TEST_ASSERT_TRUE(state.gps_health.lock);
 
   profile.serial.gps = SERIAL_PORT_INVALID;
   gps_init();
@@ -191,7 +191,7 @@ void test_gps_configuration_and_fix_validity() {
   for (uint8_t fix = 0; fix <= 5; fix++) {
     gps_status.state = GPS_RUNNING_NAV_SAT_OFF;
     gps_test_feed_solution(fix, 12, 1);
-    TEST_ASSERT_EQUAL(fix == GPS_FIX_3D || fix == GPS_FIX_GNSS_DR, state.gps_lock);
+    TEST_ASSERT_EQUAL(fix == GPS_FIX_3D || fix == GPS_FIX_GNSS_DR, state.gps_health.lock);
   }
   profile.serial.gps = SERIAL_PORT_INVALID;
   gps_init();
@@ -302,42 +302,42 @@ void test_gps_interference_reports() {
   flags.arm_state = false;
   time_test_set_us(10000000);
   gps_test_feed_mon_rf(GPS_JAMMING_WARNING, GPS_ANTENNA_OK);
-  TEST_ASSERT_EQUAL_UINT8(GPS_JAMMING_WARNING, state.gps_jamming);
+  TEST_ASSERT_EQUAL_UINT8(GPS_JAMMING_WARNING, state.gps_health.jamming);
   TEST_ASSERT_EQUAL_UINT8(GPS_ANTENNA_OK, gps_status.antenna_status);
   TEST_ASSERT_EQUAL_UINT16(0x0134, gps_status.noise_per_ms);
   TEST_ASSERT_EQUAL_UINT16(0x1000, gps_status.agc_count);
   TEST_ASSERT_EQUAL_UINT8(42, gps_status.cw_jamming);
   time_test_advance_us(3001000);
   gps_task();
-  TEST_ASSERT_EQUAL_UINT8(GPS_JAMMING_UNKNOWN, state.gps_jamming); // stale
+  TEST_ASSERT_EQUAL_UINT8(GPS_JAMMING_UNKNOWN, state.gps_health.jamming); // stale
 
   // An M10 without SEC-SIG (SPG 5.10) reports jamming in MON-RF.
   gps_test_reset(0x000A0000U);
   gps_status.state = GPS_WAITING_FOR_LOCK;
   gps_test_feed_mon_rf(GPS_JAMMING_CRITICAL, GPS_ANTENNA_SHORT);
-  TEST_ASSERT_EQUAL_UINT8(GPS_JAMMING_CRITICAL, state.gps_jamming);
+  TEST_ASSERT_EQUAL_UINT8(GPS_JAMMING_CRITICAL, state.gps_health.jamming);
   TEST_ASSERT_EQUAL_UINT8(GPS_ANTENNA_SHORT, gps_status.antenna_status);
 
   // Where SEC-SIG reports, it owns jamming and adds spoofing, in both layouts.
   const uint8_t v1[12] = {1, 0, 0, 0, 0x01 | (GPS_JAMMING_OK << 1), 0, 0, 0, 0x01 | (GPS_SPOOFING_INDICATED << 1)};
   gps_test_queue_packet(0x27, 0x09, v1, sizeof(v1));
   gps_task();
-  TEST_ASSERT_EQUAL_UINT8(GPS_JAMMING_OK, state.gps_jamming);
-  TEST_ASSERT_EQUAL_UINT8(GPS_SPOOFING_INDICATED, state.gps_spoofing);
+  TEST_ASSERT_EQUAL_UINT8(GPS_JAMMING_OK, state.gps_health.jamming);
+  TEST_ASSERT_EQUAL_UINT8(GPS_SPOOFING_INDICATED, state.gps_health.spoofing);
   const uint8_t v2[4] = {2, uint8_t(0x01 | (GPS_JAMMING_CRITICAL << 1) | 0x08 | (GPS_SPOOFING_OK << 4)), 0, 0};
   gps_test_queue_packet(0x27, 0x09, v2, sizeof(v2));
   gps_task();
-  TEST_ASSERT_EQUAL_UINT8(GPS_JAMMING_CRITICAL, state.gps_jamming);
-  TEST_ASSERT_EQUAL_UINT8(GPS_SPOOFING_OK, state.gps_spoofing);
+  TEST_ASSERT_EQUAL_UINT8(GPS_JAMMING_CRITICAL, state.gps_health.jamming);
+  TEST_ASSERT_EQUAL_UINT8(GPS_SPOOFING_OK, state.gps_health.spoofing);
   gps_test_feed_mon_rf(GPS_JAMMING_OK, GPS_ANTENNA_OK);
-  TEST_ASSERT_EQUAL_UINT8(GPS_JAMMING_CRITICAL, state.gps_jamming);
+  TEST_ASSERT_EQUAL_UINT8(GPS_JAMMING_CRITICAL, state.gps_health.jamming);
   const uint8_t reserved[4] = {2, uint8_t(0x08 | (6 << 4)), 0, 0};
   gps_test_queue_packet(0x27, 0x09, reserved, sizeof(reserved));
   gps_task();
-  TEST_ASSERT_EQUAL_UINT8(GPS_SPOOFING_UNKNOWN, state.gps_spoofing);
+  TEST_ASSERT_EQUAL_UINT8(GPS_SPOOFING_UNKNOWN, state.gps_health.spoofing);
   time_test_advance_us(3001000);
   gps_task();
-  TEST_ASSERT_EQUAL_UINT8(GPS_JAMMING_UNKNOWN, state.gps_jamming);
+  TEST_ASSERT_EQUAL_UINT8(GPS_JAMMING_UNKNOWN, state.gps_health.jamming);
 
   profile.serial.gps = SERIAL_PORT_INVALID;
   gps_init();
@@ -347,7 +347,7 @@ void test_gps_ground_and_airborne_configuration() {
   gps_test_reset(0x000A0000U);
   gps_status.state = GPS_WAITING_FOR_LOCK;
   flags.arm_state = false;
-  state.gps_lock = false;
+  state.gps_health.lock = false;
   uint8_t packet[128];
   const auto expect_model = [&](uint8_t model) {
     gps_test_read_packet(packet);
@@ -367,14 +367,14 @@ void test_gps_ground_and_airborne_configuration() {
   expect_model(2);
   gps_test_feed_ack(true);
   expect_nav_sat(5);
-  state.gps_lock = true;
+  state.gps_health.lock = true;
   gps_task();
   TEST_ASSERT_EQUAL_UINT32(0, ring_buffer_read_multi(serial_gps.tx_buffer, packet, sizeof(packet)));
 
   // Arm without a fix: the stationary model must not remain active in
   // flight, so a lost acknowledgement sends the airborne model again.
   flags.arm_state = true;
-  state.gps_lock = false;
+  state.gps_health.lock = false;
   gps_task();
   expect_model(8);
   time_test_advance_us(600000);
@@ -404,24 +404,24 @@ void test_gps_satellite_and_fix_loss_remain_visible_armed() {
   flags.arm_state = true;
   gps_status.state = GPS_RUNNING_NAV_SAT_OFF;
   gps_test_feed_solution(GPS_FIX_3D, 12, 1);
-  TEST_ASSERT_TRUE(state.gps_lock);
+  TEST_ASSERT_TRUE(state.gps_health.lock);
   TEST_ASSERT_EQUAL_UINT8(12, state.gps_sats);
   time_test_advance_us(100000);
   gps_test_feed_solution(GPS_FIX_3D, 3, 1);
-  TEST_ASSERT_FALSE(state.gps_lock);
+  TEST_ASSERT_FALSE(state.gps_health.lock);
   TEST_ASSERT_EQUAL_UINT8(3, state.gps_sats);
   gps_test_feed_solution(GPS_FIX_NONE, 0, 0);
-  TEST_ASSERT_FALSE(state.gps_lock);
+  TEST_ASSERT_FALSE(state.gps_health.lock);
   TEST_ASSERT_EQUAL_UINT8(0, state.gps_sats);
   gps_test_feed_solution(GPS_FIX_3D, 12, 0);
-  TEST_ASSERT_FALSE(state.gps_lock); // Satellites alone do not establish a fix.
+  TEST_ASSERT_FALSE(state.gps_health.lock); // Satellites alone do not establish a fix.
   gps_test_feed_solution(GPS_FIX_3D, 12, 1);
-  TEST_ASSERT_TRUE(state.gps_lock);
+  TEST_ASSERT_TRUE(state.gps_health.lock);
   time_test_advance_us(501000);
   gps_task();
-  TEST_ASSERT_FALSE(state.gps_lock); // A silent receiver cannot leave LOCKED set.
+  TEST_ASSERT_FALSE(state.gps_health.lock); // A silent receiver cannot leave LOCKED set.
   gps_test_feed_solution(GPS_FIX_3D, 10, 1);
-  TEST_ASSERT_TRUE(state.gps_lock);
+  TEST_ASSERT_TRUE(state.gps_health.lock);
   TEST_ASSERT_EQUAL_UINT8(10, state.gps_sats);
   profile.serial.gps = SERIAL_PORT_INVALID;
   gps_init();
@@ -453,17 +453,17 @@ void test_gps_stamps_solutions_by_receiver_epoch() {
   TEST_ASSERT_UINT32_WITHIN(2, 1200, state.gps_last_update_ms);
   gps_task();
   TEST_ASSERT_UINT32_WITHIN(3, 1300, state.gps_last_update_ms);
-  TEST_ASSERT_TRUE(state.gps_lock);
+  TEST_ASSERT_TRUE(state.gps_health.lock);
   time_test_set_us(1840000);
   gps_task();
-  TEST_ASSERT_FALSE(state.gps_lock); // Measured over 500 ms ago, though delivered 360 ms ago.
+  TEST_ASSERT_FALSE(state.gps_health.lock); // Measured over 500 ms ago, though delivered 360 ms ago.
 
   // A faster delivery re-anchors without stamping ahead of arrival.
   time_test_set_us(1850000);
   gps_test_queue_solution(GPS_FIX_3D, 12, 1, 5850);
   gps_task();
   TEST_ASSERT_EQUAL_UINT32(1850, state.gps_last_update_ms);
-  TEST_ASSERT_TRUE(state.gps_lock);
+  TEST_ASSERT_TRUE(state.gps_health.lock);
 
   // Week rollover re-anchors on arrival.
   time_test_set_us(1950000);

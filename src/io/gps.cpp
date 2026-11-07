@@ -579,7 +579,7 @@ static void gps_handle_packet(const uint16_t class_id, const uint8_t *payload, c
 
     // Publish one complete solution before Flight can consume navigation data.
     taskENTER_CRITICAL();
-    state.gps_lock = (nav_pvt->flags & FLAGS_GNSS_FIX_OK) &&
+    state.gps_health.lock = (nav_pvt->flags & FLAGS_GNSS_FIX_OK) &&
                      (nav_pvt->fixType == GPS_FIX_3D || nav_pvt->fixType == GPS_FIX_GNSS_DR) &&
                      (nav_pvt->numSV >= GPS_MIN_SATS_FOR_LOCK);
     state.gps_sats = nav_pvt->numSV;
@@ -590,11 +590,10 @@ static void gps_handle_packet(const uint16_t class_id, const uint8_t *payload, c
     state.gps_heading_accuracy = nav_pvt->headAcc / 100000.0f;
     state.gps_horizontal_accuracy = nav_pvt->hAcc * 0.001f;
     state.gps_speed_accuracy = nav_pvt->sAcc * 0.001f; // mm/s to m/s
+    state.gps_vertical_accuracy = nav_pvt->vAcc * 0.001f;
     state.gps_last_update_ms = epoch_ms;
     state.gps_speed = nav_pvt->gSpeed * 0.001f; // mm/s to m/s
-    state.gps_vel_north = nav_pvt->velN * 0.001f;
-    state.gps_vel_east = nav_pvt->velE * 0.001f;
-    state.gps_vel_down = nav_pvt->velD * 0.001f;
+    state.gps_velocity = {{nav_pvt->velN * 0.001f, nav_pvt->velE * 0.001f, nav_pvt->velD * -0.001f}};
     taskEXIT_CRITICAL();
 
     // Update comprehensive status
@@ -717,7 +716,7 @@ static void gps_handle_packet(const uint16_t class_id, const uint8_t *payload, c
     // Where the receiver reports SEC-SIG, that carries jamming instead. The
     // M10 on SPG 5.10 has no SEC-SIG; its MON-RF state then counts.
     if (time_millis() - spoofing_update_ms > GPS_INTERFERENCE_STALE_MS) {
-      state.gps_jamming = block[1] & 0x03;
+      state.gps_health.jamming = block[1] & 0x03;
       jamming_update_ms = time_millis();
     }
     break;
@@ -734,8 +733,8 @@ static void gps_handle_packet(const uint16_t class_id, const uint8_t *payload, c
     } else {
       break;
     }
-    state.gps_jamming = jamming;
-    state.gps_spoofing = spoofing <= GPS_SPOOFING_MULTIPLE ? spoofing : GPS_SPOOFING_UNKNOWN;
+    state.gps_health.jamming = jamming;
+    state.gps_health.spoofing = spoofing <= GPS_SPOOFING_MULTIPLE ? spoofing : GPS_SPOOFING_UNKNOWN;
     jamming_update_ms = spoofing_update_ms = time_millis();
     break;
   }
@@ -1080,7 +1079,7 @@ TickType_t gps_task() {
   case GPS_WAITING_FOR_LOCK: {
     gps_read_ublox();
 
-    if (state.gps_lock) {
+    if (state.gps_health.lock) {
       gps_status.state = GPS_RUNNING;
       break;
     }
@@ -1097,7 +1096,7 @@ TickType_t gps_task() {
       gps_set_nav_sat_messages(configured_dynamic_model == 2);
     }
     if (gps_had_ack_response() || (time_millis() - config_request_time) > 500) {
-      gps_status.state = state.gps_lock ? GPS_RUNNING : GPS_WAITING_FOR_LOCK;
+      gps_status.state = state.gps_health.lock ? GPS_RUNNING : GPS_WAITING_FOR_LOCK;
       gps_reset_ack_state();
     }
     break;
@@ -1106,7 +1105,7 @@ TickType_t gps_task() {
     gps_read_ublox();
 
     // Check if we lost lock
-    if (!state.gps_lock) {
+    if (!state.gps_health.lock) {
       gps_status.state = GPS_WAITING_FOR_LOCK;
       break;
     }
@@ -1122,7 +1121,7 @@ TickType_t gps_task() {
   case GPS_CONFIG_DISABLE_NAV_SAT: {
     gps_read_ublox();
 
-    if (!state.gps_lock) {
+    if (!state.gps_health.lock) {
       gps_status.state = GPS_WAITING_FOR_LOCK;
       break;
     }
@@ -1136,7 +1135,7 @@ TickType_t gps_task() {
   case GPS_RUNNING_NAV_SAT_OFF: {
     gps_read_ublox();
 
-    if (!state.gps_lock) {
+    if (!state.gps_health.lock) {
       gps_status.state = GPS_WAITING_FOR_LOCK;
     }
     break;
@@ -1148,11 +1147,11 @@ TickType_t gps_task() {
   // shared fix valid. Retain the last measurements, but make the OSD blink
   // and consumers reject the fix if the receiver stops delivering solutions.
   if (time_millis() - state.gps_last_update_ms > GPS_SOLUTION_STALE_MS)
-    state.gps_lock = false;
+    state.gps_health.lock = false;
   if (time_millis() - jamming_update_ms > GPS_INTERFERENCE_STALE_MS)
-    state.gps_jamming = GPS_JAMMING_UNKNOWN;
+    state.gps_health.jamming = GPS_JAMMING_UNKNOWN;
   if (time_millis() - spoofing_update_ms > GPS_INTERFERENCE_STALE_MS)
-    state.gps_spoofing = GPS_SPOOFING_UNKNOWN;
+    state.gps_health.spoofing = GPS_SPOOFING_UNKNOWN;
 
   // Steady state is fed by serial RX data; the periodic backstop covers
   // config-state retries and a missed notification. The RX ring at 115200
@@ -1183,3 +1182,20 @@ GPS_STATUS_MEMBERS
 void gps_init(void) {}
 TickType_t gps_task(void) { return portMAX_DELAY; }
 #endif
+
+COLD_CODE cbor_result_t cbor_encode_gps_health_t(cbor_value_t *enc, const gps_health_t *health) {
+  cbor_result_t res = CBOR_OK;
+  const bool lock = health->lock;
+  const uint8_t jamming = health->jamming;
+  const uint8_t spoofing = health->spoofing;
+
+  CBOR_CHECK_ERROR(res = cbor_encode_map(enc, 3));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "lock"));
+  CBOR_CHECK_ERROR(res = cbor_encode_bool(enc, &lock));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "jamming"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint8_t(enc, &jamming));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "spoofing"));
+  CBOR_CHECK_ERROR(res = cbor_encode_uint8_t(enc, &spoofing));
+
+  return res;
+}

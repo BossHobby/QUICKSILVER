@@ -76,7 +76,7 @@ baro_types_t baro_init() {
   next_read_us = time_micros(); // first sample runs immediately
 #endif
   const baro_types_t detected = baro_detect();
-  state.baro_detected = detected != BARO_TYPE_INVALID;
+  flags.baro_detected = detected != BARO_TYPE_INVALID;
   return detected;
 }
 

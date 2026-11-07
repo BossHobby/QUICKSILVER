@@ -1,6 +1,8 @@
 #pragma once
 
+#include "control/mission.h"
 #include "core/profile.h"
+#include "driver/fmc.h"
 #include "rx/rx_spi.h"
 
 #define FMC_MAGIC 0x12AA0001
@@ -20,6 +22,12 @@ extern flash_storage_t flash_storage;
 
 #define PROFILE_STORAGE_OFFSET (FLASH_STORAGE_OFFSET + FLASH_STORAGE_SIZE)
 #define PROFILE_STORAGE_SIZE FLASH_ALIGN(4096 + 128 + 512)
+
+// Kept out of the profile so mission uploads do not change its layout.
+static constexpr uint32_t MISSION_STORAGE_OFFSET = PROFILE_STORAGE_OFFSET + PROFILE_STORAGE_SIZE;
+static constexpr uint32_t MISSION_STORAGE_SIZE = FLASH_ALIGN(FMC_MAGIC_SIZE + sizeof(mission_t));
+// The block is a raw mission_t copy: a changed layout size reads as no mission.
+static constexpr uint32_t MISSION_STORAGE_MAGIC = (FMC_MAGIC | MISSION_STORAGE_OFFSET) ^ ((uint32_t)sizeof(mission_t) << 16);
 
 void flash_save(const target_t *saved_target = &target);
 void flash_load();

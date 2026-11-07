@@ -199,7 +199,7 @@ void test_imu_gps_fusion_low_speed(void) {
   state.heading = 0.0f;
 
   // GPS data with low speed
-  state.gps_lock = true;
+  state.gps_health.lock = true;
   state.gps_speed = 1.5f; // Below minimum
   state.gps_heading = 90.0f;
   state.gps_heading_accuracy = 2.0f;
@@ -243,7 +243,7 @@ void test_imu_gps_fusion_poor_accuracy(void) {
   state.heading = 0.0f;
 
   // GPS data with poor accuracy
-  state.gps_lock = true;
+  state.gps_health.lock = true;
   state.gps_speed = 15.0f; // Good speed
   state.gps_heading = 90.0f;
   state.gps_heading_accuracy = 10.0f; // Poor accuracy (> 5 degrees)
