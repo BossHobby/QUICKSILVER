@@ -56,8 +56,7 @@ static struct {
 
 static struct {
   gps_coord_t origin; // GPS position the center is measured from
-  float center_north; // circle center relative to origin, meters
-  float center_east;
+  vec2_t center;      // circle center relative to origin, meters
 } circle;
 
 static struct {
@@ -69,9 +68,8 @@ static struct {
 static struct {
   uint32_t steer_ms;  // latest pass the pilot steered or the course could not lock
   gps_coord_t origin; // GPS position where the course locked
-  float dir_north;    // unit ground track of the locked course
-  float dir_east;
-  bool climbing;      // pitch stick was off center in the previous pass
+  vec2_t dir;         // unit ground track of the locked course
+  bool climbing;     // pitch stick was off center in the previous pass
 } cruise;
 
 static float nav_slew(float current, float target, float step) {
@@ -153,45 +151,37 @@ static void circle_place_ahead() {
   // Offset the center to the turn side of the ground track so the aircraft
   // rolls straight onto the circle instead of first flying out from its center.
   circle.origin = state.gps_coord;
-  circle.center_north = 0.0f;
-  circle.center_east = 0.0f;
-  const float speed = hypotf(state.gps_vel_north, state.gps_vel_east);
+  circle.center = {};
+  const vec2_t vel = {{state.gps_vel_north, state.gps_vel_east}};
+  const float speed = vec2_magnitude(vel);
   if (speed < LOITER_CENTER_MIN_SPEED)
     return;
-  const float scale = loiter_direction() * profile.navigation.loiter_radius / speed;
-  circle.center_north = -state.gps_vel_east * scale;
-  circle.center_east = state.gps_vel_north * scale;
+  // Velocity rotated 90 degrees clockwise points to the right of the track.
+  const vec2_t right = {{-vel.east, vel.north}};
+  circle.center = right * (loiter_direction() * profile.navigation.loiter_radius / speed);
 }
 
 static void circle_place_home() {
   circle.origin = state.gps_home;
-  circle.center_north = 0.0f;
-  circle.center_east = 0.0f;
+  circle.center = {};
 }
 
 // L1 loiter guidance on the GPS ground track, as in ArduPlane's
 // AP_L1_Control::update_loiter(). Returns lateral acceleration in m/s^2,
 // positive to the right.
 static float circle_lateral_accel() {
-  float north, east;
-  nav_position_delta(circle.origin, state.gps_coord, &north, &east);
-  north -= circle.center_north;
-  east -= circle.center_east;
-  const float distance = hypotf(north, east);
+  const vec2_t position = nav_position_delta(circle.origin, state.gps_coord) - circle.center;
+  const float distance = vec2_magnitude(position);
 
-  const float vel_north = state.gps_vel_north;
-  const float vel_east = state.gps_vel_east;
-  const float speed = hypotf(vel_north, vel_east);
+  const vec2_t vel = {{state.gps_vel_north, state.gps_vel_east}};
+  const float speed = vec2_magnitude(vel);
 
   // Unit vector from the center to the aircraft.
-  float radial_north = 1.0f;
-  float radial_east = 0.0f;
+  vec2_t radial = {{1.0f, 0.0f}};
   if (distance > 0.1f) {
-    radial_north = north / distance;
-    radial_east = east / distance;
+    radial = position * (1.0f / distance);
   } else if (speed > 0.1f) {
-    radial_north = vel_north / speed;
-    radial_east = vel_east / speed;
+    radial = vel * (1.0f / speed);
   }
 
   const float direction = loiter_direction();
@@ -200,8 +190,8 @@ static float circle_lateral_accel() {
   const float l1_distance = MAX(L1_DAMPING * L1_PERIOD * speed / M_PI_F, 1.0f);
 
   // Capture: steer the velocity vector toward the center from outside.
-  const float cross_velocity = radial_north * vel_east - radial_east * vel_north;
-  const float inward_velocity = -(radial_north * vel_north + radial_east * vel_east);
+  const float cross_velocity = vec2_cross(radial, vel);
+  const float inward_velocity = -vec2_dot(radial, vel);
   const float nu = constrain(atan2f(cross_velocity, inward_velocity), -M_PI_F / 2.0f, M_PI_F / 2.0f);
   const float capture = 4.0f * L1_DAMPING * L1_DAMPING * speed * speed / l1_distance * sinf(nu);
 
@@ -239,29 +229,24 @@ static float waypoint_lateral_accel(float bearing, float course, float speed) {
 
 static void cruise_lock() {
   cruise.origin = state.gps_coord;
-  cruise.dir_north = state.gps_vel_north / nav.speed;
-  cruise.dir_east = state.gps_vel_east / nav.speed;
+  cruise.dir = vec2_t{{state.gps_vel_north, state.gps_vel_east}} * (1.0f / nav.speed);
 }
 
 // L1 toward a point CRUISE_LOOKAHEAD ahead of the aircraft along the locked
 // track, as in ArduPlane's CRUISE, so cross-track error is steered out as
 // well as wind drift. Vector form keeps libm trig out of the Flight loop.
 static float cruise_lateral_accel() {
-  float north, east;
-  nav_position_delta(cruise.origin, state.gps_coord, &north, &east);
-  const float ahead = north * cruise.dir_north + east * cruise.dir_east + CRUISE_LOOKAHEAD;
-  const float los_north = ahead * cruise.dir_north - north;
-  const float los_east = ahead * cruise.dir_east - east;
+  const vec2_t position = nav_position_delta(cruise.origin, state.gps_coord);
+  const float ahead = vec2_dot(position, cruise.dir) + CRUISE_LOOKAHEAD;
+  const vec2_t los = cruise.dir * ahead - position;
 
   // Cross and dot products of ground velocity and line of sight scale sin(nu)
   // and cos(nu) by both lengths; beyond 90 degrees nu clamps to the turn side.
-  const float vel_north = state.gps_vel_north;
-  const float vel_east = state.gps_vel_east;
-  const float cross = vel_north * los_east - vel_east * los_north;
-  const float dot = vel_north * los_north + vel_east * los_east;
-  const float sin_nu = dot > 0.0f ? cross / (nav.speed * hypotf(los_north, los_east)) : copysignf(1.0f, cross);
+  const vec2_t vel = {{state.gps_vel_north, state.gps_vel_east}};
+  const float cross = vec2_cross(vel, los);
+  const float sin_nu = vec2_dot(vel, los) > 0.0f ? cross / (nav.speed * vec2_magnitude(los)) : copysignf(1.0f, cross);
 
-  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 5, (int16_t)constrain(cruise.dir_north * east - cruise.dir_east * north, -32768.0f, 32767.0f)); // cross-track meters, right positive
+  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 5, (int16_t)constrain(vec2_cross(cruise.dir, position), -32768.0f, 32767.0f)); // cross-track meters, right positive
   return l1_lateral_accel(sin_nu, nav.speed);
 }
 

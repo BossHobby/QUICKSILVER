@@ -196,7 +196,7 @@ void nav_update_gps_accel() {
   gps_accel.sample_valid = true;
 }
 
-void nav_position_delta(gps_coord_t start, gps_coord_t end, float *north, float *east) {
+vec2_t nav_position_delta(gps_coord_t start, gps_coord_t end) {
   const float scale = 1.0f / 10000000.0f;
   const float lat_diff = (end.lat - start.lat) * scale;
   // Subtract in 64 bits and take the short way across the antimeridian.
@@ -207,14 +207,7 @@ void nav_position_delta(gps_coord_t start, gps_coord_t end, float *north, float 
     lon_delta += 2 * GPS_LON_HALF_TURN;
   const float lon_diff = lon_delta * scale;
   const float lat_rad = start.lat * scale * DEGTORAD;
-  *north = lat_diff * METERS_PER_DEGREE_LAT;
-  *east = lon_diff * (METERS_PER_DEGREE_LAT * cosf(lat_rad));
-}
-
-static float nav_distance_between(gps_coord_t start, gps_coord_t end) {
-  float north, east;
-  nav_position_delta(start, end, &north, &east);
-  return sqrtf(north * north + east * east);
+  return {{lat_diff * METERS_PER_DEGREE_LAT, lon_diff * (METERS_PER_DEGREE_LAT * cosf(lat_rad))}};
 }
 
 static bool nav_gps_quality_ok(void) {
@@ -237,7 +230,7 @@ static void nav_update_gps_sanity(void) {
   gps.checked_ms = state.gps_last_update_ms;
 
   if (gps.position_valid) {
-    const float jump = nav_distance_between(gps.position, state.gps_coord);
+    const float jump = vec2_magnitude(nav_position_delta(gps.position, state.gps_coord));
     if (jump > NAV_GPS_MAX_POSITION_JUMP) {
       gps.valid = false;
       return;
@@ -252,10 +245,9 @@ static void nav_update_gps_sanity(void) {
 // Flat-earth vector from integer coordinate differences. Float haversine on
 // absolute coordinates loses ~0.5 m and several degrees of bearing near home.
 static void nav_update_home_vector(const gps_coord_t start, const gps_coord_t end) {
-  float north, east;
-  nav_position_delta(start, end, &north, &east);
-  state.home_distance = sqrtf(north * north + east * east);
-  state.home_bearing = normalize_rad(atan2approx_rad(east, north)) * RADTODEG;
+  const vec2_t delta = nav_position_delta(start, end);
+  state.home_distance = vec2_magnitude(delta);
+  state.home_bearing = normalize_rad(atan2approx_rad(delta.east, delta.north)) * RADTODEG;
 }
 
 static void nav_update_home(bool arming) {

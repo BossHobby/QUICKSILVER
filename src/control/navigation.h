@@ -10,7 +10,7 @@ constexpr float METERS_PER_DEGREE_LAT = EARTH_RADIUS * M_PI_F / 180.0f;
 constexpr uint32_t NAV_GPS_STALE_MS = 500;
 
 // Local displacement in meters; GPS coordinates are signed degrees * 1e7.
-void nav_position_delta(gps_coord_t start, gps_coord_t end, float *north, float *east);
+vec2_t nav_position_delta(gps_coord_t start, gps_coord_t end);
 
 void nav_init();
 void nav_update();

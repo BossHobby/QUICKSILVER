@@ -87,10 +87,8 @@ static struct {
     gps_coord_t origin;
   } acquisition;
   struct {
-    float integral_north;
-    float integral_east;
-    float desired_velocity_north;
-    float desired_velocity_east;
+    vec2_t integral;         // radians of tilt toward north/east
+    vec2_t desired_velocity; // m/s, slewed
     float roll_command;
     float pitch_command;
   } horizontal;
@@ -258,9 +256,8 @@ static void nav_update_yaw(float distance, float home_radius, float dt) {
 
 static void nav_update_horizontal_control(float dt) {
   const float safe_dt = MAX(dt, 0.001f);
-  float error_north, error_east;
-  nav_position_delta(state.gps_coord, state.gps_home, &error_north, &error_east);
-  const float distance = sqrtf(error_north * error_north + error_east * error_east);
+  const vec2_t error = nav_position_delta(state.gps_coord, state.gps_home);
+  const float distance = vec2_magnitude(error);
 
   const float cruise_speed = MAX(profile.navigation.rth_cruise_speed, 0.1f);
   const float home_radius = RTH_HOME_RADIUS;
@@ -271,63 +268,50 @@ static void nav_update_horizontal_control(float dt) {
                                    2.0f * RTH_NAV_BRAKE_ACCEL * distance) - brake_delay_speed;
   const float speed_limit = MIN(cruise_speed, braking_speed);
 
-  float desired_vel_north = 0.0f;
-  float desired_vel_east = 0.0f;
+  vec2_t desired_vel = {};
   if (distance > 0.01f) {
     const float desired_speed = MIN(speed_limit, distance * RTH_NAV_POSITION_KP);
-    desired_vel_north = error_north * (desired_speed / distance);
-    desired_vel_east = error_east * (desired_speed / distance);
+    desired_vel = error * (desired_speed / distance);
   }
 
   const float velocity_step = RTH_NAV_ACCEL_LIMIT * safe_dt;
-  rth.horizontal.desired_velocity_north = nav_slew(rth.horizontal.desired_velocity_north, desired_vel_north, velocity_step);
-  rth.horizontal.desired_velocity_east = nav_slew(rth.horizontal.desired_velocity_east, desired_vel_east, velocity_step);
-  desired_vel_north = rth.horizontal.desired_velocity_north;
-  desired_vel_east = rth.horizontal.desired_velocity_east;
+  for (uint32_t i = 0; i < 2; i++)
+    rth.horizontal.desired_velocity.axis[i] = nav_slew(rth.horizontal.desired_velocity.axis[i], desired_vel.axis[i], velocity_step);
+  desired_vel = rth.horizontal.desired_velocity;
 
-  const float vel_error_north = desired_vel_north - state.gps_vel_north;
-  const float vel_error_east = desired_vel_east - state.gps_vel_east;
+  const vec2_t gps_vel = {{state.gps_vel_north, state.gps_vel_east}};
+  const vec2_t nav_accel = {{state.nav_accel_north, state.nav_accel_east}};
+  const vec2_t vel_error = desired_vel - gps_vel;
 
   const float heading_rad = state.heading * DEGTORAD;
   const float cos_heading = cosf(heading_rad);
   const float sin_heading = sinf(heading_rad);
 
-  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 10, (int16_t)(desired_vel_north * 10));
-  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 11, (int16_t)(desired_vel_east * 10));
-  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 12, (int16_t)(state.gps_vel_north * 10));
-  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 13, (int16_t)(state.gps_vel_east * 10));
+  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 10, (int16_t)(desired_vel.north * 10));
+  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 11, (int16_t)(desired_vel.east * 10));
+  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 12, (int16_t)(gps_vel.north * 10));
+  blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 13, (int16_t)(gps_vel.east * 10));
 
   // Do not build a persistent tilt demand while heading recovery is needed.
   // Use actual progress along the home vector, independent of estimated yaw.
-  const bool moving_away = state.rth_state == RTH_STATE_NAVIGATE &&
-      state.gps_vel_north * error_north + state.gps_vel_east * error_east < 0.0f;
+  const bool moving_away = state.rth_state == RTH_STATE_NAVIGATE && vec2_dot(gps_vel, error) < 0.0f;
   if (moving_away) {
-    const float decay = expf(-2.0f * safe_dt);
-    rth.horizontal.integral_north *= decay;
-    rth.horizontal.integral_east *= decay;
+    rth.horizontal.integral *= expf(-2.0f * safe_dt);
   }
   const float authority = 0.25f + 0.75f * state.heading_confidence;
   const float max_angle_rad = MAX(profile.rate.level_max_angle, 0.0f) * DEGTORAD * authority;
-  const float north_pd = NAV_VEL_KP * vel_error_north - NAV_VEL_KD * state.nav_accel_north;
-  const float east_pd = NAV_VEL_KP * vel_error_east - NAV_VEL_KD * state.nav_accel_east;
-  const float north_i = constrain(rth.horizontal.integral_north + NAV_VEL_KI * vel_error_north * safe_dt,
-                                 -max_angle_rad * 0.5f, max_angle_rad * 0.5f);
-  const float east_i = constrain(rth.horizontal.integral_east + NAV_VEL_KI * vel_error_east * safe_dt,
-                                -max_angle_rad * 0.5f, max_angle_rad * 0.5f);
-  const float candidate_north = north_pd + north_i;
-  const float candidate_east = east_pd + east_i;
-  const float candidate_length = hypotf(candidate_north, candidate_east);
-  if (!moving_away && (candidate_length <= max_angle_rad || candidate_north * vel_error_north + candidate_east * vel_error_east < 0.0f)) {
-    rth.horizontal.integral_north = north_i;
-    rth.horizontal.integral_east = east_i;
+  const vec2_t pd = NAV_VEL_KP * vel_error - NAV_VEL_KD * nav_accel;
+  vec2_t integral = rth.horizontal.integral + NAV_VEL_KI * safe_dt * vel_error;
+  for (uint32_t i = 0; i < 2; i++)
+    integral.axis[i] = constrain(integral.axis[i], -max_angle_rad * 0.5f, max_angle_rad * 0.5f);
+  const vec2_t candidate = pd + integral;
+  if (!moving_away && (vec2_magnitude(candidate) <= max_angle_rad || vec2_dot(candidate, vel_error) < 0.0f)) {
+    rth.horizontal.integral = integral;
   }
-  float north_angle = north_pd + rth.horizontal.integral_north;
-  float east_angle = east_pd + rth.horizontal.integral_east;
-  const float angle_scale = MIN(1.0f, max_angle_rad / MAX(hypotf(north_angle, east_angle), 0.001f));
-  north_angle *= angle_scale;
-  east_angle *= angle_scale;
-  const float pitch_angle = north_angle * cos_heading + east_angle * sin_heading;
-  const float roll_angle = east_angle * cos_heading - north_angle * sin_heading;
+  vec2_t angle = pd + rth.horizontal.integral;
+  angle *= MIN(1.0f, max_angle_rad / MAX(vec2_magnitude(angle), 0.001f));
+  const float pitch_angle = angle.north * cos_heading + angle.east * sin_heading;
+  const float roll_angle = angle.east * cos_heading - angle.north * sin_heading;
 
   // Angle mode interprets stick input using level_max_angle, so scale by that
   // rather than by the navigation angle limit.
@@ -461,11 +445,9 @@ static void nav_update_rth_control() {
     // No earth-frame steering until heading is observable. Zero yaw rate holds
     // the physical orientation without chasing GPS corrections to the estimate.
     state.rx_override.roll = state.rx_override.yaw = state.rth_yaw_rate = 0.0f;
-    const float north = (int64_t(state.gps_coord.lat) - rth.acquisition.origin.lat) * (METERS_PER_DEGREE_LAT / 1e7f);
-    const float east = (int64_t(state.gps_coord.lon) - rth.acquisition.origin.lon) * (METERS_PER_DEGREE_LAT / 1e7f) *
-                       cosf(rth.acquisition.origin.lat * (DEGTORAD / 1e7f));
+    const vec2_t moved = nav_position_delta(rth.acquisition.origin, state.gps_coord);
     if (now_ms - rth.acquisition.started_ms >= RTH_ACQUIRE_TIMEOUT_MS ||
-        north * north + east * east >= RTH_ACQUIRE_DISTANCE_M * RTH_ACQUIRE_DISTANCE_M) {
+        vec2_dot(moved, moved) >= RTH_ACQUIRE_DISTANCE_M * RTH_ACQUIRE_DISTANCE_M) {
       nav_begin_failure(RTH_STATE_HEADING_FAILED, now_ms);
     } else if (state.heading_confidence >= RTH_ACQUIRE_CONFIDENCE && !state.heading_correction_flags) {
       nav_begin_turn(now_ms);
