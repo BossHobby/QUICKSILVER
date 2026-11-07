@@ -6,6 +6,7 @@
 #include "control/imu.h"
 #include "control/pid.h"
 #include "control/sixaxis.h"
+#include "core/project.h"
 #include "driver/motor.h"
 #include "driver/time.h"
 #include "io/quic_crsf.h"
@@ -261,7 +262,7 @@ static void failsafe_clear(uint32_t now_us) {
   failsafe_set_phase(FAILSAFE_PHASE_IDLE, now_us);
 }
 
-void control_failsafe_disarm() {
+COLD_CODE void control_failsafe_disarm() {
   failsafe_clear_stage1_fallback();
   flags.failsafe = 1;
   flags.failsafe_outputs_blocked = 1;
@@ -269,6 +270,45 @@ void control_failsafe_disarm() {
   if (flags.arm_state)
     failsafe_rearm_allows_prearm_hold = true;
   flags.arm_state = 0;
+}
+
+// Advances failsafe while the link is lost, through hold, stage 1 and stage 2.
+COLD_CODE static void failsafe_update_signal_lost(uint32_t now_us) {
+  if (state.failsafe_phase == FAILSAFE_PHASE_STAGE2_DROP ||
+      state.failsafe_phase == FAILSAFE_PHASE_RECOVERY) {
+    control_failsafe_disarm();
+    return;
+  }
+
+  const uint32_t loss_us = now_us - state.last_frame_time_us;
+  if (loss_us < FAILSAFE_HOLD_TIME_US) {
+    flags.failsafe = 0;
+    flags.failsafe_outputs_blocked = 0;
+    failsafe_set_phase(FAILSAFE_PHASE_HOLD_LAST, now_us);
+    return;
+  }
+
+#ifdef VEHICLE_WING
+  // Navigation takes over within one 10 ms update of stage 1 and then flies
+  // the failsafe; stay in stage 1 with live outputs instead of stage 2.
+  if (state.wing_nav_failsafe) {
+    flags.failsafe = 1;
+    flags.failsafe_outputs_blocked = 0;
+    failsafe_set_phase(FAILSAFE_PHASE_STAGE1_GUARD, now_us);
+    return;
+  }
+#endif
+
+  const uint32_t stage1_us = loss_us - FAILSAFE_HOLD_TIME_US;
+  if (stage1_us < FAILSAFE_STAGE2_TIME_US) {
+    flags.failsafe = 1;
+    flags.failsafe_outputs_blocked = 0;
+    failsafe_set_phase(FAILSAFE_PHASE_STAGE1_GUARD, now_us);
+    failsafe_apply_stage1_fallback(now_us);
+    return;
+  }
+
+  control_failsafe_disarm();
 }
 
 void control_failsafe_update() {
@@ -311,41 +351,7 @@ void control_failsafe_update() {
 #endif
 
   if (flags.failsafe_signal_lost) {
-    if (state.failsafe_phase == FAILSAFE_PHASE_STAGE2_DROP ||
-        state.failsafe_phase == FAILSAFE_PHASE_RECOVERY) {
-      control_failsafe_disarm();
-      return;
-    }
-
-    const uint32_t loss_us = now_us - state.last_frame_time_us;
-    if (loss_us < FAILSAFE_HOLD_TIME_US) {
-      flags.failsafe = 0;
-      flags.failsafe_outputs_blocked = 0;
-      failsafe_set_phase(FAILSAFE_PHASE_HOLD_LAST, now_us);
-      return;
-    }
-
-#ifdef VEHICLE_WING
-    // Navigation takes over within one 10 ms update of stage 1 and then flies
-    // the failsafe; stay in stage 1 with live outputs instead of stage 2.
-    if (state.wing_nav_failsafe) {
-      flags.failsafe = 1;
-      flags.failsafe_outputs_blocked = 0;
-      failsafe_set_phase(FAILSAFE_PHASE_STAGE1_GUARD, now_us);
-      return;
-    }
-#endif
-
-    const uint32_t stage1_us = loss_us - FAILSAFE_HOLD_TIME_US;
-    if (stage1_us < FAILSAFE_STAGE2_TIME_US) {
-      flags.failsafe = 1;
-      flags.failsafe_outputs_blocked = 0;
-      failsafe_set_phase(FAILSAFE_PHASE_STAGE1_GUARD, now_us);
-      failsafe_apply_stage1_fallback(now_us);
-      return;
-    }
-
-    control_failsafe_disarm();
+    failsafe_update_signal_lost(now_us);
     return;
   }
 

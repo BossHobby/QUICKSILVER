@@ -194,7 +194,7 @@ static void dshot_send_packet(uint8_t index, uint16_t value, bool telemetry) {
   dshot_dma_start();
 }
 
-static void dshot_handle_dir_change() {
+COLD_CODE static void dshot_handle_dir_change() {
   static uint8_t counter = 0;
   static uint32_t dir_change_time = 0;
   static dir_change_state_t state = DIR_CHANGE_START;

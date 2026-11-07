@@ -171,7 +171,7 @@ static cbor_result_t quic_send_strf(quic_t *quic, quic_command cmd, quic_flag fl
   return quic_send_str(quic, cmd, flag, str);
 }
 
-SLOW_FLASH static void get_quic(quic_t *quic, cbor_value_t *dec) {
+COLD_CODE static void get_quic(quic_t *quic, cbor_value_t *dec) {
   cbor_result_t res = CBOR_OK;
 
   cbor_value_t enc;
@@ -283,7 +283,7 @@ SLOW_FLASH static void get_quic(quic_t *quic, cbor_value_t *dec) {
   }
 }
 
-SLOW_FLASH static void set_quic(quic_t *quic, cbor_value_t *dec) {
+COLD_CODE static void set_quic(quic_t *quic, cbor_value_t *dec) {
   cbor_result_t res = CBOR_OK;
 
   cbor_value_t enc;
@@ -347,7 +347,7 @@ SLOW_FLASH static void set_quic(quic_t *quic, cbor_value_t *dec) {
   }
 }
 
-SLOW_FLASH static void process_blackbox(quic_t *quic, cbor_value_t *dec, bool fault_mode) {
+COLD_CODE static void process_blackbox(quic_t *quic, cbor_value_t *dec, bool fault_mode) {
   if (flags.arm_state) {
     quic_errorf(QUIC_CMD_BLACKBOX, "DISARM BEFORE ACCESSING LOGS");
     return;
@@ -441,7 +441,7 @@ SLOW_FLASH static void process_blackbox(quic_t *quic, cbor_value_t *dec, bool fa
   }
 }
 
-SLOW_FLASH static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
+COLD_CODE static void process_motor_test(quic_t *quic, cbor_value_t *dec) {
   cbor_result_t res = CBOR_OK;
 
   cbor_value_t enc;
@@ -638,7 +638,7 @@ static void process_osd(quic_t *quic, cbor_value_t *dec) {
   };
 }
 
-SLOW_FLASH static void process_serial(quic_t *quic, cbor_value_t *dec) {
+COLD_CODE static void process_serial(quic_t *quic, cbor_value_t *dec) {
   cbor_result_t res = CBOR_OK;
 
   cbor_value_t enc;
@@ -679,7 +679,7 @@ SLOW_FLASH static void process_serial(quic_t *quic, cbor_value_t *dec) {
   }
 }
 
-SLOW_FLASH static void process_rx(quic_t *quic, cbor_value_t *dec) {
+COLD_CODE static void process_rx(quic_t *quic, cbor_value_t *dec) {
   cbor_result_t res = CBOR_OK;
 
   quic_rx_command cmd;
@@ -709,7 +709,7 @@ SLOW_FLASH static void process_rx(quic_t *quic, cbor_value_t *dec) {
   }
 }
 
-SLOW_FLASH bool quic_process(quic_t *quic, uint8_t *data, uint32_t size, bool fault_mode) {
+COLD_CODE bool quic_process(quic_t *quic, uint8_t *data, uint32_t size, bool fault_mode) {
   if (size < 4) {
     return false;
   }

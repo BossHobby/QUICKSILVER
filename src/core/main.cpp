@@ -286,7 +286,9 @@ bool flight_timer_irq_handler() {
   return wake == pdTRUE;
 }
 
-void flight_thread(void *) {
+// Startup runs once, before the pacing timer; LTO must not inline it into
+// the loop.
+COLD_CODE static void flight_init() {
   // load settings from flash
   flash_load();
 
@@ -363,6 +365,10 @@ void flight_thread(void *) {
   timer_up_init(flight_timer, PWM_CLOCK_FREQ_HZ / FLIGHT_TIMER_HZ, flight_reload_ticks - 1);
   interrupt_enable(timer_defs[flight_timer].irq, TIMER_PRIORITY);
   timer_up_start(flight_timer);
+}
+
+void flight_thread(void *) {
+  flight_init();
 
   while (1) {
     const uint32_t elapsed_cycles = time_cycles() - last_loop_cycles;

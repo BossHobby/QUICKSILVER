@@ -44,7 +44,7 @@ void motor_wait_for_ready() {
 #endif
 }
 
-void motor_beep() {
+COLD_CODE void motor_beep() {
   motor_wait_for_ready();
 
 #ifdef USE_MOTOR_DSHOT
