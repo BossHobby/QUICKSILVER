@@ -17,18 +17,8 @@ float output_apply_config(const profile_output_t *output, float value) {
   return constrain(value, min, max);
 }
 
-static bool output_has_mixer_source(uint8_t output_index, output_source_t source) {
-  for (uint32_t i = 0; i < MIXER_RULE_MAX; i++) {
-    const profile_mixer_rule_t *rule = &profile.mixer[i];
-    if (rule->output_index == output_index && rule->source == source && rule->weight != 0) {
-      return true;
-    }
-  }
-  return false;
-}
-
 float output_pwm_stop_value(uint8_t index) {
-  if (!output_has_mixer_source(index, OUTPUT_SOURCE_THROTTLE)) {
+  if (!profile_output_has_throttle(index)) {
     return 0.0f;
   }
 #ifdef VEHICLE_ROVER
@@ -53,7 +43,7 @@ static void output_set_slot(uint8_t index, const profile_output_t *output, float
 
   if (output->protocol == OUTPUT_PROTOCOL_PWM) {
 #ifdef VEHICLE_WING
-    if (output_has_mixer_source(index, OUTPUT_SOURCE_THROTTLE)) {
+    if (profile_output_has_throttle(index)) {
       value = constrain(value, 0.0f, 1.0f) * 2.0f - 1.0f;
     }
 #endif
@@ -70,7 +60,7 @@ static void output_stop_slot(uint8_t index, const profile_output_t *output) {
 
   if (output->protocol == OUTPUT_PROTOCOL_PWM) {
     float value = output_pwm_stop_value(index);
-    if (!output_has_mixer_source(index, OUTPUT_SOURCE_THROTTLE)) {
+    if (!profile_output_has_throttle(index)) {
       // Surfaces stop at their trimmed center within the configured travel.
       value = output_apply_config(output, value);
     }
@@ -134,7 +124,7 @@ static bool output_is_motor_value(uint8_t index, const profile_output_t *output)
     return (target_output->caps & OUTPUT_CAP_BRUSHED) != 0;
   }
   if (output->protocol == OUTPUT_PROTOCOL_PWM) {
-    return (target_output->caps & OUTPUT_CAP_PWM) != 0 && output_has_mixer_source(index, OUTPUT_SOURCE_THROTTLE);
+    return (target_output->caps & OUTPUT_CAP_PWM) != 0 && profile_output_has_throttle(index);
   }
   return false;
 }
@@ -204,7 +194,7 @@ static bool output_allowed(uint8_t index, const profile_output_t *output) {
     return false;
   }
   if (output->protocol == OUTPUT_PROTOCOL_PWM) {
-    return !output_has_mixer_source(index, OUTPUT_SOURCE_THROTTLE) || flags.arm_state || flags.motortest_override;
+    return !profile_output_has_throttle(index) || flags.arm_state || flags.motortest_override;
   }
   return flags.arm_state || flags.motortest_override;
 }
