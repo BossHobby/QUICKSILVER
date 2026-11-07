@@ -2,7 +2,12 @@
 
 #include <stdint.h>
 
+#include "util/vector.h"
+
 #define FILTER_MAX_SLOTS 2
+
+// Poles of the highest low-pass order, FILTER_LP_PT3.
+static constexpr uint32_t FILTER_MAX_ORDER = 3;
 
 typedef enum {
   FILTER_NONE,
@@ -13,39 +18,49 @@ typedef enum {
   FILTER_MAX
 } __attribute__((__packed__)) filter_type_t;
 
-typedef struct {
-  float delay_element[3];
-} filter_state_t;
+// filter_coeff_t::coeff uses a low-pass type's value as its pole count.
+static_assert(FILTER_LP_PT1 == 1 && FILTER_LP_PT2 == 2 && FILTER_LP_PT3 == FILTER_MAX_ORDER, "low-pass type is its order");
 
-typedef struct {
-  float x1;
-  float x2;
-  float y1;
-  float y2;
-} filter_biquad_state_t;
-
-typedef struct {
+// Cutoff and smoothing factor shared by every channel of a low-pass filter.
+struct filter_coeff_t {
   float hz;
   float sample_period_us;
 
   float alpha;
-} filter_lp_pt1;
+  uint32_t order; // poles; equals the configured filter_type_t
 
-typedef struct {
-  float hz;
-  float sample_period_us;
+  void coeff(filter_type_t type, float cutoff_hz, float period_us);
+};
 
-  float alpha;
-} filter_lp_pt2;
+// Low-pass of 1-3 cascaded poles over a float, vec3_t or vec4_t. FILTER_NONE
+// passes values through.
+template <typename value_t = float>
+struct filter_t : filter_coeff_t {
+  value_t pole[FILTER_MAX_ORDER];
 
-typedef struct {
-  float hz;
-  float sample_period_us;
+  void init(filter_type_t type, float cutoff_hz, float period_us) {
+    *this = {};
+    coeff(type, cutoff_hz, period_us);
+  }
 
-  float alpha;
-} filter_lp_pt3;
+  void reset() {
+    for (value_t &p : pole)
+      p = {};
+  }
 
-typedef struct {
+  // Each pole moves toward its input; with vectors every axis updates before
+  // the next pole, so the axes are independent chains the FPU overlaps.
+  value_t step(value_t v) {
+    for (uint32_t p = 0; p < order; p++) {
+      pole[p] += alpha * (v - pole[p]);
+      v = pole[p];
+    }
+    return v;
+  }
+};
+
+// Second-order notch with its own history. Disabled below 0.1 Hz.
+struct filter_biquad_notch_t {
   float hz;
   float sample_period_us;
 
@@ -54,13 +69,32 @@ typedef struct {
   float b2;
   float a1;
   float a2;
-} filter_biquad_notch_t;
 
-typedef union {
-  filter_lp_pt1 lp_pt1;
-  filter_lp_pt2 lp_pt2;
-  filter_lp_pt3 lp_pt3;
-} filter_t;
+  float x1;
+  float x2;
+  float y1;
+  float y2;
+
+  void init(float cutoff_hz, float period_us);
+  void coeff(float cutoff_hz, float period_us);
+
+  float step(float in) {
+    if (hz < 0.1f) {
+      return in;
+    }
+
+    // Notch symmetry: b0 == b2 and b1 == a1.
+    const float result = b0 * (in + x2) + b1 * (x1 - y1) - a2 * y2;
+
+    x2 = x1;
+    x1 = in;
+
+    y2 = y1;
+    y1 = result;
+
+    return result;
+  }
+};
 
 typedef struct {
   float v[2];
@@ -83,28 +117,7 @@ typedef struct {
 
 void filter_global_init();
 
-void filter_lp_pt1_init(filter_lp_pt1 *filter, filter_state_t *state, uint8_t count, float hz, float sample_period_us);
-void filter_lp_pt1_coeff(filter_lp_pt1 *filter, float hz, float sample_period_us);
-float filter_lp_pt1_step(filter_lp_pt1 *filter, filter_state_t *state, float in);
-
-void filter_lp_pt2_init(filter_lp_pt2 *filter, filter_state_t *state, uint8_t count, float hz, float sample_period_us);
-void filter_lp_pt2_coeff(filter_lp_pt2 *filter, float hz, float sample_period_us);
-float filter_lp_pt2_step(filter_lp_pt2 *filter, filter_state_t *state, float in);
-
-void filter_lp_pt3_init(filter_lp_pt3 *filter, filter_state_t *state, uint8_t count, float hz, float sample_period_us);
-void filter_lp_pt3_coeff(filter_lp_pt3 *filter, float hz, float sample_period_us);
-float filter_lp_pt3_step(filter_lp_pt3 *filter, filter_state_t *state, float in);
-
-void filter_biquad_notch_init(filter_biquad_notch_t *filter, filter_biquad_state_t *state, uint8_t count, float hz, float sample_period_us);
-void filter_biquad_notch_coeff(filter_biquad_notch_t *filter, float hz, float sample_period_us);
-float filter_biquad_notch_step(filter_biquad_notch_t *filter, filter_biquad_state_t *state, float in);
-
 void filter_hp_be_init(filter_hp_be *filter);
 float filter_hp_be_step(filter_hp_be *filter, float x);
-
-void filter_init(filter_type_t type, filter_t *filter, filter_state_t *state, uint8_t count, float hz, float sample_period_us);
-void filter_init_state(filter_state_t *state, uint8_t count);
-void filter_coeff(filter_type_t type, filter_t *filter, float hz, float sample_period_us);
-float filter_step(filter_type_t type, filter_t *filter, filter_state_t *state, float in);
 
 float throttlehpf(float in);

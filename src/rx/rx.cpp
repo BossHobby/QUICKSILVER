@@ -36,8 +36,7 @@ static uint32_t rx_filter_start;
 static std::atomic<uint32_t> rx_filter_counter;
 static_assert(std::atomic<uint32_t>::is_always_lock_free);
 
-static filter_lp_pt2 rx_filter;
-static filter_state_t rx_filter_state[4];
+static filter_t<vec4_t> rx_filter;
 
 void rx_lqi_lost_packet() {
   frames_missed++;
@@ -105,17 +104,18 @@ static void rx_apply_smoothing() {
     return;
   }
 
-  filter_lp_pt2_coeff(&rx_filter, state.rx_filter_hz, state.looptime_autodetect);
+  rx_filter.coeff(FILTER_LP_PT2, state.rx_filter_hz, state.looptime_autodetect);
 
   state.rx.roll = constrain(state.rx.roll, -1.0, 1.0);
   state.rx.pitch = constrain(state.rx.pitch, -1.0, 1.0);
   state.rx.yaw = constrain(state.rx.yaw, -1.0, 1.0);
   state.rx.throttle = constrain(state.rx.throttle, 0.0, 1.0);
 
-  state.rx_filtered.roll = constrain(filter_lp_pt2_step(&rx_filter, &rx_filter_state[0], state.rx.roll), -1.0, 1.0);
-  state.rx_filtered.pitch = constrain(filter_lp_pt2_step(&rx_filter, &rx_filter_state[1], state.rx.pitch), -1.0, 1.0);
-  state.rx_filtered.yaw = constrain(filter_lp_pt2_step(&rx_filter, &rx_filter_state[2], state.rx.yaw), -1.0, 1.0);
-  state.rx_filtered.throttle = constrain(filter_lp_pt2_step(&rx_filter, &rx_filter_state[3], state.rx.throttle), 0.0, 1.0);
+  const vec4_t filtered = rx_filter.step(state.rx);
+  state.rx_filtered.roll = constrain(filtered.roll, -1.0, 1.0);
+  state.rx_filtered.pitch = constrain(filtered.pitch, -1.0, 1.0);
+  state.rx_filtered.yaw = constrain(filtered.yaw, -1.0, 1.0);
+  state.rx_filtered.throttle = constrain(filtered.throttle, 0.0, 1.0);
 }
 
 static float rx_apply_deadband(float val) {
@@ -176,7 +176,7 @@ static void rx_init_state() {
   state.aux_active = 0;
   rx_update_aux_active(true);
 
-  filter_lp_pt2_init(&rx_filter, rx_filter_state, 4, state.rx_filter_hz, state.looptime_autodetect);
+  rx_filter.init(FILTER_LP_PT2, state.rx_filter_hz, state.looptime_autodetect);
 }
 
 void rx_init() {

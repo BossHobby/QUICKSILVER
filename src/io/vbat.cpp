@@ -33,26 +33,19 @@ static constexpr float SAG_AVERAGE_HZ = 0.02f;
 // Load variation (RMS, relative to the mean load) needed to update R.
 static constexpr float SAG_MIN_RELATIVE_EXCITATION = 0.1f;
 
-struct battery_filter_state_t {
-  filter_state_t display;
-  filter_state_t sag;
-};
-
 static struct {
-  // Voltage, current and throttle share the sag filter, so compensation does
+  filter_t<> voltage_display;
+  filter_t<> current_display;
+  // Voltage, current and throttle share the sag cutoff, so compensation does
   // not lead or lag the voltage it corrects.
-  filter_lp_pt2 display_filter;
-  filter_lp_pt1 sag_filter;
-  battery_filter_state_t voltage;
-  battery_filter_state_t current;
-  filter_state_t throttle;
+  filter_t<> voltage_sag;
+  filter_t<> current_sag;
+  filter_t<> throttle_sag;
 
-  filter_lp_pt1 trend_filter;
-  filter_lp_pt1 average_filter;
-  filter_state_t voltage_trend;
-  filter_state_t load_trend;
-  filter_state_t covariance;
-  filter_state_t variance;
+  filter_t<> voltage_trend;
+  filter_t<> load_trend;
+  filter_t<> covariance;
+  filter_t<> variance;
   bool current_load;
   float resistance;
 
@@ -61,9 +54,9 @@ static struct {
 } battery;
 
 static void vbat_reset_sag_estimate() {
-  filter_init_state(&battery.load_trend, 1);
-  filter_init_state(&battery.covariance, 1);
-  filter_init_state(&battery.variance, 1);
+  battery.load_trend.reset();
+  battery.covariance.reset();
+  battery.variance.reset();
   battery.resistance = 0;
 }
 
@@ -84,10 +77,15 @@ static void vbat_update_cell_count() {
 
 void vbat_init() {
   battery = {};
-  filter_lp_pt2_coeff(&battery.display_filter, DISPLAY_FILTER_HZ, VBAT_PERIOD_US);
-  filter_lp_pt1_coeff(&battery.sag_filter, SAG_FILTER_HZ, VBAT_PERIOD_US);
-  filter_lp_pt1_coeff(&battery.trend_filter, SAG_HIGHPASS_HZ, VBAT_PERIOD_US);
-  filter_lp_pt1_coeff(&battery.average_filter, SAG_AVERAGE_HZ, VBAT_PERIOD_US);
+  battery.voltage_display.init(FILTER_LP_PT2, DISPLAY_FILTER_HZ, VBAT_PERIOD_US);
+  battery.current_display.init(FILTER_LP_PT2, DISPLAY_FILTER_HZ, VBAT_PERIOD_US);
+  battery.voltage_sag.init(FILTER_LP_PT1, SAG_FILTER_HZ, VBAT_PERIOD_US);
+  battery.current_sag.init(FILTER_LP_PT1, SAG_FILTER_HZ, VBAT_PERIOD_US);
+  battery.throttle_sag.init(FILTER_LP_PT1, SAG_FILTER_HZ, VBAT_PERIOD_US);
+  battery.voltage_trend.init(FILTER_LP_PT1, SAG_HIGHPASS_HZ, VBAT_PERIOD_US);
+  battery.load_trend.init(FILTER_LP_PT1, SAG_HIGHPASS_HZ, VBAT_PERIOD_US);
+  battery.covariance.init(FILTER_LP_PT1, SAG_AVERAGE_HZ, VBAT_PERIOD_US);
+  battery.variance.init(FILTER_LP_PT1, SAG_AVERAGE_HZ, VBAT_PERIOD_US);
 
   // Boot runs with interrupts enabled, before IO owns acquisition. Cell count
   // detection needs a complete first window, including its reference voltage.
@@ -100,9 +98,9 @@ void vbat_init() {
   }
   state.vbat = adc_read(ADC_CHAN_VBAT);
   for (size_t i = 0; i < 5000; i++) {
-    state.vbat_filtered = filter_lp_pt2_step(&battery.display_filter, &battery.voltage.display, state.vbat);
-    state.vbat_sag_filtered = filter_lp_pt1_step(&battery.sag_filter, &battery.voltage.sag, state.vbat);
-    filter_lp_pt1_step(&battery.trend_filter, &battery.voltage_trend, state.vbat);
+    state.vbat_filtered = battery.voltage_display.step(state.vbat);
+    state.vbat_sag_filtered = battery.voltage_sag.step(state.vbat);
+    battery.voltage_trend.step(state.vbat);
   }
 
   state.lipo_cell_count = 1;
@@ -116,7 +114,7 @@ void vbat_init() {
 }
 
 static void vbat_update_compensation() {
-  const float throttle = filter_lp_pt1_step(&battery.sag_filter, &battery.throttle, state.thrsum);
+  const float throttle = battery.throttle_sag.step(state.thrsum);
   // Ground configuration can enable or disable the current sensor; R from the
   // other load unit does not apply.
   const bool current_load = target.ibat != PIN_NONE && profile.voltage.ibat_scale != 0;
@@ -126,14 +124,14 @@ static void vbat_update_compensation() {
   }
   const float load = current_load ? state.ibat_sag_filtered * 0.001f : throttle;
 
-  const float voltage_step = state.vbat_sag_filtered - filter_lp_pt1_step(&battery.trend_filter, &battery.voltage_trend, state.vbat_sag_filtered);
-  const float load_mean = filter_lp_pt1_step(&battery.trend_filter, &battery.load_trend, load);
+  const float voltage_step = state.vbat_sag_filtered - battery.voltage_trend.step(state.vbat_sag_filtered);
+  const float load_mean = battery.load_trend.step(load);
   const float load_step = load - load_mean;
 
   // Only motor load changes in flight reveal the pack's resistance.
   if (flags.in_air) {
-    const float covariance = filter_lp_pt1_step(&battery.average_filter, &battery.covariance, voltage_step * load_step);
-    const float variance = filter_lp_pt1_step(&battery.average_filter, &battery.variance, load_step * load_step);
+    const float covariance = battery.covariance.step(voltage_step * load_step);
+    const float variance = battery.variance.step(load_step * load_step);
     const float min_variance = SAG_MIN_RELATIVE_EXCITATION * SAG_MIN_RELATIVE_EXCITATION * load_mean * load_mean;
     if (variance > 0.0f && variance >= min_variance)
       battery.resistance = std::max(0.0f, -covariance / variance);
@@ -163,11 +161,11 @@ TickType_t vbat_calc() {
   if (adc_update()) {
     state.cpu_temp = adc_read(ADC_CHAN_TEMP);
     state.ibat = adc_read(ADC_CHAN_IBAT);
-    state.ibat_filtered = filter_lp_pt2_step(&battery.display_filter, &battery.current.display, state.ibat);
-    state.ibat_sag_filtered = filter_lp_pt1_step(&battery.sag_filter, &battery.current.sag, state.ibat);
+    state.ibat_filtered = battery.current_display.step(state.ibat);
+    state.ibat_sag_filtered = battery.current_sag.step(state.ibat);
     state.vbat = adc_read(ADC_CHAN_VBAT);
-    state.vbat_filtered = filter_lp_pt2_step(&battery.display_filter, &battery.voltage.display, state.vbat);
-    state.vbat_sag_filtered = filter_lp_pt1_step(&battery.sag_filter, &battery.voltage.sag, state.vbat);
+    state.vbat_filtered = battery.voltage_display.step(state.vbat);
+    state.vbat_sag_filtered = battery.voltage_sag.step(state.vbat);
     vbat_update_cell_count();
     vbat_update_compensation();
   }

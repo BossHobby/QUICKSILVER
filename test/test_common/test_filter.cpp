@@ -16,17 +16,16 @@ void test_notch_matches_reference_with_changing_frequency() {
   const float periods[] = {125, 250, 500};
   for (float period : periods) {
     filter_biquad_notch_t filters[3];
-    filter_biquad_state_t history[3];
     double x1[3] = {}, x2[3] = {}, y1[3] = {}, y2[3] = {};
     for (unsigned p = 0; p < 3; p++) {
-      filter_biquad_notch_init(&filters[p], &history[p], 1, 100 + p * 200, period);
+      filters[p].init(100 + p * 200, period);
     }
     for (unsigned i = 0; i < 12000; i++) {
       if (i % 97 == 0) {
         for (unsigned p = 0; p < 3; p++) {
           // Include low centres, moving peaks, and disabling/re-enabling.
           const float hz = i >= 4000 && i < 4200 ? 0 : 100 + (i / 97 + p * 200) % 501;
-          filter_biquad_notch_coeff(&filters[p], hz, period);
+          filters[p].coeff(hz, period);
         }
       }
       float actual = 10 * sinf(i * 0.11f) + 5 * cosf(i * 0.73f) + (i % 251 == 0 ? 20 : 0);
@@ -42,7 +41,7 @@ void test_notch_matches_reference_with_changing_frequency() {
           y1[p] = result;
           expected = result;
         }
-        actual = filter_biquad_notch_step(&filters[p], &history[p], actual);
+        actual = filters[p].step(actual);
       }
       TEST_ASSERT_FLOAT_WITHIN(0.002f, expected, actual);
     }
@@ -65,35 +64,42 @@ static void filter_setUp(void) {
 // Test filter initialization
 void test_filter_init(void) {
   filter_setUp();
-  // Initialize filter with 100Hz cutoff at 8kHz
-  filter_t filter;
-  filter_state_t state;
-  filter_init(FILTER_LP_PT1, &filter, &state, 1, 100.0f, 125.0f); // 125 microseconds
-
-  // Check that filter state is initialized
-  TEST_ASSERT_NOT_NULL(&filter);
+  // 100Hz cutoff at 8kHz; a fresh filter starts from zero.
+  filter_t<> filter;
+  filter.init(FILTER_LP_PT1, 100.0f, 125.0f);
+  TEST_ASSERT_GREATER_THAN_FLOAT(0.0f, filter.step(1.0f));
 }
 
-// Test low-pass filtering
+void test_filter_coeff_applies_type_change(void) {
+  // A type edit at an unchanged cutoff must not keep the old order's response.
+  filter_t<> changed;
+  changed.init(FILTER_LP_PT1, 100.0f, 125.0f);
+  changed.coeff(FILTER_LP_PT3, 100.0f, 125.0f);
+
+  filter_t<> fresh;
+  fresh.init(FILTER_LP_PT3, 100.0f, 125.0f);
+  for (int i = 0; i < 10; i++) {
+    TEST_ASSERT_FLOAT_WITHIN(1e-6f, fresh.step(1.0f), changed.step(1.0f));
+  }
+}
+
+// Reinitializing with another type starts from rest, like a fresh filter.
 void test_filter_reconfigure_type(void) {
   for (int from = FILTER_NONE; from < FILTER_MAX; from++) {
     for (int to = FILTER_NONE; to < FILTER_MAX; to++) {
-      filter_t changed;
-      filter_state_t history[3];
-      filter_init((filter_type_t)from, &changed, history, 3, 100.0f, 125.0f);
+      filter_t<vec3_t> changed;
+      changed.init((filter_type_t)from, 100.0f, 125.0f);
       for (int i = 0; i < 100; i++) {
-        for (int axis = 0; axis < 3; axis++) {
-          filter_step((filter_type_t)from, &changed, &history[axis], 5.0f);
-        }
+        changed.step(vec3_t{{5.0f, 5.0f, 5.0f}});
       }
-      filter_init((filter_type_t)to, &changed, history, 3, 100.0f, 125.0f);
-      filter_t fresh;
-      filter_state_t fresh_history;
-      filter_init((filter_type_t)to, &fresh, &fresh_history, 1, 100.0f, 125.0f);
+      changed.init((filter_type_t)to, 100.0f, 125.0f);
+      filter_t<> fresh;
+      fresh.init((filter_type_t)to, 100.0f, 125.0f);
       for (int i = 0; i < 10; i++) {
-        const float expected = filter_step((filter_type_t)to, &fresh, &fresh_history, 1.0f);
+        const float expected = fresh.step(1.0f);
+        const vec3_t actual = changed.step(vec3_t{{1.0f, 1.0f, 1.0f}});
         for (int axis = 0; axis < 3; axis++) {
-          TEST_ASSERT_FLOAT_WITHIN(1e-6f, expected, filter_step((filter_type_t)to, &changed, &history[axis], 1.0f));
+          TEST_ASSERT_FLOAT_WITHIN(1e-6f, expected, actual.axis[axis]);
         }
       }
     }
@@ -102,9 +108,8 @@ void test_filter_reconfigure_type(void) {
 
 void test_filter_lowpass_pt1(void) {
   filter_setUp();
-  filter_t filter;
-  filter_state_t filter_state;
-  filter_init(FILTER_LP_PT1, &filter, &filter_state, 1, 100.0f, 125.0f);
+  filter_t<> filter;
+  filter.init(FILTER_LP_PT1, 100.0f, 125.0f);
 
   // Apply step input
   float input = 1.0f;
@@ -112,7 +117,7 @@ void test_filter_lowpass_pt1(void) {
 
   // Run filter several times to see convergence
   for (int i = 0; i < 100; i++) {
-    output = filter_step(FILTER_LP_PT1, &filter, &filter_state, input);
+    output = filter.step(input);
   }
 
   // Output should converge toward input
@@ -122,15 +127,14 @@ void test_filter_lowpass_pt1(void) {
 // Test high-frequency attenuation
 void test_filter_highfreq_attenuation(void) {
   filter_setUp();
-  filter_t filter;
-  filter_state_t filter_state;
-  filter_init(FILTER_LP_PT1, &filter, &filter_state, 1, 100.0f, 125.0f);
+  filter_t<> filter;
+  filter.init(FILTER_LP_PT1, 100.0f, 125.0f);
 
   // Apply high-frequency signal
   float output_mag = 0.0f;
   for (int i = 0; i < 1000; i++) {
     float input = sinf(2.0f * M_PI * 1000.0f * i * 0.000125f); // 1kHz signal
-    float output = filter_step(FILTER_LP_PT1, &filter, &filter_state, input);
+    float output = filter.step(input);
     output_mag += output * output;
   }
 
@@ -141,18 +145,17 @@ void test_filter_highfreq_attenuation(void) {
 // Test filter reset
 void test_filter_reset(void) {
   filter_setUp();
-  filter_t filter;
-  filter_state_t filter_state;
-  filter_init(FILTER_LP_PT1, &filter, &filter_state, 1, 100.0f, 125.0f);
+  filter_t<> filter;
+  filter.init(FILTER_LP_PT1, 100.0f, 125.0f);
 
   // Process some data
   for (int i = 0; i < 10; i++) {
-    filter_step(FILTER_LP_PT1, &filter, &filter_state, 1.0f);
+    filter.step(1.0f);
   }
 
   // Reset state and process again
-  filter_init_state(&filter_state, 1);
-  float output = filter_step(FILTER_LP_PT1, &filter, &filter_state, 0.0f);
+  filter.reset();
+  float output = filter.step(0.0f);
 
   // After reset, output should be close to new input
   TEST_ASSERT_FLOAT_WITHIN(0.1f, 0.0f, output);
@@ -161,34 +164,47 @@ void test_filter_reset(void) {
 // Test different filter types
 void test_filter_types(void) {
   filter_setUp();
-  filter_t filter_pt1, filter_pt2;
-  filter_state_t state_pt1, state_pt2;
-
-  filter_init(FILTER_LP_PT1, &filter_pt1, &state_pt1, 1, 100.0f, 125.0f);
-  filter_init(FILTER_LP_PT2, &filter_pt2, &state_pt2, 1, 100.0f, 125.0f);
+  filter_t<> filter_pt1, filter_pt2;
+  filter_pt1.init(FILTER_LP_PT1, 100.0f, 125.0f);
+  filter_pt2.init(FILTER_LP_PT2, 100.0f, 125.0f);
 
   // Apply same input to both
   float input = 1.0f;
-  float output_pt1 = filter_step(FILTER_LP_PT1, &filter_pt1, &state_pt1, input);
-  float output_pt2 = filter_step(FILTER_LP_PT2, &filter_pt2, &state_pt2, input);
+  float output_pt1 = filter_pt1.step(input);
+  float output_pt2 = filter_pt2.step(input);
 
   // PT2 should have different response than PT1
   TEST_ASSERT_NOT_EQUAL(output_pt1, output_pt2);
 }
 
+// Each channel of a multi-channel filter matches its own scalar filter.
+void test_filter_channels_independent(void) {
+  filter_t<vec4_t> channels;
+  channels.init(FILTER_LP_PT3, 100.0f, 125.0f);
+  filter_t<> scalar[4];
+  for (auto &f : scalar) {
+    f.init(FILTER_LP_PT3, 100.0f, 125.0f);
+  }
+  for (int i = 0; i < 50; i++) {
+    const vec4_t input = {{sinf(i * 0.3f), 2.0f, -1.0f, i * 0.1f}};
+    const vec4_t output = channels.step(input);
+    for (int c = 0; c < 4; c++) {
+      TEST_ASSERT_FLOAT_WITHIN(1e-6f, scalar[c].step(input.axis[c]), output.axis[c]);
+    }
+  }
+}
+
 // Test filter cascade
 void test_filter_cascade(void) {
   filter_setUp();
-  filter_t filter1, filter2;
-  filter_state_t state1, state2;
-
-  filter_init(FILTER_LP_PT1, &filter1, &state1, 1, 200.0f, 125.0f);
-  filter_init(FILTER_LP_PT1, &filter2, &state2, 1, 100.0f, 125.0f);
+  filter_t<> filter1, filter2;
+  filter1.init(FILTER_LP_PT1, 200.0f, 125.0f);
+  filter2.init(FILTER_LP_PT1, 100.0f, 125.0f);
 
   // Apply cascaded filtering
   float input = 1.0f;
-  float intermediate = filter_step(FILTER_LP_PT1, &filter1, &state1, input);
-  float output = filter_step(FILTER_LP_PT1, &filter2, &state2, intermediate);
+  float intermediate = filter1.step(input);
+  float output = filter2.step(intermediate);
 
   // Cascaded output should be more filtered
   TEST_ASSERT_LESS_THAN_FLOAT(intermediate, output);

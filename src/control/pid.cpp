@@ -43,12 +43,9 @@ static vec3_t last_error = {0};
 static vec3_t last_error2 = {0};
 static pid_rate_t scaled_rates;
 
-static filter_t filter[FILTER_MAX_SLOTS];
-static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
-static filter_t dynamic_filter;
-static filter_state_t dynamic_filter_state[3];
-static filter_lp_pt1 rx_filter;
-static filter_state_t rx_filter_state[3];
+static filter_t<vec3_t> filter[FILTER_MAX_SLOTS];
+static filter_t<vec3_t> dynamic_filter;
+static filter_t<vec3_t> rx_filter;
 
 void pid_reset_i(uint8_t axis) {
   ierror.axis[axis] = 0.0f;
@@ -79,19 +76,19 @@ void pid_rates_update() {
 void pid_filter_update(bool reset) {
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
     if (reset) {
-      filter_init(profile.filter.dterm[i].type, &filter[i], filter_state[i], 3, profile.filter.dterm[i].cutoff_freq, state.looptime_autodetect);
+      filter[i].init(profile.filter.dterm[i].type, profile.filter.dterm[i].cutoff_freq, state.looptime_autodetect);
     } else {
-      filter_coeff(profile.filter.dterm[i].type, &filter[i], profile.filter.dterm[i].cutoff_freq, state.looptime_autodetect);
+      filter[i].coeff(profile.filter.dterm[i].type, profile.filter.dterm[i].cutoff_freq, state.looptime_autodetect);
     }
   }
   if (reset) {
-    filter_init(profile.filter.dterm_dynamic_type, &dynamic_filter, dynamic_filter_state, 3, DTERM_DYNAMIC_FREQ_MAX, state.looptime_autodetect);
+    dynamic_filter.init(profile.filter.dterm_dynamic_type, DTERM_DYNAMIC_FREQ_MAX, state.looptime_autodetect);
   }
 }
 
 void pid_init() {
   pid_rates_update();
-  filter_lp_pt1_init(&rx_filter, rx_filter_state, 3, state.rx_filter_hz, state.looptime_autodetect);
+  rx_filter.init(FILTER_LP_PT1, state.rx_filter_hz, state.looptime_autodetect);
   pid_filter_update(true);
   lastrate = (vec3_t){0};
   lastsetpoint = (vec3_t){0};
@@ -135,11 +132,10 @@ static inline vec3_t pid_compute_iterm_windup_vec(const vec3_t *pid_output) {
   return windup;
 }
 
-static inline float pid_filter_dterm(uint8_t x, float dterm) {
-  dterm = filter_step(profile.filter.dterm[0].type, &filter[0], &filter_state[0][x], dterm);
-  dterm = filter_step(profile.filter.dterm[1].type, &filter[1], &filter_state[1][x], dterm);
-  dterm = filter_step(profile.filter.dterm_dynamic_type, &dynamic_filter, &dynamic_filter_state[x], dterm);
-  return dterm;
+static inline vec3_t pid_filter_dterm(vec3_t dterm) {
+  dterm = filter[0].step(dterm);
+  dterm = filter[1].step(dterm);
+  return dynamic_filter.step(dterm);
 }
 
 static inline vec3_t pid_should_enable_iterm_vec() {
@@ -189,12 +185,12 @@ static inline float pid_tda_compensation() {
 }
 
 void pid_calc() {
-  filter_lp_pt1_coeff(&rx_filter, state.rx_filter_hz, state.looptime_autodetect);
+  rx_filter.coeff(FILTER_LP_PT1, state.rx_filter_hz, state.looptime_autodetect);
 
   const float dynamic_throttle = state.throttle + state.throttle * (1.0f - state.throttle);
   const float dterm_dynamic_raw_freq = mapf(dynamic_throttle, 0.0f, 1.0f, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
   const float dterm_dynamic_freq = constrain(dterm_dynamic_raw_freq, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
-  filter_coeff(profile.filter.dterm_dynamic_type, &dynamic_filter, dterm_dynamic_freq, state.looptime_autodetect);
+  dynamic_filter.coeff(profile.filter.dterm_dynamic_type, dterm_dynamic_freq, state.looptime_autodetect);
 
   static vec3_t pid_output = {.roll = 0, .pitch = 0, .yaw = 0};
   const float v_compensation = pid_voltage_compensation();
@@ -225,8 +221,12 @@ void pid_calc() {
   const vec3_t current_kd = vec3_mul(scaled_rates.kd, state.looptime_inverse * pid_speed_compensation);
   const vec3_t iterm_enable = pid_should_enable_iterm_vec();
   const vec3_t iterm_windup = pid_compute_iterm_windup_vec(&pid_output);
-  const bool rx_filter_enabled = state.rx_filter_hz > 0.1f;
+  vec3_t setpoint_derivative = vec3_mul_elem(setpoint_delta, current_kd);
+  if (state.rx_filter_hz > 0.1f) {
+    setpoint_derivative = rx_filter.step(setpoint_derivative);
+  }
 
+  vec3_t dterm;
 #pragma GCC unroll 3
 #pragma GCC ivdep
   for (uint8_t x = 0; x < PID_SIZE; x++) {
@@ -247,15 +247,15 @@ void pid_calc() {
       transition_setpoint_weight = 1.0f;
     }
 
-    float setpoint_derivative = setpoint_delta.axis[x] * current_kd.axis[x];
-    if (rx_filter_enabled) {
-      setpoint_derivative = filter_lp_pt1_step(&rx_filter, &rx_filter_state[x], setpoint_derivative);
-    }
-
     const float gyro_derivative = gyro_delta.axis[x] * current_kd.axis[x] * tda_compensation;
-    const float dterm = (setpoint_derivative * stick_accelerator[x] * transition_setpoint_weight) - gyro_derivative;
-    state.pid_d_term.axis[x] = pid_filter_dterm(x, dterm);
+    dterm.axis[x] = (setpoint_derivative.axis[x] * stick_accelerator[x] * transition_setpoint_weight) - gyro_derivative;
+  }
 
+  // Filter stages run across all axes; the unfiltered term stays local.
+  state.pid_d_term = pid_filter_dterm(dterm);
+
+#pragma GCC unroll 3
+  for (uint8_t x = 0; x < PID_SIZE; x++) {
     pid_output.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x];
 #ifdef VEHICLE_WING
     // Feed the requested body rate, including level/autolaunch corrections.

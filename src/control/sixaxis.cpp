@@ -40,12 +40,10 @@ static float rot_mat[3][3] = {
     {0.0f, 0.0f, 1.0f},
 };
 
-static filter_t filter[FILTER_MAX_SLOTS];
-static filter_state_t filter_state[FILTER_MAX_SLOTS][3];
+static filter_t<vec3_t> filter[FILTER_MAX_SLOTS];
 
 static sdft_t gyro_sdft[SDFT_AXES];
 static filter_biquad_notch_t notch_filter[SDFT_AXES][SDFT_PEAKS];
-static filter_biquad_state_t notch_filter_state[SDFT_AXES][SDFT_PEAKS];
 
 void sixaxis_orientation_update() {
   vec3_t rot = {.roll = 0, .pitch = 0, .yaw = 0};
@@ -99,9 +97,9 @@ void sixaxis_filter_update(bool reset) {
   }
   for (uint8_t i = 0; i < FILTER_MAX_SLOTS; i++) {
     if (reset) {
-      filter_init(profile.filter.gyro[i].type, &filter[i], filter_state[i], 3, profile.filter.gyro[i].cutoff_freq, state.looptime_autodetect);
+      filter[i].init(profile.filter.gyro[i].type, profile.filter.gyro[i].cutoff_freq, state.looptime_autodetect);
     } else {
-      filter_coeff(profile.filter.gyro[i].type, &filter[i], profile.filter.gyro[i].cutoff_freq, state.looptime_autodetect);
+      filter[i].coeff(profile.filter.gyro[i].type, profile.filter.gyro[i].cutoff_freq, state.looptime_autodetect);
     }
   }
 }
@@ -116,7 +114,7 @@ void sixaxis_init() {
 
   for (uint8_t i = 0; i < SDFT_AXES; i++) {
     for (uint8_t j = 0; j < SDFT_PEAKS; j++) {
-      filter_biquad_notch_init(&notch_filter[i][j], &notch_filter_state[i][j], 1, 0, state.looptime_autodetect);
+      notch_filter[i][j].init(0, state.looptime_autodetect);
     }
   }
 }
@@ -168,7 +166,7 @@ void sixaxis_read() {
     if (current_axis < 3 && sdft_update(&gyro_sdft[current_axis])) {
       // once all sdft update steps are done, we update the filters and continue to the next axis
       for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
-        filter_biquad_notch_coeff(&notch_filter[current_axis][p], gyro_sdft[current_axis].notch_hz[p], state.looptime_autodetect);
+        notch_filter[current_axis][p].coeff(gyro_sdft[current_axis].notch_hz[p], state.looptime_autodetect);
         blackbox_set_debug(BBOX_DEBUG_DYN_NOTCH, current_axis * SDFT_PEAKS + p, gyro_sdft[current_axis].notch_hz[p]);
       }
       // on the last axis we increment this to the idle state 3
@@ -176,13 +174,13 @@ void sixaxis_read() {
     }
   }
 
-  for (uint32_t i = 0; i < 3; i++) {
-    state.gyro.axis[i] = filter_step(profile.filter.gyro[0].type, &filter[0], &filter_state[0][i], state.gyro.axis[i]);
-    state.gyro.axis[i] = filter_step(profile.filter.gyro[1].type, &filter[1], &filter_state[1][i], state.gyro.axis[i]);
+  state.gyro = filter[0].step(state.gyro);
+  state.gyro = filter[1].step(state.gyro);
 
-    if (profile.filter.gyro_dynamic_notch_enable) {
+  if (profile.filter.gyro_dynamic_notch_enable) {
+    for (uint32_t i = 0; i < 3; i++) {
       for (uint32_t p = 0; p < SDFT_PEAKS; p++) {
-        state.gyro.axis[i] = filter_biquad_notch_step(&notch_filter[i][p], &notch_filter_state[i][p], state.gyro.axis[i]);
+        state.gyro.axis[i] = notch_filter[i][p].step(state.gyro.axis[i]);
       }
     }
   }

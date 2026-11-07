@@ -38,6 +38,13 @@ cbor_result_t cbor_decode_compact_vec3_t(cbor_value_t *dec, compact_vec3_t *vec)
 void vec3_from_array(vec3_t *out, float *in);
 void vec3_compress(compact_vec3_t *out, vec3_t *in, float scale);
 
+// Element-wise arithmetic, so generic code such as filter_t treats vectors
+// like floats.
+inline vec3_t operator+(vec3_t a, vec3_t b) { return {{a.axis[0] + b.axis[0], a.axis[1] + b.axis[1], a.axis[2] + b.axis[2]}}; }
+inline vec3_t operator-(vec3_t a, vec3_t b) { return {{a.axis[0] - b.axis[0], a.axis[1] - b.axis[1], a.axis[2] - b.axis[2]}}; }
+inline vec3_t operator*(float s, vec3_t v) { return {{s * v.axis[0], s * v.axis[1], s * v.axis[2]}}; }
+inline vec3_t &operator+=(vec3_t &a, vec3_t b) { return a = a + b; }
+
 // Vec3 operations
 static inline vec3_t vec3_add(vec3_t a, vec3_t b) {
   return (vec3_t){{a.axis[0] + b.axis[0],
@@ -90,6 +97,11 @@ typedef union {
 
 cbor_result_t cbor_encode_vec4_t(cbor_value_t *enc, const vec4_t *vec);
 cbor_result_t cbor_decode_vec4_t(cbor_value_t *dec, vec4_t *vec);
+
+inline vec4_t operator+(vec4_t a, vec4_t b) { return {{a.axis[0] + b.axis[0], a.axis[1] + b.axis[1], a.axis[2] + b.axis[2], a.axis[3] + b.axis[3]}}; }
+inline vec4_t operator-(vec4_t a, vec4_t b) { return {{a.axis[0] - b.axis[0], a.axis[1] - b.axis[1], a.axis[2] - b.axis[2], a.axis[3] - b.axis[3]}}; }
+inline vec4_t operator*(float s, vec4_t v) { return {{s * v.axis[0], s * v.axis[1], s * v.axis[2], s * v.axis[3]}}; }
+inline vec4_t &operator+=(vec4_t &a, vec4_t b) { return a = a + b; }
 
 typedef union {
   struct {
