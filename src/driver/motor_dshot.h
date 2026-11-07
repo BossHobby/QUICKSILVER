@@ -84,5 +84,5 @@ void dshot_dma_setup_output(uint32_t index);
 void dshot_gpio_init_input(gpio_pins_t pin);
 void dshot_dma_setup_input(uint32_t index);
 
-uint32_t dshot_decode_eRPM_telemetry_value(uint16_t value);
+// eRPM / 100 from one pin's reply; 0 when invalid or stopped.
 uint32_t dshot_decode_gcr(uint16_t *dma_buffer, uint32_t pin_mask);

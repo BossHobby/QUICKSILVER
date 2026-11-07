@@ -773,6 +773,10 @@ bool profile_outputs_use_protocol(output_protocol_t protocol) {
   return protocol <= OUTPUT_PROTOCOL_PWM && (output_protocols & (1U << protocol)) != 0;
 }
 
+uint8_t profile_output_protocol_slots(output_protocol_t protocol) {
+  return protocol <= OUTPUT_PROTOCOL_PWM ? output_protocol_slots[protocol] : 0;
+}
+
 void profile_mutex_init() {
   profile_mutex = xSemaphoreCreateMutexStatic(&profile_mutex_storage);
   configASSERT(profile_mutex);

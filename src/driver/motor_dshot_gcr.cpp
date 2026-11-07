@@ -55,22 +55,8 @@ static const uint32_t gcr_dict[32] = {
     GCR_INVALID,
 };
 
-uint32_t dshot_decode_eRPM_telemetry_value(uint16_t value) {
-  // eRPM range
-  if (value == 0x0fff) {
-    return 0;
-  }
-
-  // Convert value to 16 bit from the GCR telemetry format (eeem mmmm mmmm)
-  value = (value & 0x01ff) << ((value & 0xfe00) >> 9);
-  if (!value) {
-    return 0;
-  }
-
-  // Convert period to erpm * 100
-  return (1000000 * 60 / 100 + value / 2) / value;
-}
-
+// Decodes one pin's bidirectional DShot reply to eRPM / 100. Returns 0 for an
+// invalid frame or a stopped motor.
 uint32_t dshot_decode_gcr(uint16_t *dma_buffer, uint32_t pin_mask) {
 #ifdef DSHOT_BITBAND
   const dshot_bitband_t *buf = (dshot_bitband_t *)BITBAND_SRAM((uint32_t)dma_buffer, BITBAND_PIN(pin_mask));
@@ -163,5 +149,14 @@ uint32_t dshot_decode_gcr(uint16_t *dma_buffer, uint32_t pin_mask) {
     return 0;
   }
 
-  return decoded >> 4;
+  // eRPM period in microseconds as eeem mmmm mmmm; all ones means stopped.
+  const uint32_t telemetry = decoded >> 4;
+  if (telemetry == 0x0fff) {
+    return 0;
+  }
+  const uint32_t period_us = (telemetry & 0x01ff) << (telemetry >> 9);
+  if (!period_us) {
+    return 0;
+  }
+  return (1000000 * 60 / 100 + period_us / 2) / period_us;
 }

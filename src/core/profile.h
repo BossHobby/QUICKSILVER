@@ -835,6 +835,8 @@ rate_t *profile_current_rates();
 void profile_output_update();
 bool profile_outputs_use_protocol(output_protocol_t protocol);
 bool profile_output_slot_uses_protocol(uint8_t target_output, output_protocol_t protocol);
+// Target output slots the profile assigns to the protocol, one bit per slot.
+uint8_t profile_output_protocol_slots(output_protocol_t protocol);
 
 uint32_t profile_output_count(const profile_output_t *outputs, uint32_t size);
 uint32_t profile_mixer_rule_count(const profile_mixer_rule_t *mixer, uint32_t size);
