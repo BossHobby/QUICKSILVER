@@ -45,7 +45,7 @@ inline cbor_result_t cbor_decode_member(cbor_value_t *dec, E *value, cbor_result
   }
 
 #define CBOR_START_STRUCT_ENCODER(type)                                \
-  SLOW_FLASH cbor_result_t cbor_encode_##type(cbor_value_t *enc, const type *o) { \
+  COLD_CODE cbor_result_t cbor_encode_##type(cbor_value_t *enc, const type *o) { \
     cbor_result_t res = CBOR_OK;                                       \
     CBOR_CHECK_ERROR(res = cbor_encode_map_indefinite(enc));
 
@@ -109,7 +109,7 @@ inline cbor_result_t cbor_decode_member(cbor_value_t *dec, E *value, cbor_result
   }
 
 #define CBOR_START_STRUCT_DECODER(type)                              \
-  SLOW_FLASH cbor_result_t cbor_decode_##type(cbor_value_t *dec, type *o) {     \
+  COLD_CODE cbor_result_t cbor_decode_##type(cbor_value_t *dec, type *o) {     \
     cbor_result_t res = CBOR_OK;                                     \
     cbor_container_t map;                                            \
     CBOR_CHECK_ERROR(res = cbor_decode_map(dec, &map));              \

@@ -32,7 +32,7 @@ _Min_Stack_Size = 0x1000; /* interrupts only; failloop resets out of handler mod
 MEMORY
 {
 /* EOPB0 (SRAM_CONFIG in reset.cpp) trades SRAM for zero-wait flash. Only that
-   area executes at full speed; everything except SLOW_FLASH code stays in it. */
+   area executes at full speed; everything except COLD_CODE stays in it. */
 FLASH (rx)        : ORIGIN = 0x08000000, LENGTH = 384K
 SLOW_FLASH (rx)   : ORIGIN = 0x08060000, LENGTH = 576K
 FLASH_CONFIG (r)  : ORIGIN = 0x080F0000, LENGTH = 64K
@@ -74,7 +74,7 @@ SECTIONS
     _etext = .;        /* define a global symbols at end of code */
   } >FLASH
 
-  /* Code that never runs per Flight loop, marked SLOW_FLASH */
+  /* Code that never runs in normal flight, marked COLD_CODE */
   .slow_flash :
   {
     . = ALIGN(4);

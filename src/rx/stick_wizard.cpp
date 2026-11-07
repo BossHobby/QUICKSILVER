@@ -88,7 +88,7 @@ static bool stick_wizard_check_for_perfect_sticks() {
   return false;
 }
 
-static void rx_stick_calibration_wizard() {
+COLD_CODE static void rx_stick_calibration_wizard() {
   static uint32_t wizard_start_millis;
 
   // take appropriate action based on the wizard phase

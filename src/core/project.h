@@ -13,13 +13,15 @@
 #define FAST_RAM
 #endif
 
+// Code that never runs in normal flight: configuration, maintenance, bench
+// tests, turtle and failsafe handling. Kept out of line and optimized for size
+// on every MCU, so it does not dilute the Flight loop's code; callers treat
+// the branch as unlikely. Where only part of flash runs at full speed, it is
+// placed in the slow part.
 #ifdef USE_SLOW_FLASH
-// Configuration, maintenance and startup code that never runs per Flight loop.
-// It may execute from flash with wait states, leaving fast flash for hot code.
-// Inlining would move it back into its caller's section.
-#define SLOW_FLASH __attribute__((section(".slow_flash"), noinline))
+#define COLD_CODE __attribute__((section(".slow_flash"), cold, noinline))
 #else
-#define SLOW_FLASH
+#define COLD_CODE __attribute__((cold, noinline))
 #endif
 
 #ifdef USE_DMA_RAM

@@ -13,6 +13,7 @@
 #include "control/wing/navigation.h"
 #include "core/flash.h"
 #include "core/profile.h"
+#include "core/project.h"
 #include "core/tasks.h"
 #include "driver/motor.h"
 #include "driver/time.h"
@@ -144,7 +145,7 @@ static void wing_apply_outputs(float throttle, float aileron, float elevator, fl
   output_write_all();
 }
 
-static void wing_apply_test_outputs() {
+COLD_CODE static void wing_apply_test_outputs() {
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
     state.output[i] = motor_test.value[i];
     state.output_active[i] = profile.outputs[i].protocol != OUTPUT_PROTOCOL_NONE;
@@ -543,11 +544,16 @@ static bool wing_launch_max_altitude_reached() {
           state.gps_altitude - launch.takeoff_altitude >= profile.wing.autolaunch.max_altitude;
 }
 
+// Disarmed, launch only tracks the switch and stays idle.
+COLD_CODE static void wing_launch_disarmed(bool launch_aux_on) {
+  state.wing_launch_available = launch_aux_on;
+  wing_launch_set_state(WING_LAUNCH_IDLE);
+}
+
 static float wing_autolaunch_throttle() {
   const bool launch_aux_on = rx_aux_on(AUX_AUTOLAUNCH);
   if (!flags.arm_state) {
-    state.wing_launch_available = launch_aux_on;
-    wing_launch_set_state(WING_LAUNCH_IDLE);
+    wing_launch_disarmed(launch_aux_on);
     return state.throttle;
   }
   // Launch runs at most once per arm: DONE or ABORTED holds until disarm, so
@@ -806,10 +812,11 @@ static void wing_learn_cruise_speed() {
 
 // Store a learned cruise speed once landed, like autotrim. Flight holds
 // profile_mutex only for passes that start disarmed, and the save blocks with
-// interrupts masked, so wait while GPS shows a gliding wing.
-static void wing_save_cruise_speed(bool armed_at_start) {
+// interrupts masked, so wait while GPS shows a gliding wing. The caller checks
+// save_pending.
+COLD_CODE static void wing_save_cruise_speed(bool armed_at_start) {
   const bool moving = state.gps_lock && state.gps_speed >= WING_FLYING_MIN_SPEED;
-  if (!speed_learn.save_pending || flags.arm_state || armed_at_start || moving)
+  if (flags.arm_state || armed_at_start || moving)
     return;
   flash_save();
   flight_reset_runtime();
@@ -889,7 +896,8 @@ void control() {
   }
   // Update centers after writing this loop's outputs, as in INAV's switched trim.
   wing_update_autotrim(armed_at_start, wing_mode);
-  wing_save_cruise_speed(armed_at_start);
+  if (speed_learn.save_pending)
+    wing_save_cruise_speed(armed_at_start);
 
   blackbox_set_debug(BBOX_DEBUG_WING, WING_DEBUG_MODE, wing_mode);
   blackbox_set_debug(BBOX_DEBUG_WING, WING_DEBUG_LAUNCH_STATE, state.wing_launch_state);

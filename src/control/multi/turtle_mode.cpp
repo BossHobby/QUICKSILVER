@@ -4,6 +4,7 @@
 
 #include "control/control.h"
 #include "core/profile.h"
+#include "core/project.h"
 #include "driver/motor.h"
 #include "driver/time.h"
 
@@ -21,7 +22,7 @@ static uint32_t turtle_time = 0;
 static uint8_t turtle_axis = 0;
 static uint8_t turtle_dir = 0;
 
-void turtle_mode_start() {
+COLD_CODE void turtle_mode_start() {
   if (!profile_outputs_use_protocol(OUTPUT_PROTOCOL_DSHOT)) {
     return;
   }
@@ -44,43 +45,20 @@ void turtle_mode_cancel() {
   flags.turtle_ready = 0;
 }
 
-void turtle_mode_update() {
-  if (!profile_outputs_use_protocol(OUTPUT_PROTOCOL_DSHOT)) {
-    return;
-  }
+// Runs the active turtle sequence; idle passes never get here.
+COLD_CODE static void turtle_mode_step() {
+  flags.turtle = 1;
 
-  if (turtle_state != TURTLE_STAGE_IDLE) {
-    // turtle is active
-    flags.turtle = 1;
-
-    if (
-        !flags.turtle_ready ||    // turtle was canceled
-        state.GEstG.yaw > 0.5f || // quad was flipped
-        !flags.arm_state          // quad was disarmed
-    ) {
-      // quad was flipped
-      turtle_state = TURTLE_STAGE_EXIT;
-    }
-  } else {
-    // turtle is in-active
-    flags.turtle = 0;
+  if (
+      !flags.turtle_ready ||    // turtle was canceled
+      state.GEstG.yaw > 0.5f || // quad was flipped
+      !flags.arm_state          // quad was disarmed
+  ) {
+    // quad was flipped
+    turtle_state = TURTLE_STAGE_EXIT;
   }
 
   switch (turtle_state) {
-  case TURTLE_STAGE_IDLE: {
-    // quad was just armed and upside down, begin the turtle sequence
-    static uint8_t last_armed_state_turtle = 0;
-    if (flags.arm_state != last_armed_state_turtle) {
-      last_armed_state_turtle = flags.arm_state;
-
-      // quad was just armed and upside down, begin the turtle sequence
-      if (flags.turtle_ready && flags.arm_state && (state.GEstG.yaw < 0)) {
-        motor_set_direction(MOTOR_REVERSE);
-        turtle_state = TURTLE_STAGE_START;
-      }
-    }
-    break;
-  }
   case TURTLE_STAGE_START:
     flags.controls_override = 1;
     flags.motortest_override = 1;
@@ -138,5 +116,31 @@ void turtle_mode_update() {
     turtle_state = TURTLE_STAGE_IDLE;
     flags.turtle_ready = 0;
     break;
+  default:
+    break;
+  }
+}
+
+void turtle_mode_update() {
+  if (!profile_outputs_use_protocol(OUTPUT_PROTOCOL_DSHOT)) {
+    return;
+  }
+
+  if (turtle_state != TURTLE_STAGE_IDLE) {
+    turtle_mode_step();
+    return;
+  }
+  flags.turtle = 0;
+
+  // quad was just armed and upside down, begin the turtle sequence
+  static uint8_t last_armed_state_turtle = 0;
+  if (flags.arm_state != last_armed_state_turtle) {
+    last_armed_state_turtle = flags.arm_state;
+
+    // quad was just armed and upside down, begin the turtle sequence
+    if (flags.turtle_ready && flags.arm_state && (state.GEstG.yaw < 0)) {
+      motor_set_direction(MOTOR_REVERSE);
+      turtle_state = TURTLE_STAGE_START;
+    }
   }
 }

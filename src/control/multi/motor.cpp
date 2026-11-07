@@ -142,7 +142,7 @@ static void motor_brushed_mixer_scale_calc(float throttle) {
   }
 }
 
-void motor_test_calc(bool motortest_usb) {
+COLD_CODE void motor_test_calc(bool motortest_usb) {
   if (motortest_usb) {
     // set mix according to values we got via usb
     state.output[MOTOR_FR] = motor_test.value[MOTOR_FR];
