@@ -34,11 +34,11 @@
 #ifdef USE_GYRO
 
 static float gyrocal[3];
-static float rot_mat[3][3] = {
-    {1.0f, 0.0f, 0.0f},
-    {0.0f, 1.0f, 0.0f},
-    {0.0f, 0.0f, 1.0f},
-};
+// Supported orientations are 45 degree yaw steps plus an optional 180 degree roll flip,
+// so the board rotation reduces to a planar roll/pitch rotation and a sign.
+static float rot_cos = 1.0f;
+static float rot_sin = 0.0f;
+static float rot_flip = 1.0f;
 
 static filter_t<vec3_t> filter[FILTER_MAX_SLOTS];
 
@@ -46,49 +46,40 @@ static sdft_t gyro_sdft[SDFT_AXES];
 static filter_biquad_notch_t notch_filter[SDFT_AXES][SDFT_PEAKS];
 
 void sixaxis_orientation_update() {
-  vec3_t rot = {.roll = 0, .pitch = 0, .yaw = 0};
+  const uint8_t orientation = profile.motor.gyro_orientation;
 
-  if (profile.motor.gyro_orientation & GYRO_ROTATE_90_CW) {
-    rot.yaw += 90.0f * DEGTORAD;
-  }
-  if (profile.motor.gyro_orientation & GYRO_ROTATE_90_CCW) {
-    rot.yaw -= 90.0f * DEGTORAD;
-  }
-  if (profile.motor.gyro_orientation & GYRO_ROTATE_45_CW) {
-    rot.yaw += 45.0f * DEGTORAD;
-  }
-  if (profile.motor.gyro_orientation & GYRO_ROTATE_45_CCW) {
-    rot.yaw -= 45.0f * DEGTORAD;
-  }
-  if (profile.motor.gyro_orientation & GYRO_ROTATE_180) {
-    rot.yaw += 180.0f * DEGTORAD;
-  }
-  if (profile.motor.gyro_orientation & GYRO_FLIP_180) {
-    rot.roll += 180.0f * DEGTORAD;
-    rot.yaw += 180.0f * DEGTORAD;
-  }
+  // yaw in clockwise 45 degree steps
+  int32_t steps = 0;
+  if (orientation & GYRO_ROTATE_90_CW)
+    steps += 2;
+  if (orientation & GYRO_ROTATE_90_CCW)
+    steps -= 2;
+  if (orientation & GYRO_ROTATE_45_CW)
+    steps += 1;
+  if (orientation & GYRO_ROTATE_45_CCW)
+    steps -= 1;
+  if (orientation & GYRO_ROTATE_180)
+    steps += 4;
+  if (orientation & GYRO_FLIP_180)
+    steps += 4;
 
-  const float cosx = fastcos(rot.roll);
-  const float sinx = fastsin(rot.roll);
-  const float cosy = fastcos(rot.pitch);
-  const float siny = fastsin(rot.pitch);
-  const float cosz = fastcos(rot.yaw);
-  const float sinz = fastsin(rot.yaw);
+  static constexpr float H = M_SQRT1_2; // cos(45 deg)
+  static constexpr struct {
+    float cos, sin;
+  } yaw_steps[8] = {
+      {1.0f, 0.0f},  // 0
+      {H, H},        // 45
+      {0.0f, 1.0f},  // 90
+      {-H, H},       // 135
+      {-1.0f, 0.0f}, // 180
+      {-H, -H},      // 225
+      {0.0f, -1.0f}, // 270
+      {H, -H},       // 315
+  };
 
-  const float coszcosx = cosz * cosx;
-  const float sinzcosx = sinz * cosx;
-  const float coszsinx = sinx * cosz;
-  const float sinzsinx = sinx * sinz;
-
-  rot_mat[0][0] = cosz * cosy;
-  rot_mat[0][1] = -cosy * sinz;
-  rot_mat[0][2] = siny;
-  rot_mat[1][0] = sinzcosx + (coszsinx * siny);
-  rot_mat[1][1] = coszcosx - (sinzsinx * siny);
-  rot_mat[1][2] = -sinx * cosy;
-  rot_mat[2][0] = (sinzsinx) - (coszcosx * siny);
-  rot_mat[2][1] = (coszsinx) + (sinzcosx * siny);
-  rot_mat[2][2] = cosy * cosx;
+  rot_cos = yaw_steps[steps & 7].cos;
+  rot_sin = yaw_steps[steps & 7].sin;
+  rot_flip = (orientation & GYRO_FLIP_180) ? -1.0f : 1.0f;
 }
 
 void sixaxis_filter_update(bool reset) {
@@ -119,18 +110,19 @@ void sixaxis_init() {
   }
 }
 
-static vec3_t sixaxis_apply_matrix(vec3_t v) {
+static vec3_t sixaxis_apply_orientation(vec3_t v) {
+  const float pitch = v.pitch * rot_flip;
   return (vec3_t){
-      .roll = (rot_mat[0][0] * v.roll + rot_mat[1][0] * v.pitch + rot_mat[2][0] * v.yaw),
-      .pitch = (rot_mat[0][1] * v.roll + rot_mat[1][1] * v.pitch + rot_mat[2][1] * v.yaw),
-      .yaw = (rot_mat[0][2] * v.roll + rot_mat[1][2] * v.pitch + rot_mat[2][2] * v.yaw),
+      .roll = rot_cos * v.roll + rot_sin * pitch,
+      .pitch = rot_cos * pitch - rot_sin * v.roll,
+      .yaw = rot_flip * v.yaw,
   };
 }
 
 void sixaxis_read() {
   const gyro_data_t data = gyro_read();
 
-  const vec3_t accel = sixaxis_apply_matrix(data.accel);
+  const vec3_t accel = sixaxis_apply_orientation(data.accel);
   // swap pitch and roll to match gyro
   state.accel_raw.roll = (accel.pitch - flash_storage.accelcal[1]) * ACCEL_RANGE;
   state.accel_raw.pitch = (accel.roll - flash_storage.accelcal[0]) * ACCEL_RANGE;
@@ -139,7 +131,7 @@ void sixaxis_read() {
   state.gyro_raw.roll = data.gyro.roll - gyrocal[0];
   state.gyro_raw.pitch = data.gyro.pitch - gyrocal[1];
   state.gyro_raw.yaw = data.gyro.yaw - gyrocal[2];
-  state.gyro_raw = sixaxis_apply_matrix(state.gyro_raw);
+  state.gyro_raw = sixaxis_apply_orientation(state.gyro_raw);
   state.gyro.roll = state.gyro_raw.roll = state.gyro_raw.roll * GYRO_RANGE * DEGTORAD;
   state.gyro.pitch = state.gyro_raw.pitch = -state.gyro_raw.pitch * GYRO_RANGE * DEGTORAD;
   state.gyro.yaw = state.gyro_raw.yaw = -state.gyro_raw.yaw * GYRO_RANGE * DEGTORAD;
@@ -288,7 +280,7 @@ void sixaxis_acc_cal() {
 
     // Skip samples if gyro shows movement
     if (!test_gyro_move(&last_data, &data)) {
-      const vec3_t accel = sixaxis_apply_matrix(data.accel);
+      const vec3_t accel = sixaxis_apply_orientation(data.accel);
       for (uint8_t i = 0; i < 3; i++) {
         lpf(&flash_storage.accelcal[i], accel.axis[i], lpfcalc(CAL_INTERVAL, 0.5 * 1e6));
       }
