@@ -304,13 +304,8 @@ void nav_init() {
   state.baro_valid = false;
 }
 
-void nav_update() {
-  // Average the accelerometer over every Flight loop between navigation steps.
-  nav_accumulate_accel();
-
-  const uint32_t now = time_micros();
-  if (now - nav.last_update_us < 10000)
-    return;
+// The 10 ms step; kept out of line so the per-pass gate stays small.
+__attribute__((noinline)) static void nav_step(uint32_t now) {
   // Coalesce delayed updates. Altitude uses sensor timestamps; control uses elapsed time.
   const float dt = MIN((now - nav.last_update_us) * 1e-6f, NAV_MAX_DT);
   nav.last_update_us = now;
@@ -329,6 +324,15 @@ void nav_update() {
   // Wing navigation also runs without GPS, as a constant-bank turn.
   nav_update_wing(gps_configured && gps.valid, gps_configured && gps.home_valid);
 #endif
+}
+
+void nav_update() {
+  // Average the accelerometer over every Flight loop between navigation steps.
+  nav_accumulate_accel();
+
+  const uint32_t now = time_micros();
+  if (now - nav.last_update_us >= 10000)
+    nav_step(now);
 }
 
 bool nav_home_valid() {
