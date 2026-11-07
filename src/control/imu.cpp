@@ -70,7 +70,7 @@ static vec3_t mahony_correct(vec3_t gyro, vec3_t gravity_estimate) {
   const vec3_t error = vec3_cross(gravity_estimate, gravity_body);
 
   const float kp = flags.arm_state ? MAHONY_KP : MAHONY_KP * MAHONY_DISARMED_KP_MULTIPLIER;
-  return vec3_add(gyro, vec3_mul(error, kp));
+  return gyro + error * kp;
 }
 
 static uint8_t gps_heading_sensor_blocks() {
@@ -311,15 +311,15 @@ static vec3_t imu_gravity_reference(vec3_t accel) {
 
   // Legacy body axes are {left, back, up}. Project the nose onto the plane
   // normal to the gravity estimate to find the level forward and left axes.
-  const vec3_t up = vec3_mul(state.GEstG, 1.0f / ACC_1G);
+  const vec3_t up = state.GEstG * (1.0f / ACC_1G);
   const vec3_t nose = {{0.0f, -1.0f, 0.0f}};
-  const vec3_t level_forward = vec3_sub(nose, vec3_mul(up, vec3_dot(nose, up)));
+  const vec3_t level_forward = nose - up * vec3_dot(nose, up);
   const float level_forward_length = vec3_magnitude(level_forward);
   if (level_forward_length < 0.1f)
     return accel;
-  const vec3_t forward_axis = vec3_mul(level_forward, 1.0f / level_forward_length);
+  const vec3_t forward_axis = level_forward * (1.0f / level_forward_length);
   const vec3_t left_axis = vec3_cross(up, forward_axis);
-  return vec3_sub(accel, vec3_add(vec3_mul(forward_axis, forward), vec3_mul(left_axis, left)));
+  return accel - (forward_axis * forward + left_axis * left);
 }
 #endif
 
@@ -339,12 +339,12 @@ void imu_calc() {
   const float accmag_squared = vec3_dot(state.accel, state.accel);
   if (accmag_squared > (ACC_MIN * ACC_1G) * (ACC_MIN * ACC_1G) && accmag_squared < (ACC_MAX * ACC_1G) * (ACC_MAX * ACC_1G)) {
     const float accel_scale = ACC_1G / sqrtf(accmag_squared);
-    state.accel = vec3_mul(state.accel, accel_scale);
+    state.accel *= accel_scale;
   }
 
   const float refmag_squared = vec3_dot(gravity_reference, gravity_reference);
   if (refmag_squared > (ACC_MIN * ACC_1G) * (ACC_MIN * ACC_1G) && refmag_squared < (ACC_MAX * ACC_1G) * (ACC_MAX * ACC_1G)) {
-    const vec3_t reference = vec3_mul(gravity_reference, ACC_1G / sqrtf(refmag_squared));
+    const vec3_t reference = gravity_reference * (ACC_1G / sqrtf(refmag_squared));
     const float filter_time = flags.on_ground ? GRAVITY_GROUND_FILTER_TIME : GRAVITY_FLIGHT_FILTER_TIME;
     // Filter times are time constants; lpfcalc() takes 1 / cutoff frequency.
     const float filtcoeff = constrain(1.0f - state.looptime / filter_time, 0.0f, 1.0f);
@@ -357,7 +357,7 @@ void imu_calc() {
   const float gravity_magnitude = vec3_magnitude(state.GEstG);
   const bool gravity_valid = float_is_finite(gravity_magnitude) && gravity_magnitude > 0.01f;
   if (gravity_valid) {
-    state.GEstG = vec3_mul(state.GEstG, ACC_1G / gravity_magnitude);
+    state.GEstG *= ACC_1G / gravity_magnitude;
   }
 
   imu_update_attitude(gravity_valid);
@@ -371,7 +371,7 @@ void imu_test_attitude_update() {
   const float magnitude = vec3_magnitude(state.GEstG);
   const bool valid = float_is_finite(magnitude) && magnitude > 0.01f;
   if (valid)
-    state.GEstG = vec3_mul(state.GEstG, ACC_1G / magnitude);
+    state.GEstG *= ACC_1G / magnitude;
   imu_update_attitude(valid);
 }
 #endif

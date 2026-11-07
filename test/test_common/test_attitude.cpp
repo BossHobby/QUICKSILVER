@@ -669,7 +669,7 @@ void test_attitude_imu_pipeline_roll_and_pitch(void) {
       state.accel_raw = (vec3_t){{sinf(roll) * cosf(pitch), sinf(pitch), cosf(roll) * cosf(pitch)}};
       state.gyro = (vec3_t){0};
       state.gyro.axis[axis] = i < 500 ? rate : 0;
-      state.gyro_delta_angle = vec3_mul(state.gyro, state.looptime);
+      state.gyro_delta_angle = state.gyro * state.looptime;
       imu_calc();
       TEST_ASSERT_FLOAT_WITHIN(0.5f * DEGTORAD, roll, state.attitude.roll);
       TEST_ASSERT_FLOAT_WITHIN(0.5f * DEGTORAD, pitch, state.attitude.pitch);
@@ -692,7 +692,7 @@ void test_attitude_imu_pipeline_yaw_while_tilted(void) {
   flags.on_ground = 0;
   const float yaw_rate = 30 * DEGTORAD;
   state.gyro = (vec3_t){{yaw_rate * sinf(pitch), -yaw_rate * sinf(roll) * cosf(pitch), yaw_rate * cosf(roll) * cosf(pitch)}};
-  state.gyro_delta_angle = vec3_mul(state.gyro, state.looptime);
+  state.gyro_delta_angle = state.gyro * state.looptime;
   for (int i = 0; i < 3000; i++) {
     imu_calc();
   }

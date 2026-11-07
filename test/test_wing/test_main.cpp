@@ -203,7 +203,7 @@ static vec3_t turn_setpoint_change(float roll) {
   const vec3_t uncoordinated = state.setpoint;
   profile.wing.turn_coordination = 1;
   control();
-  return vec3_sub(state.setpoint, uncoordinated);
+  return state.setpoint - uncoordinated;
 }
 static void test_level_turn_coordination_adds_turn_rates() {
   arm();
