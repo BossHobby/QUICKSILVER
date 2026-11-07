@@ -73,6 +73,14 @@ static vec3_t mahony_correct(vec3_t gyro, vec3_t gravity_estimate) {
   return gyro + error * kp;
 }
 
+// Rotate the attitude about the world z axis (gravity), changing yaw only.
+static void imu_rotate_yaw(float angle) {
+  const vec3_t z_axis = {{0, 0, 1}};
+  const quat_t correction = quat_from_axis_angle(&z_axis, angle);
+  attitude_state.orientation = quat_multiply(&correction, &attitude_state.orientation);
+  quat_normalize(&attitude_state.orientation);
+}
+
 static uint8_t gps_heading_sensor_blocks() {
   uint8_t sensor_blocks = 0;
   if (!state.gps_lock) sensor_blocks |= HEADING_NO_FIX;
@@ -157,17 +165,6 @@ static void gps_heading_update(float dt) {
   const float accuracy_weight = constrain((GPS_MAX_HEADING_ACCURACY - state.gps_heading_accuracy) / (GPS_MAX_HEADING_ACCURACY - GPS_FULL_HEADING_ACCURACY), 0.0f, 1.0f);
   const float fusion_gain = motion_gain * accuracy_weight;
 
-  // Seed once during ordinary flight; never snap yaw during an override.
-  if (!attitude_state.gps_heading_initialized && !flags.controls_override) {
-    attitude_state.gps_heading_initialized = true;
-    // Seeding a yaw reference is not proof of its reliability.
-    // Confidence still needs multiple consistent GPS observations after this sample.
-    float roll, pitch, yaw;
-    quat_to_euler(&attitude_state.orientation, &roll, &pitch, &yaw);
-    attitude_state.orientation = quat_from_euler(roll, pitch, state.gps_heading * DEGTORAD);
-    return;
-  }
-
   // calculate heading error
   float heading_error = state.gps_heading * DEGTORAD - state.attitude.yaw;
   while (heading_error > M_PI_F) {
@@ -175,6 +172,15 @@ static void gps_heading_update(float dt) {
   }
   while (heading_error < -M_PI_F) {
     heading_error += 2.0f * M_PI_F;
+  }
+
+  // Seed once during ordinary flight; never snap yaw during an override.
+  if (!attitude_state.gps_heading_initialized && !flags.controls_override) {
+    attitude_state.gps_heading_initialized = true;
+    // Seeding a yaw reference is not proof of its reliability.
+    // Confidence still needs multiple consistent GPS observations after this sample.
+    imu_rotate_yaw(heading_error);
+    return;
   }
 
   // Like Betaflight, require alignment within about 15 degrees. The observation
@@ -189,13 +195,9 @@ static void gps_heading_update(float dt) {
   if (fusion_gain > 0.01f) {
     attitude_state.gps_heading_initialized = true;
 
-    // convert heading error to rotation around z axis (gravity) and apply
-    const vec3_t z_axis = {{0, 0, 1}};
     const float correction_limit = (state.rth_active ? 45.0f : 10.0f) * DEGTORAD * gps_dt;
     const float correction_angle = constrain(heading_error * (1.0f - expf(-fusion_gain * gps_dt)), -correction_limit, correction_limit);
-    const quat_t correction = quat_from_axis_angle(&z_axis, correction_angle);
-    attitude_state.orientation = quat_multiply(&correction, &attitude_state.orientation);
-    quat_normalize(&attitude_state.orientation);
+    imu_rotate_yaw(correction_angle);
   }
 }
 
