@@ -9,6 +9,7 @@
 constexpr float M_PI_F = 3.14159265358979323846f;
 constexpr float DEGTORAD = M_PI_F / 180.0f;
 constexpr float RADTODEG = 180.0f / M_PI_F;
+constexpr float GRAVITY = 9.80665f; // m/s^2
 
 #define MEMORY_ALIGN(offset, size) (((offset) + ((size) - 1)) & -(size))
 
@@ -47,6 +48,11 @@ template <typename T, typename U>
 constexpr auto MAX(T a, U b) {
   using common_type = std::common_type_t<decltype(+a), decltype(+b)>;
   return common_type(a) > common_type(b) ? +a : +b;
+}
+
+// Move current toward target by at most step.
+constexpr float slew(float current, float target, float step) {
+  return constrain(target, current - step, current + step);
 }
 
 // Hardware builds use -Ofast, which can remove ordinary isfinite() checks.

@@ -6,6 +6,7 @@
 #include <unistd.h>
 
 #include "control/control.h"
+#include "control/mission.h"
 #include "core/profile.h"
 #include "core/tasks.h"
 #include "driver/time.h"
@@ -208,7 +209,7 @@ void test_osd_render_completes_before_transfer() {
   profile.osd = saved_osd;
 }
 
-static void assert_looptime_label(bool visible) {
+static void assert_status_label(const char *label, bool visible) {
   for (uint32_t i = 0; i < 64; i++) {
     if (osd_update())
       break;
@@ -216,7 +217,11 @@ static void assert_looptime_label(bool visible) {
   char row[51] = {};
   for (uint8_t x = 0; x < 50; x++)
     row[x] = simulator_osd_test_char(x, 0);
-  TEST_ASSERT_EQUAL(visible, strstr(row, "LOOPTIME") != nullptr);
+  TEST_ASSERT_EQUAL_MESSAGE(visible, strstr(row, label) != nullptr, row);
+}
+
+static void assert_looptime_label(bool visible) {
+  assert_status_label("LOOPTIME", visible);
 }
 
 void test_osd_looptime_warning_is_temporary_until_2khz() {
@@ -271,6 +276,115 @@ void test_osd_looptime_warning_is_temporary_until_2khz() {
   profile.osd.guac_mode = saved_guac;
   osd_clear();
   osd_status_reset();
+}
+
+void test_osd_mission_status_names_the_waypoint() {
+#ifndef VEHICLE_ROVER
+  const auto saved_state = state;
+  const auto saved_flags = flags;
+  const auto saved_mission = mission;
+  flags = {};
+  flags.rx_ready = 1;
+  flags.arm_state = 1;
+  state = {};
+  mission = {.count = 12};
+  state.nav_target = NAV_TARGET_MISSION;
+  state.mission_index = 9;
+#ifdef VEHICLE_WING
+  state.wing_nav_state = WING_NAV_MISSION;
+#else
+  state.nav_state = NAV_STATE_CLIMB;
+  state.nav_state = NAV_STATE_NAVIGATE;
+#endif
+  osd_element_t el = {};
+  osd_device_init();
+  osd_clear();
+  osd_status_reset();
+  simulator_osd_test_reset(false);
+  // Let the arming announcement expire.
+  osd_status_update(&el);
+  time_test_advance_us(1001000);
+  osd_status_update(&el);
+  osd_status_update(&el);
+  osd_status_update(&el);
+  assert_status_label("WP 10/12 FLY", true);
+
+  // Each arrival rewrites the label.
+  state.mission_index = 10;
+  osd_status_update(&el);
+  assert_status_label("WP 11/12 FLY", true);
+
+  // The distance to the waypoint, right-aligned.
+  state.nav_target_distance = 85.4f;
+  osd_status_update(&el);
+  assert_status_label("WP 11/12 FLY  85\x0c", true);
+  state.nav_target_distance = 2460;
+  osd_status_update(&el);
+  assert_status_label("WP 11/12 FLY 2.5\x7d", true);
+  state.nav_target_distance = 15200;
+  osd_status_update(&el);
+  assert_status_label("WP 11/12 FLY  15\x7d", true);
+
+#ifdef VEHICLE_MULTI
+  // Takeoff and landing name their phase and what the craft does.
+  state.mission_index = 11;
+  mission.waypoints[11].type = MISSION_WAYPOINT_LAND;
+  osd_status_update(&el);
+  assert_status_label("WP 12/12 LAND", true);
+  state.nav_state = NAV_STATE_LAND;
+  osd_status_update(&el);
+  assert_status_label("LAND: DESCENDING", true);
+  state.mission_index = 0;
+  state.nav_state = NAV_STATE_TAKEOFF_SPINUP;
+  osd_status_update(&el);
+  assert_status_label("TAKEOFF: SPINUP", true);
+  state.nav_state = NAV_STATE_TAKEOFF;
+  osd_status_update(&el);
+  assert_status_label("TAKEOFF: CLIMBING", true);
+  // The heading run after it reads as in any other navigation.
+  state.nav_state = NAV_STATE_ACQUIRE_HEADING;
+  osd_status_update(&el);
+  assert_status_label("ACQUIRING HEADING", true);
+
+  // Failsafe RTH readiness outranks the hint to toggle the mission switch.
+  const auto saved_navigation = profile.navigation;
+  const auto saved_gps = profile.serial.gps;
+  profile.navigation.rth_on_failsafe = true;
+  profile.serial.gps = SERIAL_PORT1;
+  state = {};
+  state.aux_active = 1U << AUX_MISSION;
+  osd_status_update(&el);
+  assert_status_label("NO BARO", true);
+
+  // A ground takeoff names what keeps it from starting, a missing fix first.
+  profile.navigation.rth_on_failsafe = false;
+  mission.waypoints[0] = {.coord = {.lon = 1, .lat = 1}, .altitude = 10, .type = MISSION_WAYPOINT_TAKEOFF};
+  flags.gps_valid = false;
+  osd_status_update(&el);
+  assert_status_label("TAKEOFF: NO GPS FIX", true);
+  flags.gps_valid = true;
+  flags.altitude_valid = true;
+  state.position = {.lon = 1, .lat = 1};
+  osd_status_update(&el);
+  assert_status_label("TAKEOFF: NO HOME", true); // armed since the start of the test
+  flags.home_valid = true;
+  osd_status_update(&el);
+  assert_status_label("TAKEOFF: TOGGLE SWITCH", true);
+  state.position = {.lon = 0, .lat = 2000};
+  osd_status_update(&el);
+  assert_status_label("TAKEOFF: MOVE TO WP 1", true);
+  flags.gps_valid = false;
+  flags.home_valid = false;
+  profile.navigation = saved_navigation;
+  profile.serial.gps = saved_gps;
+#endif
+
+  state = saved_state;
+  flags = saved_flags;
+  mission = saved_mission;
+  osd_clear();
+  osd_status_reset();
+#endif
 }
 
 void test_osd_renders_latest_telemetry() {

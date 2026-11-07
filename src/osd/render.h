@@ -149,6 +149,9 @@ void osd_thread(void *);
 void osd_display_reset();
 
 uint8_t osd_attr(osd_element_t *el);
+// Write distance in meters, or kilometers from 1000, as four characters for a
+// status label. Returns the end of the written text, unterminated.
+char *osd_format_distance(char *text, float distance);
 
 osd_screens_t osd_push_screen(osd_screens_t screen);
 osd_screens_t osd_push_screen_replace(osd_screens_t screen);

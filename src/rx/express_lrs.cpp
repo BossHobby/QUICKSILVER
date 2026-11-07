@@ -340,8 +340,8 @@ static void elrs_connection_lost(void) {
 static void elrs_update_signal_loss(uint32_t now_us) {
   if (elrs_state == CONNECTED &&
       flags.rx_ready &&
-      state.last_frame_time_us != 0 &&
-      now_us - state.last_frame_time_us > FAILSAFE_DETECT_TIME_US) {
+      state.rx_frame_time_us != 0 &&
+      now_us - state.rx_frame_time_us > FAILSAFE_DETECT_TIME_US) {
     flags.failsafe_signal_lost = 1;
   }
 }

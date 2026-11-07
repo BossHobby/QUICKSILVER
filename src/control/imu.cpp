@@ -35,7 +35,15 @@
 #define GPS_MAX_HEADING_ACCURACY 15.0f // degrees, reject course at or above this uncertainty
 #define GPS_HEADING_STALE_MS 500U
 #define CONFIDENCE_TIME_CONSTANT 2.0f // seconds of consistent forward motion
-#define GRAVITY_MSS 9.80665f
+// Like Betaflight, GPS course or an observed heading counts toward confidence
+// within this much error.
+static constexpr float HEADING_ALIGNED_ERROR = 15.0f; // degrees
+// Heading observed from accelerations: unlike course, it holds whichever way
+// the vehicle moves relative to its nose.
+static constexpr float ACCEL_HEADING_TIME = 2.0f;      // seconds, correction time constant
+static constexpr float ACCEL_HEADING_MAX_RATE = 45.0f; // degrees/s
+// Noisier GPS velocity than this differentiates into a false tilt.
+static constexpr float GPS_ACCEL_MAX_SPEED_ACCURACY = 0.5f; // m/s
 
 #ifdef VEHICLE_WING
 #define GPS_HEADING_ROLL_LIMIT 25.0f // degrees
@@ -48,6 +56,7 @@ typedef struct {
   float yaw_suppression;
   uint32_t last_gps_heading_update_ms;
   bool gps_heading_initialized;
+  bool gps_heading_rejected; // navigation rejected the heading; reseed it during acquisition
   bool gps_heading_sample_seen;
   bool armed;
 } attitude_state_t;
@@ -73,17 +82,36 @@ static vec3_t mahony_correct(vec3_t gyro, vec3_t gravity_estimate) {
   return gyro + error * kp;
 }
 
-// Rotate the attitude about the world z axis (gravity), changing yaw only.
+// Wrap radians from -2pi..2pi into -pi..pi.
+static float imu_wrap_angle(float angle) {
+  if (angle > M_PI_F)
+    return angle - 2.0f * M_PI_F;
+  if (angle < -M_PI_F)
+    return angle + 2.0f * M_PI_F;
+  return angle;
+}
+
+static void imu_publish_heading() {
+  const float heading = state.attitude.yaw * RADTODEG;
+  state.heading = heading < 0.0f ? heading + 360.0f : heading;
+}
+
+// Rotate the attitude about the world z axis (gravity) by up to pi, changing
+// yaw only: the published yaw and heading follow at once, so a later
+// correction in the same pass compares against the turned heading.
 static void imu_rotate_yaw(float angle) {
   const vec3_t z_axis = {{0, 0, 1}};
   const quat_t correction = quat_from_axis_angle(&z_axis, angle);
   attitude_state.orientation = quat_multiply(&correction, &attitude_state.orientation);
   quat_normalize(&attitude_state.orientation);
+  state.attitude.yaw = imu_wrap_angle(state.attitude.yaw + angle);
+  imu_publish_heading();
+  state.heading_correction_total = imu_wrap_angle(state.heading_correction_total + angle);
 }
 
 static uint8_t gps_heading_sensor_blocks() {
   uint8_t sensor_blocks = 0;
-  if (!state.gps_lock) sensor_blocks |= HEADING_NO_FIX;
+  if (!state.gps_health.lock) sensor_blocks |= HEADING_NO_FIX;
   if (time_millis() - state.gps_last_update_ms > GPS_HEADING_STALE_MS)
     sensor_blocks |= HEADING_STALE;
   if (!float_is_finite(state.gps_speed) || state.gps_speed <= GPS_MIN_SPEED)
@@ -96,17 +124,18 @@ static uint8_t gps_heading_sensor_blocks() {
 // Publish all motion-related rejection reasons, then weight usable course data.
 static float gps_heading_gain() {
   state.heading_correction_flags = 0;
-  if (state.rth_active && state.rth_state != RTH_STATE_ACQUIRE_HEADING) {
-    if (state.rth_state != RTH_STATE_NAVIGATE)
-      state.heading_correction_flags |= HEADING_RTH_PHASE;
+  if (state.nav_state >= NAV_STATE_CLIMB && state.nav_state != NAV_STATE_ACQUIRE_HEADING) {
+    if (state.nav_state != NAV_STATE_NAVIGATE)
+      state.heading_correction_flags |= HEADING_NAV_PHASE;
     // Course is only a nose reference while commanding forward motion.
     if (state.rx_override.pitch <= 0.02f || fabsf(state.rx_override.roll) >= state.rx_override.pitch || state.attitude.pitch <= 0)
       state.heading_correction_flags |= HEADING_NOT_FORWARD;
     if (state.heading_correction_flags) return 0.0f;
 
-    const float bearing = state.home_bearing * DEGTORAD;
-    const float speed_home = state.gps_vel_north * fastcos(bearing) + state.gps_vel_east * fastsin(bearing);
-    const float recovery = constrain((state.gps_speed - speed_home) / GPS_TRUST_SPEED, 0.0f, 3.5f);
+    const float bearing = state.nav_target_bearing * DEGTORAD;
+    const vec2_t target_dir = {{fastcos(bearing), fastsin(bearing)}};
+    const float speed_target = vec2_dot(vec3_horizontal(state.gps_velocity), target_dir);
+    const float recovery = constrain((state.gps_speed - speed_target) / GPS_TRUST_SPEED, 0.0f, 3.5f);
     const float speed_quality = constrain((state.gps_speed - GPS_MIN_SPEED) / (GPS_TRUST_SPEED - GPS_MIN_SPEED), 0.0f, 1.0f);
     return GPS_HEADING_KP * speed_quality * (constrain(state.attitude.pitch / (30.0f * DEGTORAD), 0.0f, 2.0f) + recovery);
   }
@@ -123,11 +152,11 @@ static float gps_heading_gain() {
   if (roll_suppression <= 0) state.heading_correction_flags |= HEADING_ROLL;
   if (attitude_state.yaw_suppression < 0.1f)
     state.heading_correction_flags |= HEADING_YAW;
-  if (pitch_gain <= 0 && (attitude_state.gps_heading_initialized || state.rth_active))
+  if (pitch_gain <= 0 && (attitude_state.gps_heading_initialized || state.nav_state >= NAV_STATE_CLIMB))
     state.heading_correction_flags |= HEADING_NOT_FORWARD;
-  if (flags.controls_override && !state.rth_active)
+  if (flags.controls_override && state.nav_state < NAV_STATE_CLIMB)
     state.heading_correction_flags |= HEADING_NOT_FORWARD;
-  if (state.rth_active && (state.rx_override.pitch <= 0.02f || state.attitude.pitch < 5.0f * DEGTORAD))
+  if (state.nav_state >= NAV_STATE_CLIMB && (state.rx_override.pitch <= 0.02f || state.attitude.pitch < 5.0f * DEGTORAD))
     state.heading_correction_flags |= HEADING_NOT_FORWARD;
   if (state.heading_correction_flags) return 0.0f;
 
@@ -141,6 +170,9 @@ static void gps_heading_update(float dt) {
   const float yaw_ratio = MIN(fabsf(state.gyro.yaw) * RADTODEG / 10.0f, 1.0f);
   const float yaw_factor = 1.0f - yaw_ratio * yaw_ratio;
   attitude_state.yaw_suppression = MIN(yaw_factor, attitude_state.yaw_suppression + dt / (1.0f + dt) * (yaw_factor - attitude_state.yaw_suppression));
+  // A rejection lasts only for the acquisition navigation starts with it.
+  if (state.nav_state != NAV_STATE_ACQUIRE_HEADING)
+    attitude_state.gps_heading_rejected = false;
 
   const uint8_t sensor_blocks = gps_heading_sensor_blocks();
   if (sensor_blocks) {
@@ -165,6 +197,17 @@ static void gps_heading_update(float dt) {
   const float accuracy_weight = constrain((GPS_MAX_HEADING_ACCURACY - state.gps_heading_accuracy) / (GPS_MAX_HEADING_ACCURACY - GPS_FULL_HEADING_ACCURACY), 0.0f, 1.0f);
   const float fusion_gain = motion_gain * accuracy_weight;
 
+  // A rejected heading reseeds once forward speed dominates the course; slower,
+  // the course still swings with the momentum the rejection left. Acquisition
+  // flies the nose without earth-frame steering, so the snap moves nothing.
+  bool reseed = false;
+  if (attitude_state.gps_heading_rejected) {
+    if (state.gps_speed < GPS_TRUST_SPEED)
+      return;
+    attitude_state.gps_heading_rejected = false;
+    reseed = true;
+  }
+
   // calculate heading error
   float heading_error = state.gps_heading * DEGTORAD - state.attitude.yaw;
   while (heading_error > M_PI_F) {
@@ -174,8 +217,9 @@ static void gps_heading_update(float dt) {
     heading_error += 2.0f * M_PI_F;
   }
 
-  // Seed once during ordinary flight; never snap yaw during an override.
-  if (!attitude_state.gps_heading_initialized && !flags.controls_override) {
+  // Seed once during ordinary flight; never snap yaw while an override
+  // steers in the earth frame.
+  if ((!attitude_state.gps_heading_initialized && !flags.controls_override) || reseed) {
     attitude_state.gps_heading_initialized = true;
     // Seeding a yaw reference is not proof of its reliability.
     // Confidence still needs multiple consistent GPS observations after this sample.
@@ -183,11 +227,11 @@ static void gps_heading_update(float dt) {
     return;
   }
 
-  // Like Betaflight, require alignment within about 15 degrees. The observation
+  // Require alignment within HEADING_ALIGNED_ERROR. The observation
   // strength sets how quickly confidence follows that alignment, not its level:
   // slowing down or flying at a shallow tilt weakens the evidence without
   // contradicting the integrated heading.
-  const float alignment = MAX(1.0f - fabsf(heading_error) / (15.0f * DEGTORAD), 0.0f);
+  const float alignment = MAX(1.0f - fabsf(heading_error) / (HEADING_ALIGNED_ERROR * DEGTORAD), 0.0f);
   const float evidence_dt = MIN(fusion_gain, 1.0f) * gps_dt;
   state.heading_confidence += evidence_dt / (CONFIDENCE_TIME_CONSTANT + evidence_dt) * (alignment - state.heading_confidence);
 
@@ -195,7 +239,7 @@ static void gps_heading_update(float dt) {
   if (fusion_gain > 0.01f) {
     attitude_state.gps_heading_initialized = true;
 
-    const float correction_limit = (state.rth_active ? 45.0f : 10.0f) * DEGTORAD * gps_dt;
+    const float correction_limit = (state.nav_state >= NAV_STATE_CLIMB ? 45.0f : 10.0f) * DEGTORAD * gps_dt;
     const float correction_angle = constrain(heading_error * (1.0f - expf(-fusion_gain * gps_dt)), -correction_limit, correction_limit);
     imu_rotate_yaw(correction_angle);
   }
@@ -228,8 +272,7 @@ static void imu_update_attitude(bool gravity_valid) {
   state.attitude.pitch = -state.attitude.pitch;
 
   // Euler extraction already bounds yaw to +/-180 degrees.
-  const float heading = state.attitude.yaw * RADTODEG;
-  state.heading = heading < 0.0f ? heading + 360.0f : heading;
+  imu_publish_heading();
   // Publish rejected samples too, so diagnostics do not freeze.
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 0, (int16_t)(state.heading * 10));
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 1, (int16_t)(state.gps_heading * 10));
@@ -249,6 +292,22 @@ static void imu_reset_attitude() {
   state.heading_correction_flags = HEADING_NO_FIX;
   attitude_state.orientation = quat_identity();
   attitude_state.yaw_suppression = 1.0f;
+}
+
+void imu_observe_heading(float error, float dt) {
+  if (!gps_enabled || !float_is_finite(error))
+    return;
+  const float alignment = MAX(1.0f - fabsf(error) / (HEADING_ALIGNED_ERROR * DEGTORAD), 0.0f);
+  state.heading_confidence += dt / (CONFIDENCE_TIME_CONSTANT + dt) * (alignment - state.heading_confidence);
+  const float limit = ACCEL_HEADING_MAX_RATE * DEGTORAD * dt;
+  const float correction = constrain(error * dt / (ACCEL_HEADING_TIME + dt), -limit, limit);
+  imu_rotate_yaw(correction);
+  attitude_state.gps_heading_initialized = true;
+}
+
+void imu_reject_heading() {
+  state.heading_confidence = 0.0f;
+  attitude_state.gps_heading_rejected = true;
 }
 
 void imu_filter_update() {
@@ -282,7 +341,7 @@ void imu_init() {
 // acceleration without a heading, which GPS course biases by the crab angle.
 static vec3_t imu_gravity_reference(vec3_t accel) {
   // Held for a throw, the wing turns without flying along its nose.
-  const bool in_hand = state.wing_launch_available && state.wing_launch_state < WING_LAUNCH_DETECTED;
+  const bool in_hand = flags.wing_launch_available && state.wing_launch_state < WING_LAUNCH_DETECTED;
   if (!flags.in_air || in_hand)
     return accel;
 
@@ -290,7 +349,7 @@ static vec3_t imu_gravity_reference(vec3_t accel) {
   // nose-down pitch. Turning right adds a rightward acceleration, and pulling
   // the nose up adds load along body up.
   const float speed = profile.navigation.cruise_speed / state.wing_speed_scale;
-  const float scale = speed * (ACC_1G / GRAVITY_MSS);
+  const float scale = speed * (ACC_1G / GRAVITY);
   accel.roll += scale * state.gyro.yaw;
   accel.yaw += scale * state.gyro.pitch;
   return accel;
@@ -298,18 +357,26 @@ static vec3_t imu_gravity_reference(vec3_t accel) {
 #else
 // The accelerometer measures gravity plus motion. Multirotor RTH drag
 // deceleration otherwise reads as tilt, so the level command holds a real
-// attitude offset. Remove the horizontal acceleration navigation publishes
-// while it trusts heading.
+// attitude offset. Remove the horizontal acceleration GPS measures, turned by
+// heading: only while navigation steers on a trusted heading clear of the
+// ground, and the receiver trusts its velocity, whose noise would otherwise
+// differentiate into false tilt. Leveling during CLIMB is a drag brake too.
+// Taking off and landing, the ground may hold the craft still.
 static vec3_t imu_gravity_reference(vec3_t accel) {
-  const float north = state.nav_accel_north;
-  const float east = state.nav_accel_east;
+  const bool steering = state.nav_state >= NAV_STATE_CLIMB && state.nav_state != NAV_STATE_ACQUIRE_HEADING &&
+                        state.nav_state != NAV_STATE_HEADING_FAILED && state.ground_effect == GROUND_EFFECT_NONE;
+  if (!steering || !flags.gps_valid || state.gps_speed_accuracy > GPS_ACCEL_MAX_SPEED_ACCURACY ||
+      state.heading_confidence < NAV_MIN_HEADING_CONFIDENCE)
+    return accel;
+  const float north = state.gps_accel.north;
+  const float east = state.gps_accel.east;
   if (north == 0.0f && east == 0.0f)
     return accel;
   const float heading = state.heading * DEGTORAD;
   const float cos_heading = fastcos(heading);
   const float sin_heading = fastsin(heading);
-  const float forward = (north * cos_heading + east * sin_heading) * (ACC_1G / GRAVITY_MSS);
-  const float left = (north * sin_heading - east * cos_heading) * (ACC_1G / GRAVITY_MSS);
+  const float forward = (north * cos_heading + east * sin_heading) * (ACC_1G / GRAVITY);
+  const float left = (north * sin_heading - east * cos_heading) * (ACC_1G / GRAVITY);
 
   // Legacy body axes are {left, back, up}. Project the nose onto the plane
   // normal to the gravity estimate to find the level forward and left axes.
@@ -337,12 +404,6 @@ HOT_CODE void imu_calc() {
   state.accel = accel_filter[1].step(accel_filter[0].step(state.accel_raw));
 
   const vec3_t gravity_reference = imu_gravity_reference(state.accel);
-
-  const float accmag_squared = vec3_dot(state.accel, state.accel);
-  if (accmag_squared > (ACC_MIN * ACC_1G) * (ACC_MIN * ACC_1G) && accmag_squared < (ACC_MAX * ACC_1G) * (ACC_MAX * ACC_1G)) {
-    const float accel_scale = ACC_1G / sqrtf(accmag_squared);
-    state.accel *= accel_scale;
-  }
 
   const float refmag_squared = vec3_dot(gravity_reference, gravity_reference);
   if (refmag_squared > (ACC_MIN * ACC_1G) * (ACC_MIN * ACC_1G) && refmag_squared < (ACC_MAX * ACC_1G) * (ACC_MAX * ACC_1G)) {

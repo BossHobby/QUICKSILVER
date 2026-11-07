@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include "control/control.h"
-#include "control/navigation.h"
 #include "core/profile.h"
 #include "core/target.h"
 #include "io/gps.h"
@@ -191,7 +190,7 @@ uint32_t crsf_tlm_frame_baro_altitude(uint8_t *buf) {
 
   const int32_t altitude_dm = lrintf(constrain(state.altitude * 10.0f, -1.0e6f, 1.0e6f));
   frame->payload.altitude = __builtin_bswap16(crsf_altitude_packed(altitude_dm));
-  frame->payload.vertical_speed = crsf_vertical_speed_packed(state.vertical_speed * 100.0f);
+  frame->payload.vertical_speed = crsf_vertical_speed_packed(state.velocity.up * 100.0f);
   return crsf_tlm_frame_finalize(buf, CRSF_FRAME_BARO_ALTITUDE_PAYLOAD_SIZE);
 }
 
@@ -212,8 +211,9 @@ uint32_t crsf_tlm_frame_gps(uint8_t *buf) {
   crsf_gps_frame_t *frame = (crsf_gps_frame_t *)buf;
   frame->header.type = CRSF_FRAMETYPE_GPS;
 
-  frame->payload.latitude = __builtin_bswap32((uint32_t)state.gps_coord.lat);
-  frame->payload.longitude = __builtin_bswap32((uint32_t)state.gps_coord.lon);
+  // The position navigation flies, so the ground station sees the same one.
+  frame->payload.latitude = __builtin_bswap32((uint32_t)state.position.lat);
+  frame->payload.longitude = __builtin_bswap32((uint32_t)state.position.lon);
 
   // 0.1 km/h from m/s.
   frame->payload.ground_speed = __builtin_bswap16((uint16_t)constrain(state.gps_speed * 36.0f, 0.0f, 65535.0f));
@@ -267,15 +267,15 @@ uint32_t crsf_tlm_frame_gps_extended(uint8_t *buf) {
 
 // Returns 0 while no home is latched.
 uint32_t crsf_tlm_frame_gps_home(uint8_t *buf) {
-  if (!nav_home_valid())
+  if (!flags.home_valid)
     return 0;
 
   crsf_gps_home_frame_t *frame = (crsf_gps_home_frame_t *)buf;
   frame->header.type = CRSF_FRAMETYPE_GPS_HOME;
   frame->payload = (crsf_gps_home_payload_t){
-      .latitude = (int32_t)__builtin_bswap32((uint32_t)state.gps_home.lat),
-      .longitude = (int32_t)__builtin_bswap32((uint32_t)state.gps_home.lon),
-      .altitude = __builtin_bswap16((uint16_t)(nav_home_altitude() + 1000)),
+      .latitude = (int32_t)__builtin_bswap32((uint32_t)state.home.lat),
+      .longitude = (int32_t)__builtin_bswap32((uint32_t)state.home.lon),
+      .altitude = __builtin_bswap16((uint16_t)(state.home_altitude + 1000)),
   };
   return crsf_tlm_frame_finalize(buf, CRSF_FRAME_GPS_HOME_PAYLOAD_SIZE);
 }
@@ -322,16 +322,24 @@ uint32_t crsf_tlm_frame_msp_resp(uint8_t *buf, uint8_t origin, const uint8_t *pa
   return crsf_tlm_frame_finalize(buf, size + CRSF_FRAME_ORIGIN_DEST_SIZE);
 }
 
-uint32_t crsf_frame_quic(uint8_t *buf, uint8_t destination, const uint8_t *payload, uint8_t size) {
+static uint32_t crsf_frame_extended(uint8_t *buf, uint8_t type, uint8_t destination, const uint8_t *payload, uint8_t size) {
   if (size > CRSF_PAYLOAD_SIZE_MAX - CRSF_FRAME_ORIGIN_DEST_SIZE)
     size = CRSF_PAYLOAD_SIZE_MAX - CRSF_FRAME_ORIGIN_DEST_SIZE;
 
   crsf_frame_header_t *frame = (crsf_frame_header_t *)buf;
-  frame->type = CRSF_FRAMETYPE_QUIC;
+  frame->type = type;
 
   crsf_extended_header_t *extended = (crsf_extended_header_t *)(buf + sizeof(*frame));
   extended->destination = destination;
   extended->origin = CRSF_ADDRESS_FLIGHT_CONTROLLER;
   memcpy(extended + 1, payload, size);
   return crsf_tlm_frame_finalize(buf, CRSF_FRAME_ORIGIN_DEST_SIZE + size);
+}
+
+uint32_t crsf_frame_quic(uint8_t *buf, uint8_t destination, const uint8_t *payload, uint8_t size) {
+  return crsf_frame_extended(buf, CRSF_FRAMETYPE_QUIC, destination, payload, size);
+}
+
+uint32_t crsf_frame_quic_rt(uint8_t *buf, uint8_t destination, const uint8_t *payload, uint8_t size) {
+  return crsf_frame_extended(buf, CRSF_FRAMETYPE_QUIC_RT, destination, payload, size);
 }

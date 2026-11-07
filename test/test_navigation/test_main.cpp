@@ -5,14 +5,17 @@
 
 #include "control/control.h"
 #include "control/imu.h"
+#include "control/mission.h"
 #include "control/navigation.h"
 
 #include "rx/rx.h"
 #include "util/util.h"
+#include "control/multi/nav_control.h"
 #include "control/multi/navigation.h"
 #include "core/profile.h"
 #include "driver/time.h"
 #include "driver/baro/baro.h"
+#include "io/quic_rt.h"
 #include "mock_helpers.h"
 
 extern void imu_test_attitude_init();
@@ -22,22 +25,19 @@ void setUp() { time_test_reset(); }
 void tearDown() {}
 
 extern void nav_test_reset(void);
-extern void nav_test_update_rth(void);
+extern void nav_test_rth_start(void);
+extern void nav_test_stop(void);
+extern void nav_test_mission_start(void);
+extern void nav_test_update_control(float dt);
 extern void nav_test_altitude_sample(float altitude, uint32_t now_ms);
-extern void nav_test_altitude_control(float target, float rate, float dt);
 extern void control_test_flight_mode(void);
 extern float control_test_throttle_input(void);
 extern void nav_test_update_horizontal_control(float dt);
 extern void nav_test_update_gps_sanity(void);
-extern bool nav_test_gps_sane(void);
-extern void nav_test_set_home_valid(bool valid);
-extern void nav_test_set_gps_sane(bool sane);
 extern void nav_test_vertical_update(float dt);
-extern void nav_test_set_hover_learned(float throttle);
-extern void nav_test_update_hover(float dt);
-static void set_altitude_source(bool valid, uint32_t update_ms) {
-  state.baro_valid = valid;
-  state.baro_last_update_ms = update_ms;
+extern void nav_test_set_vertical(float altitude, float climb);
+static void set_altitude_source(bool valid) {
+  flags.altitude_valid = valid;
 }
 
 #define GPS_DEG_10M 899
@@ -46,6 +46,7 @@ static void set_altitude_source(bool valid, uint32_t update_ms) {
 static void sim_vertical(float accel_up, float dt) {
   state.GEstG = (vec3_t){{0, 0, 1}};
   state.accel_raw = (vec3_t){{0, 0, 1.0f + accel_up / 9.80665f}};
+  state.accel = state.accel_raw;
   nav_test_vertical_update(dt);
 }
 
@@ -65,11 +66,14 @@ static void navigation_test_setup(void) {
   baro_init();
   nav_init();
   profile.serial.gps = SERIAL_PORT1;
-  state.gps_lock = true;
-  state.gps_sats = GPS_MIN_SATS_FOR_LOCK;
+  state.gps_health.lock = true;
+  state.gps_sats = 12; // a good fix, as the plant reports
   state.heading = 0.0f;
   state.gps_heading = 0.0f;
   state.gps_speed = 0.0f;
+  // Level and unaccelerated.
+  state.GEstG = (vec3_t){{0, 0, 1}};
+  state.accel = state.GEstG;
   profile.rate.level_max_angle = 60.0f;
   profile.rate.profile = STICK_RATE_PROFILE_1;
   profile.rate.rates[STICK_RATE_PROFILE_1].mode = RATE_MODE_ACTUAL;
@@ -82,13 +86,14 @@ static void navigation_test_setup(void) {
   profile.rate.rates[STICK_RATE_PROFILE_1].rate[ACTUAL_EXPO].roll = 0.0f;
   profile.rate.rates[STICK_RATE_PROFILE_1].rate[ACTUAL_EXPO].pitch = 0.0f;
   profile.rate.rates[STICK_RATE_PROFILE_1].rate[ACTUAL_EXPO].yaw = 0.0f;
-  profile.navigation.rth_cruise_speed = 8.0f;
+  profile.navigation.travel_speed = 8.0f;
   profile.rate.level_max_angle = 25.0f;
-  profile.navigation.rth_throttle_min = 0.1f;
-  profile.navigation.rth_throttle_hover = 0.5f;
-  profile.navigation.rth_throttle_max = 0.75f;
+  profile.navigation.throttle_min = 0.1f;
+  profile.navigation.throttle_hover = 0.5f;
+  profile.navigation.throttle_max = 0.75f;
   profile.navigation.rth_altitude = 10.0f;
   profile.navigation.rth_on_failsafe = true;
+  profile.navigation.mission_on_failsafe = true;
   state.GEstG.yaw = 1;
   state.accel_raw = (vec3_t){{0, 0, 1}};
   imu_test_attitude_init();
@@ -99,10 +104,10 @@ static void navigation_test_setup(void) {
 void test_navigation_target_north_commands_forward_pitch(void) {
   navigation_test_setup();
 
-  state.gps_coord.lat = 0;
-  state.gps_coord.lon = 0;
-  state.gps_home.lat = GPS_DEG_10M;
-  state.gps_home.lon = 0;
+  state.position.lat = 0;
+  state.position.lon = 0;
+  state.home.lat = GPS_DEG_10M;
+  state.home.lon = 0;
 
   nav_test_update_horizontal_control(0.1f);
 
@@ -113,10 +118,10 @@ void test_navigation_target_north_commands_forward_pitch(void) {
 void test_navigation_target_south_commands_backward_pitch(void) {
   navigation_test_setup();
 
-  state.gps_coord.lat = 0;
-  state.gps_coord.lon = 0;
-  state.gps_home.lat = -GPS_DEG_10M;
-  state.gps_home.lon = 0;
+  state.position.lat = 0;
+  state.position.lon = 0;
+  state.home.lat = -GPS_DEG_10M;
+  state.home.lon = 0;
 
   nav_test_update_horizontal_control(0.1f);
 
@@ -127,10 +132,10 @@ void test_navigation_target_south_commands_backward_pitch(void) {
 void test_navigation_target_east_commands_right_roll(void) {
   navigation_test_setup();
 
-  state.gps_coord.lat = 0;
-  state.gps_coord.lon = 0;
-  state.gps_home.lat = 0;
-  state.gps_home.lon = GPS_DEG_10M;
+  state.position.lat = 0;
+  state.position.lon = 0;
+  state.home.lat = 0;
+  state.home.lon = GPS_DEG_10M;
 
   nav_test_update_horizontal_control(0.1f);
 
@@ -142,10 +147,10 @@ void test_navigation_heading_east_target_north_commands_left_roll(void) {
   navigation_test_setup();
 
   state.heading = 90.0f;
-  state.gps_coord.lat = 0;
-  state.gps_coord.lon = 0;
-  state.gps_home.lat = GPS_DEG_10M;
-  state.gps_home.lon = 0;
+  state.position.lat = 0;
+  state.position.lon = 0;
+  state.home.lat = GPS_DEG_10M;
+  state.home.lon = 0;
 
   nav_test_update_horizontal_control(0.1f);
 
@@ -156,11 +161,11 @@ void test_navigation_heading_east_target_north_commands_left_roll(void) {
 void test_navigation_north_velocity_overshoot_commands_backward_pitch(void) {
   navigation_test_setup();
 
-  state.gps_coord.lat = 0;
-  state.gps_coord.lon = 0;
-  state.gps_home.lat = GPS_DEG_10M;
-  state.gps_home.lon = 0;
-  state.gps_vel_north = 12.0f;
+  state.position.lat = 0;
+  state.position.lon = 0;
+  state.home.lat = GPS_DEG_10M;
+  state.home.lon = 0;
+  state.velocity.axis[0] = 12.0f;
 
   nav_test_update_horizontal_control(0.1f);
 
@@ -171,16 +176,32 @@ void test_navigation_north_velocity_overshoot_commands_backward_pitch(void) {
 void test_navigation_east_velocity_overshoot_commands_left_roll(void) {
   navigation_test_setup();
 
-  state.gps_coord.lat = 0;
-  state.gps_coord.lon = 0;
-  state.gps_home.lat = 0;
-  state.gps_home.lon = GPS_DEG_10M;
-  state.gps_vel_east = 12.0f;
+  state.position.lat = 0;
+  state.position.lon = 0;
+  state.home.lat = 0;
+  state.home.lon = GPS_DEG_10M;
+  state.velocity.axis[1] = 12.0f;
 
   nav_test_update_horizontal_control(0.1f);
 
   TEST_ASSERT_TRUE(state.rx_override.roll < 0.0f);
   TEST_ASSERT_FLOAT_WITHIN(0.05f, 0.0f, state.rx_override.pitch);
+}
+
+void test_navigation_takeover_keeps_speed_toward_the_target(void) {
+  navigation_test_setup();
+
+  // Taking over a pilot already flying at the target at cruise speed.
+  state.position.lat = 0;
+  state.position.lon = 0;
+  state.home.lat = 10 * GPS_DEG_10M;
+  state.home.lon = 0;
+  state.velocity.axis[0] = profile.navigation.travel_speed;
+
+  for (int i = 0; i < 100; i++) {
+    nav_test_update_horizontal_control(0.01f);
+    TEST_ASSERT_FLOAT_WITHIN(0.02f, 0.0f, state.rx_override.pitch);
+  }
 }
 
 void test_navigation_command_respects_level_angle_limit(void) {
@@ -189,8 +210,8 @@ void test_navigation_command_respects_level_angle_limit(void) {
     navigation_test_setup();
     profile.rate.level_max_angle = limit;
     state.heading_confidence = 1;
-    state.gps_home.lat = GPS_DEG_10M;
-    state.gps_vel_north = -20; // Demand enough tilt to reach the limit.
+    state.home.lat = GPS_DEG_10M;
+    state.velocity.axis[0] = -20; // Demand enough tilt to reach the limit.
     for (int i = 0; i < 200; i++) nav_test_update_horizontal_control(0.01f);
     TEST_ASSERT_FLOAT_WITHIN(0.001f, 1, state.rx_override.pitch);
     state.heading_confidence = 0.5f;
@@ -203,29 +224,56 @@ void test_navigation_rth_requires_recent_altitude_source(void) {
   navigation_test_setup();
 
   flags.arm_state = 1;
+  flags.in_air = 1;
   state.home_distance = 20.0f;
-  nav_test_set_home_valid(true);
-  nav_test_set_gps_sane(true);
-  set_altitude_source(false, 0);
+  flags.home_valid = true;
+  flags.gps_valid = true;
+  set_altitude_source(false);
 
-  nav_rth_start();
-  TEST_ASSERT_FALSE(state.rth_active);
+  nav_test_rth_start();
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB);
 
   time_test_set_us(1000000);
-  set_altitude_source(true, time_millis());
+  set_altitude_source(true);
 
-  nav_rth_start();
-  TEST_ASSERT_TRUE(state.rth_active);
-  TEST_ASSERT_EQUAL_UINT8(RTH_STATE_CLIMB, state.rth_state);
-  TEST_ASSERT_FALSE(state.rth_failsafe_active);
-  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.rth_yaw_rate);
+  nav_test_rth_start();
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+  TEST_ASSERT_EQUAL_UINT8(NAV_STATE_CLIMB, state.nav_state);
+  TEST_ASSERT_NOT_EQUAL(FAILSAFE_OWNER_RTH, state.failsafe_owner);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.nav_yaw_rate);
 
-  state.rth_yaw_rate = 0.25f;
-  nav_rth_stop();
-  TEST_ASSERT_FALSE(state.rth_active);
-  TEST_ASSERT_FALSE(state.rth_failsafe_active);
-  TEST_ASSERT_EQUAL_UINT8(RTH_STATE_INACTIVE, state.rth_state);
-  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.rth_yaw_rate);
+  state.nav_yaw_rate = 0.25f;
+  nav_test_stop();
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB);
+  TEST_ASSERT_NOT_EQUAL(FAILSAFE_OWNER_RTH, state.failsafe_owner);
+  TEST_ASSERT_EQUAL_UINT8(NAV_STATE_INACTIVE, state.nav_state);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.nav_yaw_rate);
+}
+
+// Navigation accepts a fix as ArduPilot's GPS pre-arm limits do, and keeps it
+// until it fails looser limits. The LR4 flew a return on 5 satellites, 17 m
+// and 3.8 m/s accuracy, and its velocity read half the speed it flew.
+void test_navigation_accepts_only_a_good_fix(void) {
+  navigation_test_setup();
+  time_test_set_us(1000000);
+  const auto sample = [](uint8_t sats, float horizontal, float speed) {
+    time_test_advance_us(100000);
+    state.gps_sats = sats;
+    state.gps_horizontal_accuracy = horizontal;
+    state.gps_speed_accuracy = speed;
+    state.gps_last_update_ms = time_millis();
+    nav_test_update_gps_sanity();
+    return (bool)flags.gps_valid;
+  };
+  TEST_ASSERT_FALSE(sample(5, 1.0f, 0.3f));
+  TEST_ASSERT_FALSE(sample(12, 6.0f, 0.3f));
+  TEST_ASSERT_FALSE(sample(12, 1.0f, 1.2f));
+  TEST_ASSERT_TRUE(sample(6, 4.0f, 0.8f));
+  // Accepted, a marginal fix keeps.
+  TEST_ASSERT_TRUE(sample(5, 7.0f, 1.4f));
+  TEST_ASSERT_FALSE(sample(5, 17.0f, 3.8f));
+  // And must meet the stricter limits again.
+  TEST_ASSERT_FALSE(sample(5, 7.0f, 1.4f));
 }
 
 void test_navigation_resets_gps_jump_baseline_after_outage(void) {
@@ -233,47 +281,80 @@ void test_navigation_resets_gps_jump_baseline_after_outage(void) {
 
   time_test_set_us(1000000);
   state.gps_horizontal_accuracy = 1.0f;
-  state.gps_coord.lat = 0;
-  state.gps_coord.lon = 0;
+  state.gps_coord = {};
   state.gps_last_update_ms = time_millis();
 
   nav_test_update_gps_sanity();
-  TEST_ASSERT_TRUE(nav_test_gps_sane());
+  TEST_ASSERT_TRUE(flags.gps_valid);
 
   time_test_advance_us((500U + 1U) * 1000U);
   nav_test_update_gps_sanity();
-  TEST_ASSERT_FALSE(nav_test_gps_sane());
+  TEST_ASSERT_FALSE(flags.gps_valid);
 
+  // After the outage the next fix is the new baseline, however far it moved.
   state.gps_coord.lat = GPS_DEG_10M * 10;
-  state.gps_coord.lon = 0;
   state.gps_last_update_ms = time_millis();
 
   nav_test_update_gps_sanity();
-  TEST_ASSERT_TRUE(nav_test_gps_sane());
+  TEST_ASSERT_TRUE(flags.gps_valid);
+}
+
+// Feed one fix at lat, 100 ms after the previous one.
+static bool gps_sanity_fix(int32_t lat) {
+  time_test_advance_us(100000);
+  state.gps_coord.lat = lat;
+  state.gps_last_update_ms = time_millis();
+  nav_test_update_gps_sanity();
+  return flags.gps_valid;
+}
+
+void test_navigation_gps_jump_settles_where_gps_is(void) {
+  navigation_test_setup();
+  time_test_set_us(1000000);
+  state.gps_horizontal_accuracy = 1.0f;
+  state.gps_coord = {};
+  TEST_ASSERT_TRUE(gps_sanity_fix(0));
+
+  // A lasting 100 m jump is rejected until the fixes after it agree for a
+  // second, then accepted rather than compared with the old position forever.
+  const int32_t jumped = GPS_DEG_10M * 10;
+  TEST_ASSERT_FALSE(gps_sanity_fix(jumped));
+  for (int i = 1; i < 10; i++)
+    TEST_ASSERT_FALSE(gps_sanity_fix(jumped));
+  TEST_ASSERT_TRUE(gps_sanity_fix(jumped));
+
+  // A spike out and back restarts the wait on its return.
+  TEST_ASSERT_FALSE(gps_sanity_fix(0));
+  TEST_ASSERT_FALSE(gps_sanity_fix(jumped));
+  for (int i = 1; i < 10; i++)
+    TEST_ASSERT_FALSE(gps_sanity_fix(jumped));
+  TEST_ASSERT_TRUE(gps_sanity_fix(jumped));
 }
 
 void test_navigation_yaw_rate_bypasses_pilot_curves(void) {
   navigation_test_setup();
 
-  profile.navigation.rth_cruise_speed = 4.0f;
+  profile.navigation.travel_speed = 4.0f;
   state.gps_speed = 10.0f;
   state.heading = 0.0f;
   state.home_bearing = 90.0f;
-  state.gps_coord.lat = 0;
-  state.gps_coord.lon = 0;
-  state.gps_home.lat = GPS_DEG_10M;
-  state.gps_home.lon = 0;
+  state.home_distance = 10.0f;
+  state.position.lat = 0;
+  state.position.lon = 0;
+  state.home.lat = GPS_DEG_10M;
+  state.home.lon = 0;
 
   nav_test_update_horizontal_control(0.1f);
 
-  const float expected = state.rth_yaw_rate;
+  const float expected = state.nav_yaw_rate;
   TEST_ASSERT_TRUE(expected > 0.0f);
   TEST_ASSERT_TRUE(expected <= 30.0f * DEGTORAD);
-  nav_test_set_home_valid(true);
-  nav_test_set_gps_sane(true);
-  set_altitude_source(true, time_millis());
+  flags.in_air = 1;
+  flags.home_valid = true;
+  flags.gps_valid = true;
+  set_altitude_source(true);
   state.home_distance = 20;
-  nav_rth_start();
+  nav_test_rth_start();
   nav_test_update_horizontal_control(0.1f);
   state.rx_filtered = state.rx_override;
   for (unsigned mode = RATE_MODE_SILVERWARE; mode <= RATE_MODE_ACTUAL; mode++) {
@@ -284,7 +365,7 @@ void test_navigation_yaw_rate_bypasses_pilot_curves(void) {
     control_test_flight_mode();
     TEST_ASSERT_FLOAT_WITHIN(0.0001f, expected, state.setpoint.yaw);
   }
-  nav_rth_stop();
+  nav_test_stop();
   state.rx_filtered = (vec4_t){0};
   control_test_flight_mode();
   TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0, state.setpoint.yaw);
@@ -295,52 +376,55 @@ static void start_test_rth(void) {
   navigation_test_setup();
   time_test_set_us(1000000);
   flags.arm_state = 1;
+  flags.in_air = 1;
   flags.rx_ready = 1;
-  nav_test_set_home_valid(true);
-  nav_test_set_gps_sane(true);
+  flags.home_valid = true;
+  flags.gps_valid = true;
   nav_test_altitude_sample(0, time_millis());
   state.home_distance = 100;
-  state.gps_coord.lat = 8990;
+  state.position.lat = 8990;
   state.throttle = 0.5f;
-  nav_rth_start();
-  TEST_ASSERT_TRUE(state.rth_active);
+  nav_test_rth_start();
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
 }
 
 static void rth_step(uint32_t elapsed_us) {
   time_test_advance_us(elapsed_us);
-  set_altitude_source(true, time_millis());
-  nav_test_update_rth();
+  set_altitude_source(true);
+  nav_test_update_control(elapsed_us * 1e-6f);
 }
 
-void test_navigation_climb_publishes_gps_acceleration(void) {
-  start_test_rth();
-  // CLIMB levels the craft and drag brakes it; the IMU needs that deceleration.
-  float velocity = -12;
-  for (int i = 0; i < 200; i++) {
-    if ((i % 10) == 0) {
+void test_navigation_publishes_gps_acceleration(void) {
+  // Braking at 4 m/s^2 through a standstill, measured by GPS at 10 Hz: the
+  // IMU and the estimate need it independently of the accelerometer. Slow, so
+  // the fixed GPS position stays consistent with the velocity.
+  navigation_test_setup();
+  time_test_set_us(1000000);
+  state.gps_horizontal_accuracy = 1;
+  state.gps_speed_accuracy = 0.2f;
+  float velocity = -2;
+  for (int i = 0; i < 1000; i++) {
+    time_test_advance_us(1000);
+    velocity += 4.0f * 0.001f;
+    if (time_millis() % 100 == 0) {
+      state.gps_velocity.north = velocity;
       state.gps_last_update_ms = time_millis();
-      state.gps_vel_north = velocity;
     }
-    velocity += 4.0f * 0.01f;
-    rth_step(10000);
+    state.accel_raw = (vec3_t){{0, 0, 1}};
+    nav_update();
   }
-  TEST_ASSERT_EQUAL_UINT8(RTH_STATE_CLIMB, state.rth_state);
-  TEST_ASSERT_FLOAT_WITHIN(0.2f, 4.0f, state.nav_accel_north);
-  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, state.nav_accel_east);
+  TEST_ASSERT_TRUE(flags.gps_valid);
+  TEST_ASSERT_FLOAT_WITHIN(0.2f, 4.0f, state.gps_accel.north);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, state.gps_accel.east);
 
-  // Without a trusted heading the IMU would rotate it onto the wrong axis.
-  state.heading_confidence = 0.5f * RTH_MIN_HEADING_CONFIDENCE;
-  rth_step(10000);
-  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.nav_accel_north);
-  state.heading_confidence = 1.0f;
-  state.rth_state = RTH_STATE_ACQUIRE_HEADING;
-  state.gps_last_update_ms = time_millis();
-  rth_step(10000);
-  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.nav_accel_north);
-
-  nav_rth_stop();
-  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.nav_accel_north);
-  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.nav_accel_east);
+  // Differentiation restarts from a fresh sample after GPS lapses.
+  state.gps_health.lock = false;
+  for (int i = 0; i < 20; i++) {
+    time_test_advance_us(1000);
+    nav_update();
+  }
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.gps_accel.north);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.gps_accel.east);
 }
 
 void test_navigation_throttle_bypasses_pilot_curves(void) {
@@ -351,51 +435,32 @@ void test_navigation_throttle_bypasses_pilot_curves(void) {
   TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.4f, control_test_throttle_input());
   state.aux_active = 1U << AUX_IDLE_UP;
   TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.4f, control_test_throttle_input());
-  nav_rth_stop();
+  nav_test_stop();
   // Handback blends from the navigation throttle, then follows pilot curves.
   TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.4f, control_test_throttle_input());
   time_test_advance_us(500000);
   TEST_ASSERT_TRUE(fabsf(control_test_throttle_input() - 0.4f) > 0.02f);
 }
 
-void test_navigation_vertical_rate_uses_sample_interval(void) {
-  navigation_test_setup();
-  nav_test_altitude_sample(0, 0);
-  float height = 0;
-  uint32_t stamp = 0;
-  for (int i = 0; i < 200; i++) {
-    const uint32_t step = i % 2 ? 40 : 60;
-    stamp += step;
-    height += 2.0f * step * 0.001f;
-    nav_test_altitude_sample(height, stamp);
-    const float velocity = state.baro_vertical_speed;
-    for (int j = 0; j < 5; j++) {
-      nav_test_altitude_control(state.altitude, 2, 0.01f);
-      TEST_ASSERT_FLOAT_WITHIN(0.00001f, velocity, state.baro_vertical_speed);
-    }
-  }
-  TEST_ASSERT_FLOAT_WITHIN(0.05f, 2.0f, state.baro_vertical_speed);
-}
-
 void test_navigation_altitude_integral_unwinds_after_saturation(void) {
   start_test_rth();
-  profile.navigation.rth_throttle_max = 0.55f;
+  profile.navigation.throttle_max = 0.55f;
   for (int i = 0; i < 1000; i++) {
-    nav_test_altitude_control(100, 2, 0.01f);
+    nav_update_altitude_control(100, 0.01f);
   }
   TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.55f, state.rx_override.throttle);
   // Reverse the error to unwind trim, then allow the rate request to settle.
   for (int i = 0; i < 300; i++) {
-    nav_test_altitude_control(-1, 2, 0.01f);
+    nav_update_altitude_control(-1, 0.01f);
   }
   for (int i = 0; i < 300; i++) {
-    nav_test_altitude_control(0, 2, 0.01f);
+    nav_update_altitude_control(0, 0.01f);
   }
   TEST_ASSERT_FLOAT_WITHIN(0.04f, 0.5f, state.rx_override.throttle);
-  profile.navigation.rth_throttle_max = 0.75f;
+  profile.navigation.throttle_max = 0.75f;
   set_tilt(0, 30 * DEGTORAD);
   for (int i = 0; i < 100; i++) {
-    nav_test_altitude_control(0, 2, 0.01f);
+    nav_update_altitude_control(0, 0.01f);
   }
   TEST_ASSERT_FLOAT_WITHIN(0.05f, 0.5f / cosf(30 * DEGTORAD), state.rx_override.throttle);
 }
@@ -404,27 +469,26 @@ void test_navigation_descent_uses_configured_throttle_minimum(void) {
   start_test_rth();
   state.altitude = 50;
   for (int i = 0; i < 2000; i++) {
-    nav_test_altitude_control(10, 2, 0.01f);
+    nav_update_altitude_control(10, 0.01f);
   }
   TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.1f, state.rx_override.throttle);
 }
 
 void test_navigation_rth_accepts_unestablished_heading(void) {
   start_test_rth();
-  nav_rth_stop();
+  nav_test_stop();
   state.heading_confidence = 0;
-  nav_rth_start();
-  TEST_ASSERT_TRUE(state.rth_active);
+  nav_test_rth_start();
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
   TEST_ASSERT_TRUE(flags.controls_override);
-  nav_rth_stop();
+  nav_test_stop();
   flags.failsafe_signal_lost = 1;
-  nav_rth_start();
-  TEST_ASSERT_TRUE(state.rth_active);
-  TEST_ASSERT_TRUE(state.rth_failsafe_active);
+  nav_test_rth_start();
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
   // Confidence loss in flight is handled by recovery, not an abrupt drop.
   state.heading_confidence = 0;
   rth_step(10000);
-  TEST_ASSERT_TRUE(state.rth_active);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
 }
 
 void test_navigation_altitude_recovers_with_wrong_hover_setting(void) {
@@ -432,9 +496,9 @@ void test_navigation_altitude_recovers_with_wrong_hover_setting(void) {
   for (const float actual_hover : hover_values) {
     start_test_rth();
     const float dt = 0.01f;
-    nav_rth_stop();
+    nav_test_stop();
     state.throttle = actual_hover;
-    nav_rth_start();
+    nav_test_rth_start();
     float height = 0;
     float velocity = 0;
     float max_height = 0;
@@ -443,14 +507,14 @@ void test_navigation_altitude_recovers_with_wrong_hover_setting(void) {
       time_test_advance_us(10000);
       if (i % 5 == 0)
         nav_test_altitude_sample(height, time_millis());
-      nav_test_altitude_control(10, 2, dt);
+      nav_update_altitude_control(10, dt);
       const float accel = 9.81f * (state.rx_override.throttle / actual_hover - 1) - 0.3f * velocity;
       velocity += dt * accel;
       sim_vertical(accel, dt);
       height += velocity * dt;
       max_height = MAX(max_height, height);
-      TEST_ASSERT_TRUE(state.rx_override.throttle >= profile.navigation.rth_throttle_min);
-      TEST_ASSERT_TRUE(state.rx_override.throttle <= profile.navigation.rth_throttle_max);
+      TEST_ASSERT_TRUE(state.rx_override.throttle >= profile.navigation.throttle_min);
+      TEST_ASSERT_TRUE(state.rx_override.throttle <= profile.navigation.throttle_max);
       if (i > 5000) {
         TEST_ASSERT_FLOAT_WITHIN(0.2f, 0, velocity);
         TEST_ASSERT_FLOAT_WITHIN(0.02f, actual_hover, state.rx_override.throttle);
@@ -469,9 +533,9 @@ void test_navigation_altitude_handles_delay_and_noise(void) {
   const float hover_values[] = {0.2f, 0.5f, 0.65f};
   for (const float hover : hover_values) {
     start_test_rth();
-    nav_rth_stop();
+    nav_test_stop();
     state.throttle = hover;
-    nav_rth_start();
+    nav_test_rth_start();
     float history[30] = {};
     float height = 0, velocity = 0, thrust = hover;
     float peak_height = 0, min_throttle = 1, max_throttle = 0;
@@ -483,7 +547,7 @@ void test_navigation_altitude_handles_delay_and_noise(void) {
         const float noise = 0.15f * sinf(i * 0.01f * 5) + 0.05f * sinf(i * 0.01f * 19);
         nav_test_altitude_sample(delayed_height + noise, time_millis());
       }
-      nav_test_altitude_control(10, 2, 0.01f);
+      nav_update_altitude_control(10, 0.01f);
       thrust += 0.01f / 0.1f * (state.rx_override.throttle - thrust);
       const float accel = 9.81f * (thrust / hover - 1) - 0.3f * velocity;
       velocity += 0.01f * accel;
@@ -504,12 +568,12 @@ void test_navigation_altitude_handles_delay_and_noise(void) {
 
 void test_navigation_altitude_takeover_is_smooth(void) {
   start_test_rth();
-  nav_rth_stop();
+  nav_test_stop();
   state.throttle = 0.2f;
-  nav_rth_start();
-  nav_test_altitude_control(10, 2, 0.01f);
+  nav_test_rth_start();
+  nav_update_altitude_control(10, 0.01f);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.2f, state.rx_override.throttle);
-  nav_test_altitude_control(10, 2, 0.01f);
+  nav_update_altitude_control(10, 0.01f);
   TEST_ASSERT_FLOAT_WITHIN(0.002f, 0.2f, state.rx_override.throttle);
 }
 
@@ -524,8 +588,8 @@ void test_navigation_pitch_command_matches_imu_and_angle_control(void) {
   imu_init();
   flags.arm_state = 1;
   flags.controls_override = 1;
-  state.rth_active = true;
-  state.gps_home.lat = GPS_DEG_10M;
+  state.nav_state = NAV_STATE_CLIMB;
+  state.home.lat = GPS_DEG_10M;
   nav_test_update_horizontal_control(0.1f);
   const float command = state.rx_override.pitch;
   const float target_pitch = command * profile.rate.level_max_angle * DEGTORAD;
@@ -549,10 +613,10 @@ void test_navigation_pitch_command_matches_imu_and_angle_control(void) {
 
 void test_navigation_integral_stays_earth_referenced_during_yaw(void) {
   navigation_test_setup();
-  state.gps_coord.lat = state.gps_home.lat = 0;
-  state.gps_vel_north = -0.2f;
+  state.position.lat = state.home.lat = 0;
+  state.velocity.axis[0] = -0.2f;
   for (int i = 0; i < 1500; i++) nav_test_update_horizontal_control(0.01f);
-  state.gps_vel_north = 0;
+  state.velocity.axis[0] = 0;
   for (int i = 0; i < 150; i++) nav_test_update_horizontal_control(0.01f);
   const float pitch = state.rx_override.pitch;
   TEST_ASSERT_TRUE(pitch > 0);
@@ -566,7 +630,7 @@ void test_navigation_repeated_gps_sample_keeps_commands_smooth(void) {
   navigation_test_setup();
   state.gps_last_update_ms = 100;
   nav_test_update_horizontal_control(0.01f);
-  state.gps_vel_north = 0.2f;
+  state.velocity.axis[0] = 0.2f;
   state.gps_last_update_ms = 200;
   nav_test_update_horizontal_control(0.01f);
   TEST_ASSERT_TRUE(state.rx_override.pitch < 0);
@@ -581,89 +645,89 @@ void test_navigation_repeated_gps_sample_keeps_commands_smooth(void) {
 void test_navigation_altitude_loss_holds_and_resumes(void) {
   start_test_rth();
   time_test_advance_us(501000);
-  nav_test_update_rth();
-  TEST_ASSERT_TRUE(state.rth_active);
+  nav_test_update_control(0.501f);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
   TEST_ASSERT_TRUE(flags.controls_override);
-  TEST_ASSERT_EQUAL(RTH_STATE_CLIMB, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
   TEST_ASSERT_EQUAL_FLOAT(0, state.rx_override.pitch);
-  TEST_ASSERT_TRUE(state.rx_override.throttle >= profile.navigation.rth_throttle_min);
+  TEST_ASSERT_TRUE(state.rx_override.throttle >= profile.navigation.throttle_min);
   // An outage inside the hold window resumes the return.
   for (int i = 0; i < 900; i++) {
     time_test_advance_us(10000);
-    nav_test_update_rth();
+    nav_test_update_control(0.01f);
   }
-  TEST_ASSERT_TRUE(state.rth_active);
-  set_altitude_source(true, time_millis());
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+  set_altitude_source(true);
   state.altitude = 10;
   rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_TURN, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_TURN, state.nav_state);
 
   // A longer outage gives up and is not retried.
   start_test_rth();
-  set_altitude_source(false, 0);
+  set_altitude_source(false);
   for (int i = 0; i < 990; i++) {
     time_test_advance_us(10000);
-    nav_test_update_rth();
+    nav_test_update_control(0.01f);
   }
-  TEST_ASSERT_TRUE(state.rth_active);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
   for (int i = 0; i < 20; i++) {
     time_test_advance_us(10000);
-    nav_test_update_rth();
+    nav_test_update_control(0.01f);
   }
-  TEST_ASSERT_FALSE(state.rth_active);
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB);
   TEST_ASSERT_FALSE(flags.controls_override);
-  TEST_ASSERT_EQUAL(RTH_STATE_ABORTED, state.rth_state);
-  set_altitude_source(true, time_millis());
-  nav_rth_start();
-  TEST_ASSERT_FALSE(state.rth_active);
+  TEST_ASSERT_EQUAL(NAV_STATE_ABORTED, state.nav_state);
+  set_altitude_source(true);
+  nav_test_rth_start();
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB);
 }
 
 void test_navigation_nonfinite_altitude_holds(void) {
   start_test_rth();
   nav_test_altitude_sample(NAN, time_millis());
-  nav_test_update_rth();
-  TEST_ASSERT_TRUE(state.rth_active);
+  nav_test_update_control(0.01f);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
   start_test_rth();
   nav_test_altitude_sample(INFINITY, time_millis());
-  nav_test_update_rth();
-  TEST_ASSERT_TRUE(state.rth_active);
+  nav_test_update_control(0.01f);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
 }
 
 void test_navigation_altitude_loss_holds_vertical_speed(void) {
   start_test_rth();
-  set_altitude_source(false, 0);
+  set_altitude_source(false);
   // Without altitude, trim is frozen and the demand is zero vertical speed.
-  state.vertical_speed = -1.0f;
+  state.velocity.axis[2] = -1.0f;
   float before = 0;
   for (int i = 0; i < 100; i++) {
     time_test_advance_us(10000);
-    nav_test_update_rth();
+    nav_test_update_control(0.01f);
     if (i == 0) before = state.rx_override.throttle;
   }
   TEST_ASSERT_TRUE(state.rx_override.throttle > 0.5f);
-  state.vertical_speed = 1.0f;
+  state.velocity.axis[2] = 1.0f;
   for (int i = 0; i < 100; i++) {
     time_test_advance_us(10000);
-    nav_test_update_rth();
+    nav_test_update_control(0.01f);
   }
   TEST_ASSERT_TRUE(state.rx_override.throttle < 0.5f);
-  TEST_ASSERT_TRUE(before >= profile.navigation.rth_throttle_min);
+  TEST_ASSERT_TRUE(before >= profile.navigation.throttle_min);
 }
 
 void test_navigation_gps_loss_holds_latched_altitude(void) {
   start_test_rth();
-  nav_test_set_gps_sane(false);
+  flags.gps_valid = false;
   rth_step(10000);
   state.altitude = -1;
   for (int i = 0; i < 50; i++) rth_step(10000);
   TEST_ASSERT_TRUE(state.rx_override.throttle > 0.5f);
   TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0, state.rx_override.pitch);
-  TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0, state.rth_yaw_rate);
+  TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0, state.nav_yaw_rate);
   for (int i = 0; i < 900; i++) rth_step(10000);
-  TEST_ASSERT_TRUE(state.rth_active);
-  TEST_ASSERT_EQUAL(RTH_STATE_CLIMB, state.rth_state);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
   for (int i = 0; i < 100; i++) rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_ABORTED, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_ABORTED, state.nav_state);
 }
 
 void test_navigation_flapping_gps_does_not_extend_return(void) {
@@ -671,82 +735,113 @@ void test_navigation_flapping_gps_does_not_extend_return(void) {
   state.altitude = 10;
   rth_step(10000);
   rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_NAVIGATE, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_NAVIGATE, state.nav_state);
   // Short outages without progress still use up the progress window.
-  for (int cycle = 0; cycle < 20 && state.rth_state == RTH_STATE_NAVIGATE; cycle++) {
-    nav_test_set_gps_sane(cycle % 2);
+  for (int cycle = 0; cycle < 20 && state.nav_state == NAV_STATE_NAVIGATE; cycle++) {
+    flags.gps_valid = cycle % 2;
     for (int i = 0; i < 100; i++) rth_step(10000);
   }
-  TEST_ASSERT_EQUAL(RTH_STATE_NAV_FAILED, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_NAV_FAILED, state.nav_state);
 }
 
 void test_navigation_gps_recovery_resumes_original_climb(void) {
   start_test_rth();
-  nav_test_set_gps_sane(false);
+  flags.gps_valid = false;
   for (int i = 0; i < 100; i++) rth_step(10000);
-  nav_test_set_gps_sane(true);
+  flags.gps_valid = true;
   for (int i = 0; i < 50; i++) rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_CLIMB, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
   TEST_ASSERT_TRUE(state.rx_override.throttle > 0.5f);
   state.altitude = 10;
   rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_TURN, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_TURN, state.nav_state);
   rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_NAVIGATE, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_NAVIGATE, state.nav_state);
 }
 
 void test_navigation_stalled_climb_and_return_abort(void) {
   start_test_rth();
   for (int i = 0; i < 1001; i++) rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_ABORTED, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_ABORTED, state.nav_state);
   start_test_rth();
   state.altitude = 10;
   rth_step(10000);
   rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_NAVIGATE, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_NAVIGATE, state.nav_state);
   for (int i = 0; i < 1501; i++) rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_NAV_FAILED, state.rth_state);
-  TEST_ASSERT_TRUE(state.rth_active);
+  TEST_ASSERT_EQUAL(NAV_STATE_NAV_FAILED, state.nav_state);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
   TEST_ASSERT_EQUAL_FLOAT(0, state.rx_override.pitch);
   TEST_ASSERT_EQUAL_FLOAT(0, state.rx_override.roll);
   // Hold level so the link can return, then give up.
   for (int i = 0; i < 998; i++) rth_step(10000);
-  TEST_ASSERT_TRUE(state.rth_active);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
   for (int i = 0; i < 2; i++) rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_ABORTED, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_ABORTED, state.nav_state);
+}
+
+void test_navigation_slow_final_approach_is_progress(void) {
+  start_test_rth();
+  state.altitude = 10;
+  state.home_distance = 7;
+  rth_step(10000);
+  rth_step(10000);
+  TEST_ASSERT_EQUAL(NAV_STATE_NAVIGATE, state.nav_state);
+  // Holding into the wind close to the target, closing only a few meters.
+  for (int i = 0; i < 1000; i++) rth_step(10000);
+  state.home_distance = 3.4f;
+  for (int i = 0; i < 1000; i++) rth_step(10000);
+  TEST_ASSERT_EQUAL(NAV_STATE_NAVIGATE, state.nav_state);
+}
+
+void test_navigation_holds_yaw_close_to_the_target(void) {
+  start_test_rth();
+  state.altitude = 10;
+  state.home_distance = 6;
+  state.position.lat = 6 * 90;
+  state.heading = 90;
+  rth_step(10000);
+  // Close in, the turn is skipped and noise in the bearing is not chased.
+  rth_step(10000);
+  TEST_ASSERT_EQUAL(NAV_STATE_NAVIGATE, state.nav_state);
+  for (int i = 0; i < 100; i++) {
+    rth_step(10000);
+    TEST_ASSERT_EQUAL(NAV_STATE_NAVIGATE, state.nav_state);
+    TEST_ASSERT_EQUAL_FLOAT(0, state.nav_yaw_rate);
+  }
 }
 
 void test_navigation_hover_does_not_timeout(void) {
   start_test_rth();
   state.altitude = 10;
   state.home_distance = 0;
-  state.gps_coord = state.gps_home;
+  state.position = state.home;
   for (int i = 0; i < 12000; i++) rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_HOVER_HOME, state.rth_state);
-  TEST_ASSERT_TRUE(state.rth_active);
+  TEST_ASSERT_EQUAL(NAV_STATE_HOLD, state.nav_state);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
   TEST_ASSERT_TRUE(flags.arm_state);
 }
 
 static void failsafe_step(uint32_t us) {
   time_test_advance_us(us);
-  if (!flags.failsafe_signal_lost) state.last_frame_time_us = time_micros();
+  if (!flags.failsafe_signal_lost) state.rx_frame_time_us = time_micros();
   control_failsafe_update();
 }
 
 void test_navigation_failsafe_rth_waits_for_stable_link_and_sticks(void) {
   start_test_rth();
   flags.failsafe_signal_lost = 1;
-  state.last_frame_time_us = time_micros();
+  state.rx_frame_time_us = time_micros();
   for (int i = 0; i < 2000; i++) failsafe_step(10000);
   TEST_ASSERT_TRUE(flags.arm_state);
   TEST_ASSERT_FALSE(flags.failsafe_outputs_blocked);
-  TEST_ASSERT_TRUE(state.rth_failsafe_active);
+  TEST_ASSERT_EQUAL(FAILSAFE_OWNER_RTH, state.failsafe_owner);
 
   // Link back, sticks centered: RTH keeps control.
   flags.failsafe_signal_lost = 0;
   state.rx = (vec4_t){0};
   for (int i = 0; i < 100; i++) failsafe_step(10000);
-  TEST_ASSERT_TRUE(state.rth_failsafe_active);
+  TEST_ASSERT_EQUAL(FAILSAFE_OWNER_RTH, state.failsafe_owner);
   TEST_ASSERT_TRUE(flags.failsafe);
 
   // Sticks move, but the link drops again before it has been stable.
@@ -755,12 +850,12 @@ void test_navigation_failsafe_rth_waits_for_stable_link_and_sticks(void) {
   failsafe_step(10000);
   flags.failsafe_signal_lost = 0;
   for (int i = 0; i < 40; i++) failsafe_step(10000);
-  TEST_ASSERT_TRUE(state.rth_failsafe_active);
+  TEST_ASSERT_EQUAL(FAILSAFE_OWNER_RTH, state.failsafe_owner);
   TEST_ASSERT_TRUE(flags.failsafe);
 
   // Stable for the recovery time with stick input: hand back.
   for (int i = 0; i < 11; i++) failsafe_step(10000);
-  TEST_ASSERT_FALSE(state.rth_failsafe_active);
+  TEST_ASSERT_NOT_EQUAL(FAILSAFE_OWNER_RTH, state.failsafe_owner);
   TEST_ASSERT_FALSE(flags.failsafe);
   TEST_ASSERT_TRUE(flags.arm_state);
 }
@@ -769,34 +864,34 @@ void test_navigation_flapping_link_does_not_interrupt_rth(void) {
   start_test_rth();
   state.rx.roll = 1.0f; // pilot input must not matter while the link is unstable
   flags.failsafe_signal_lost = 1;
-  state.last_frame_time_us = time_micros();
+  state.rx_frame_time_us = time_micros();
   failsafe_step(10000);
   for (int cycle = 0; cycle < 50; cycle++) {
     flags.failsafe_signal_lost = cycle % 2;
     for (int i = 0; i < 20; i++) {
       failsafe_step(10000);
-      TEST_ASSERT_TRUE(state.rth_failsafe_active);
+      TEST_ASSERT_EQUAL(FAILSAFE_OWNER_RTH, state.failsafe_owner);
       TEST_ASSERT_TRUE(flags.failsafe);
       TEST_ASSERT_FALSE(flags.failsafe_outputs_blocked);
     }
   }
-  TEST_ASSERT_TRUE(state.rth_active);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
   TEST_ASSERT_TRUE(flags.arm_state);
 }
 
 void test_navigation_failsafe_rth_gives_up_with_stage2(void) {
   start_test_rth();
   flags.failsafe_signal_lost = 1;
-  state.last_frame_time_us = time_micros();
+  state.rx_frame_time_us = time_micros();
   failsafe_step(10000);
-  TEST_ASSERT_TRUE(state.rth_failsafe_active);
-  nav_test_set_gps_sane(false);
-  for (int i = 0; i < 1001 && state.rth_active; i++) {
+  TEST_ASSERT_EQUAL(FAILSAFE_OWNER_RTH, state.failsafe_owner);
+  flags.gps_valid = false;
+  for (int i = 0; i < 1001 && state.nav_state >= NAV_STATE_CLIMB; i++) {
     TEST_ASSERT_TRUE(flags.arm_state);
     rth_step(10000);
     control_failsafe_update();
   }
-  TEST_ASSERT_EQUAL(RTH_STATE_ABORTED, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_ABORTED, state.nav_state);
   TEST_ASSERT_FALSE(flags.arm_state);
   TEST_ASSERT_TRUE(flags.failsafe_outputs_blocked);
   TEST_ASSERT_EQUAL(FAILSAFE_PHASE_STAGE2_DROP, state.failsafe_phase);
@@ -805,9 +900,9 @@ void test_navigation_failsafe_rth_gives_up_with_stage2(void) {
 void test_navigation_failsafe_rth_disarms_after_crash(void) {
   start_test_rth();
   flags.failsafe_signal_lost = 1;
-  state.last_frame_time_us = time_micros();
+  state.rx_frame_time_us = time_micros();
   failsafe_step(10000);
-  TEST_ASSERT_TRUE(state.rth_failsafe_active);
+  TEST_ASSERT_EQUAL(FAILSAFE_OWNER_RTH, state.failsafe_owner);
 
   // A brief upset while flying is not a crash.
   set_tilt(100 * DEGTORAD, 0);
@@ -823,7 +918,7 @@ void test_navigation_failsafe_rth_disarms_after_crash(void) {
   for (int i = 0; i < 11; i++) failsafe_step(10000);
   TEST_ASSERT_FALSE(flags.arm_state);
   TEST_ASSERT_TRUE(flags.failsafe_outputs_blocked);
-  TEST_ASSERT_FALSE(state.rth_failsafe_active);
+  TEST_ASSERT_NOT_EQUAL(FAILSAFE_OWNER_RTH, state.failsafe_owner);
   for (int i = 0; i < 100; i++) failsafe_step(10000);
   TEST_ASSERT_FALSE(flags.arm_state);
   TEST_ASSERT_EQUAL(FAILSAFE_PHASE_STAGE2_DROP, state.failsafe_phase);
@@ -837,7 +932,7 @@ static void setup_failsafe_flight(float pilot_throttle) {
   flags.in_air = 1;
   state.rx_filtered.throttle = 0.5f;
   state.throttle = pilot_throttle;
-  state.last_frame_time_us = time_micros();
+  state.rx_frame_time_us = time_micros();
   control_failsafe_update();
 }
 
@@ -846,14 +941,14 @@ void test_navigation_failsafe_holds_pilot_throttle_instead_of_idle(void) {
   flags.failsafe_signal_lost = 1;
   for (int i = 0; i < 31; i++) failsafe_step(10000);
   TEST_ASSERT_EQUAL(FAILSAFE_PHASE_STAGE1_GUARD, state.failsafe_phase);
-  TEST_ASSERT_TRUE(state.failsafe_hold);
+  TEST_ASSERT_TRUE(flags.failsafe_hold);
   TEST_ASSERT_TRUE(flags.controls_override);
   TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.45f, control_test_throttle_input());
   TEST_ASSERT_EQUAL_STRING("FS HOLD", control_flight_mode_name());
   // Without RTH the existing stage 2 procedure still follows.
   for (int i = 0; i < 101; i++) failsafe_step(10000);
   TEST_ASSERT_EQUAL(FAILSAFE_PHASE_STAGE2_DROP, state.failsafe_phase);
-  TEST_ASSERT_FALSE(state.failsafe_hold);
+  TEST_ASSERT_FALSE(flags.failsafe_hold);
   TEST_ASSERT_FALSE(flags.arm_state);
 }
 
@@ -862,7 +957,7 @@ void test_navigation_failsafe_on_ground_keeps_idle(void) {
   flags.in_air = 0;
   flags.failsafe_signal_lost = 1;
   for (int i = 0; i < 31; i++) failsafe_step(10000);
-  TEST_ASSERT_FALSE(state.failsafe_hold);
+  TEST_ASSERT_FALSE(flags.failsafe_hold);
   TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.001f, control_test_throttle_input());
 
   // Throttle low for longer than the landing window also counts as landed.
@@ -871,7 +966,7 @@ void test_navigation_failsafe_on_ground_keeps_idle(void) {
   for (int i = 0; i < 1001; i++) failsafe_step(10000);
   flags.failsafe_signal_lost = 1;
   for (int i = 0; i < 31; i++) failsafe_step(10000);
-  TEST_ASSERT_FALSE(state.failsafe_hold);
+  TEST_ASSERT_FALSE(flags.failsafe_hold);
 }
 
 void test_navigation_failsafe_hold_levels_in_acro(void) {
@@ -900,7 +995,7 @@ static float simulate_failsafe_rth(bool learn_hover, float pilot_throttle, float
     for (int i = 0; i < loops; i++) {
       time_test_advance_us(1000);
       state.gps_last_update_ms = time_millis();
-      if (!flags.failsafe_signal_lost) state.last_frame_time_us = time_micros();
+      if (!flags.failsafe_signal_lost) state.rx_frame_time_us = time_micros();
       if (i % 20 == 0) nav_test_altitude_sample(height, time_millis());
       control_failsafe_update();
       if (flags.controls_override) state.rx_filtered = state.rx_override;
@@ -912,15 +1007,24 @@ static float simulate_failsafe_rth(bool learn_hover, float pilot_throttle, float
       min_height = MIN(min_height, height);
       state.GEstG = (vec3_t){{0, 0, 1}};
       state.accel_raw = (vec3_t){{0, 0, 1.0f + accel / 9.80665f}};
+      state.accel = state.accel_raw;
+      state.gps_velocity.up = velocity;
       nav_update();
     }
   };
   state.rx_filtered.throttle = 0.5f;
   step(10); // arm and capture home
-  height = 5.0f; // clear of the ground, where hover learning applies
-  state.gps_coord.lat = 2697; // 30m from home
-  step(learn_hover ? 5000 : 500);
-  if (learn_hover) TEST_ASSERT_FLOAT_WITHIN(0.01f, hover, state.hover_throttle);
+  // Climb clear of the ground, where hover learning applies, and stop.
+  pilot = 1.2f * hover;
+  while (height < 3.0f) step(1);
+  pilot = 0.8f * hover;
+  while (velocity > 0.0f) step(1);
+  pilot = hover;
+  state.position.lat = 2697; // 30m from home
+  // The unlearned cases forget the hover learned meanwhile.
+  step(8000);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, hover, state.hover_throttle);
+  if (!learn_hover) nav_test_set_hover_learned(0.0f);
   if (forced_hover > 0.0f) nav_test_set_hover_learned(forced_hover);
   // Optionally dive for a second before the link drops.
   pilot = pilot_throttle;
@@ -929,8 +1033,8 @@ static float simulate_failsafe_rth(bool learn_hover, float pilot_throttle, float
   min_height = height;
   flags.failsafe_signal_lost = 1;
   step(8000);
-  TEST_ASSERT_TRUE(state.rth_active);
-  TEST_ASSERT_TRUE(state.rth_failsafe_active);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+  TEST_ASSERT_EQUAL(FAILSAFE_OWNER_RTH, state.failsafe_owner);
   TEST_ASSERT_TRUE(flags.arm_state);
   return min_height - loss_height;
 }
@@ -969,7 +1073,7 @@ void test_navigation_failsafe_on_ground_does_not_start_rth(void) {
     for (int i = 0; i < loops; i++) {
       time_test_advance_us(1000);
       state.gps_last_update_ms = time_millis();
-      if (!flags.failsafe_signal_lost) state.last_frame_time_us = time_micros();
+      if (!flags.failsafe_signal_lost) state.rx_frame_time_us = time_micros();
       if (i % 20 == 0) nav_test_altitude_sample(0, time_millis());
       control_failsafe_update();
       nav_update();
@@ -979,7 +1083,7 @@ void test_navigation_failsafe_on_ground_does_not_start_rth(void) {
   flags.failsafe_signal_lost = 1;
   for (int i = 0; i < 20; i++) {
     step(100);
-    TEST_ASSERT_FALSE(state.rth_active);
+    TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB);
   }
   TEST_ASSERT_FALSE(flags.arm_state);
   TEST_ASSERT_EQUAL(FAILSAFE_PHASE_STAGE2_DROP, state.failsafe_phase);
@@ -987,15 +1091,15 @@ void test_navigation_failsafe_on_ground_does_not_start_rth(void) {
 
 void test_navigation_rth_starts_close_to_home(void) {
   start_test_rth();
-  nav_rth_stop();
+  nav_test_stop();
   state.home_distance = 1;
-  nav_rth_start();
-  TEST_ASSERT_TRUE(state.rth_active);
-  state.gps_coord = state.gps_home;
+  nav_test_rth_start();
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+  state.position = state.home;
   state.altitude = 10;
   rth_step(10000);
   rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_HOVER_HOME, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_HOLD, state.nav_state);
 }
 
 void test_navigation_hover_learning(void) {
@@ -1003,45 +1107,262 @@ void test_navigation_hover_learning(void) {
   flags.arm_state = 1;
   flags.in_air = 1;
   flags.on_ground = 0;
-  set_altitude_source(true, time_millis());
+  set_altitude_source(true);
   state.throttle = 0.4f;
   // Idling on the ground is not hover, even after in_air latched.
   state.altitude = 0.0f;
-  for (int i = 0; i < 300; i++) nav_test_update_hover(0.01f);
+  for (int i = 0; i < 300; i++) nav_update_trims(0.01f);
   TEST_ASSERT_EQUAL_FLOAT(0, state.hover_throttle);
   state.altitude = 5.0f;
-  for (int i = 0; i < 100; i++) nav_test_update_hover(0.01f);
+  for (int i = 0; i < 100; i++) nav_update_trims(0.01f);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.4f, state.hover_throttle);
   // Climbing, tilted, or automatic flight is not steady hover.
   state.throttle = 0.7f;
-  state.vertical_speed = 2;
-  for (int i = 0; i < 300; i++) nav_test_update_hover(0.01f);
-  state.vertical_speed = 0;
+  state.velocity.axis[2] = 2;
+  for (int i = 0; i < 300; i++) nav_update_trims(0.01f);
+  state.velocity.axis[2] = 0;
   set_tilt(0, 30 * DEGTORAD);
-  for (int i = 0; i < 300; i++) nav_test_update_hover(0.01f);
+  for (int i = 0; i < 300; i++) nav_update_trims(0.01f);
   set_tilt(0, 0);
   flags.controls_override = 1;
-  for (int i = 0; i < 300; i++) nav_test_update_hover(0.01f);
+  for (int i = 0; i < 300; i++) nav_update_trims(0.01f);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.4f, state.hover_throttle);
   // Battery sag: the estimate follows the new steady throttle.
   flags.controls_override = 0;
   state.throttle = 0.5f;
-  for (int i = 0; i < 2000; i++) nav_test_update_hover(0.01f);
+  for (int i = 0; i < 2000; i++) nav_update_trims(0.01f);
   TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.5f, state.hover_throttle);
   // A new flight starts without the previous battery's estimate.
   flags.arm_state = 0;
-  nav_test_update_hover(0.01f);
+  nav_update_trims(0.01f);
   TEST_ASSERT_EQUAL_FLOAT(0, state.hover_throttle);
 }
 
 void test_navigation_learned_hover_trims_rth(void) {
   start_test_rth();
-  nav_rth_stop();
+  nav_test_stop();
   nav_test_set_hover_learned(0.3f);
   state.throttle = 0.3f;
-  nav_rth_start();
-  for (int i = 0; i < 500; i++) nav_test_altitude_control(0, 2, 0.01f);
+  nav_test_rth_start();
+  for (int i = 0; i < 500; i++) nav_update_altitude_control(0, 0.01f);
   TEST_ASSERT_FLOAT_WITHIN(0.005f, 0.3f, state.rx_override.throttle);
+}
+
+void test_navigation_ground_effect_holds_altitude_on_the_launch_ground(void) {
+  navigation_test_setup();
+  time_test_set_us(1000000);
+  nav_test_altitude_sample(0, time_millis());
+  // Spinning up on the ground, rotor wash makes the barometer read meters low.
+  state.ground_effect = GROUND_EFFECT_LAUNCH;
+  for (int i = 0; i < 300; i++) {
+    time_test_advance_us(10000);
+    if (i % 5 == 0) nav_test_altitude_sample(-3, time_millis());
+    sim_vertical(0, 0.01f);
+  }
+  TEST_ASSERT_EQUAL_FLOAT(0, state.altitude);
+  TEST_ASSERT_EQUAL_FLOAT(0, state.velocity.axis[2]);
+
+  // A wrong vertical accelerometer reading is still corrected toward the ground.
+  for (int i = 0; i < 300; i++) {
+    time_test_advance_us(10000);
+    if (i % 5 == 0) nav_test_altitude_sample(-3, time_millis());
+    sim_vertical(-1, 0.01f);
+  }
+  TEST_ASSERT_TRUE(state.altitude > -0.5f);
+
+  // Far below the ground the reading is no wash: beyond the dead zone it counts.
+  for (int i = 0; i < 1000; i++) {
+    time_test_advance_us(10000);
+    if (i % 5 == 0) nav_test_altitude_sample(-20, time_millis());
+    sim_vertical(0, 0.01f);
+  }
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, -15, state.altitude);
+
+  // Clear of the ground, the barometer lowers it as far as it reads.
+  state.ground_effect = GROUND_EFFECT_NONE;
+  for (int i = 0; i < 1000; i++) {
+    time_test_advance_us(10000);
+    if (i % 5 == 0) nav_test_altitude_sample(-3, time_millis());
+    sim_vertical(0, 0.01f);
+  }
+  TEST_ASSERT_FLOAT_WITHIN(0.05f, -3, state.altitude);
+}
+
+// Descend at 0.5 m/s onto the ground at zero, then rest there while the
+// barometer reads `dip` meters low from the moment of contact. A glitch
+// instead makes it read `glitch` meters low for a second at 2 m.
+static void sim_landing(float dip, float glitch) {
+  navigation_test_setup();
+  time_test_set_us(1000000);
+  float height = 5, velocity = 0;
+  nav_test_altitude_sample(height, time_millis());
+  state.ground_effect = GROUND_EFFECT_LANDING;
+  float lowest = height;
+  for (int i = 0; i < 1600; i++) {
+    time_test_advance_us(10000);
+    // Start the descent, then stop on the ground within one step.
+    float accel = i < 50 ? -0.5f / 0.5f : 0.0f;
+    if (height + (velocity + accel * 0.01f) * 0.01f < 0) accel = -velocity / 0.01f;
+    velocity += accel * 0.01f;
+    height = MAX(height + velocity * 0.01f, 0.0f);
+    float reading = height;
+    if (height <= 0) reading -= dip;
+    if (glitch && height < 2 && height > 1.5f) reading -= glitch;
+    if (i % 5 == 0) nav_test_altitude_sample(reading, time_millis());
+    sim_vertical(accel, 0.01f);
+    lowest = MIN(lowest, state.altitude);
+  }
+  TEST_ASSERT_TRUE(lowest > -0.3f);
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, 0, state.altitude);
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, 0, state.velocity.axis[2]);
+}
+
+void test_navigation_touchdown_holds_the_ground_through_rotor_wash(void) {
+  sim_landing(3, 0);
+}
+
+void test_navigation_touchdown_glitch_does_not_hold_the_ground(void) {
+  // A low reading while still descending is not touchdown: the estimate goes
+  // on down to the real ground.
+  sim_landing(0, 1);
+  // Nor while hovering before the descent.
+  navigation_test_setup();
+  time_test_set_us(1000000);
+  nav_test_altitude_sample(5, time_millis());
+  state.ground_effect = GROUND_EFFECT_LANDING;
+  for (int i = 0; i < 600; i++) {
+    time_test_advance_us(10000);
+    if (i % 5 == 0) nav_test_altitude_sample(i < 100 ? 4 : 2, time_millis());
+    sim_vertical(0, 0.01f);
+  }
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, 2, state.altitude);
+}
+
+// Accelerate north at 2 m/s^2, level and facing north, with 10 Hz GPS that
+// reports the velocity measured 120 ms before its epoch. glitch_ms adds a
+// 5 m/s north error to the sample at that time.
+static void sim_horizontal(float heading_confidence, uint32_t glitch_ms, float *worst_error, float *worst_glitch) {
+  navigation_test_setup();
+  time_test_set_us(1000000);
+  state.heading_confidence = heading_confidence;
+  state.gps_horizontal_accuracy = 1;
+  state.gps_speed_accuracy = 0.2f;
+  const uint32_t start_ms = time_millis();
+  *worst_error = *worst_glitch = 0;
+  for (int i = 0; i < 5000; i++) {
+    time_test_advance_us(1000);
+    const float t = (time_millis() - start_ms) * 0.001f;
+    const float accel = t < 4 ? 2.0f : 0.0f;
+    const float velocity = 2.0f * MIN(t, 4.0f);
+    if (time_millis() % 100 == 0) {
+      const float measured = 2.0f * constrain(t - 0.12f, 0.0f, 4.0f);
+      state.gps_velocity.north = measured + (time_millis() - start_ms == glitch_ms ? 5.0f : 0.0f);
+      state.gps_last_update_ms = time_millis();
+    }
+    state.accel_raw = (vec3_t){{0, -accel / 9.80665f, 1}};
+    nav_update();
+    if (t > 1 && t < 3.5f)
+      *worst_error = MAX(*worst_error, fabsf(state.velocity.axis[0] - velocity));
+    if (glitch_ms && t * 1000 > glitch_ms && t * 1000 < glitch_ms + 100)
+      *worst_glitch = MAX(*worst_glitch, fabsf(state.velocity.axis[0] - velocity));
+  }
+}
+
+void test_navigation_velocity_estimate_compensates_gps_delay(void) {
+  float fused, untrusted, unused;
+  sim_horizontal(1.0f, 0, &fused, &unused);
+  // Without a trusted heading, GPS velocity is carried from its measurement
+  // to the present at the rate it changes, instead of 0.24 m/s behind.
+  sim_horizontal(0.2f, 0, &untrusted, &unused);
+  TEST_ASSERT_TRUE(fused < 0.1f);
+  TEST_ASSERT_TRUE(untrusted < 0.1f);
+}
+
+// A GPS velocity step pulls the estimate in by its accuracy: a fix the
+// receiver itself reports as uncertain moves it far less.
+static float sim_velocity_step(float speed_accuracy) {
+  navigation_test_setup();
+  time_test_set_us(1000000);
+  state.heading_confidence = 1.0f;
+  state.gps_horizontal_accuracy = 1;
+  state.gps_speed_accuracy = 0.2f;
+  for (int i = 0; i < 1500; i++) {
+    time_test_advance_us(1000);
+    if (time_millis() % 100 == 0) {
+      // Accepted with a good fix; the accuracy then degrades within the hold limits.
+      if (i > 500) {
+        state.gps_speed_accuracy = speed_accuracy;
+        state.gps_velocity.north = 0.8f;
+      }
+      state.gps_last_update_ms = time_millis();
+    }
+    state.accel_raw = (vec3_t){{0, 0, 1}};
+    nav_update();
+  }
+  TEST_ASSERT_TRUE(flags.gps_valid);
+  return state.velocity.axis[0];
+}
+
+void test_navigation_velocity_weighs_gps_by_its_accuracy(void) {
+  const float accurate = sim_velocity_step(0.2f);
+  const float uncertain = sim_velocity_step(1.4f);
+  TEST_ASSERT_TRUE(accurate > 0.7f);
+  TEST_ASSERT_TRUE(uncertain < 0.4f);
+}
+
+void test_navigation_velocity_spike_is_not_fused(void) {
+  // A GPS velocity jumping by more than the accelerometer's change is GPS at
+  // fault, not the heading, which would turn the change but keep its size:
+  // the accelerometer carries the estimate past it.
+  float worst, glitch;
+  sim_horizontal(1.0f, 2000, &worst, &glitch);
+  TEST_ASSERT_TRUE(glitch < 0.2f);
+  TEST_ASSERT_TRUE(flags.gps_valid);
+}
+
+// Oscillate north and east at low speed with the true heading 30 degrees from
+// the estimate, which starts at north, and return the heading after 15 s.
+// The accelerometer reads tilt_offset m/s^2 of tilt error forward; GPS
+// reports velocity 120 ms late, with noise.
+static float sim_heading_observation(float amplitude, float tilt_offset) {
+  navigation_test_setup();
+  imu_test_attitude_init();
+  time_test_set_us(1000000);
+  state.gps_horizontal_accuracy = 1;
+  state.gps_speed_accuracy = 0.2f;
+  state.gps_heading_accuracy = 100; // course carries no heading at this speed
+  const float true_heading = 30.0f * DEGTORAD;
+  const float omega[2] = {2.0f * M_PI_F * 0.5f, 2.0f * M_PI_F * 0.31f};
+  for (int i = 0; i < 15000; i++) {
+    time_test_advance_us(1000);
+    const float t = i * 0.001f;
+    // Earth-frame acceleration and velocity, north and east.
+    const float accel[2] = {amplitude * sinf(omega[0] * t), amplitude * sinf(omega[1] * t)};
+    if (time_millis() % 100 == 0) {
+      const float measured = t - 0.12f;
+      state.gps_velocity.north = amplitude / omega[0] * (1 - cosf(omega[0] * measured)) + 0.05f * sinf(37 * t);
+      state.gps_velocity.east = amplitude / omega[1] * (1 - cosf(omega[1] * measured)) + 0.05f * cosf(29 * t);
+      state.gps_speed = hypotf(state.gps_velocity.north, state.gps_velocity.east);
+      state.gps_last_update_ms = time_millis();
+    }
+    // Body forward and right from earth by the true heading; legacy axes are {left, back, up}.
+    const float forward = accel[0] * cosf(true_heading) + accel[1] * sinf(true_heading) + tilt_offset;
+    const float right = -accel[0] * sinf(true_heading) + accel[1] * cosf(true_heading);
+    state.GEstG = (vec3_t){{0, 0, 1}};
+    state.accel_raw = (vec3_t){{-right / 9.80665f, -forward / 9.80665f, 1}};
+    imu_test_attitude_update();
+    nav_update();
+  }
+  return state.heading;
+}
+
+void test_navigation_heading_observed_from_accelerations(void) {
+  // Changing accelerations turn the heading onto the truth, despite tilt error.
+  TEST_ASSERT_FLOAT_WITHIN(3.0f, 30.0f, sim_heading_observation(1.5f, 0.0f));
+  TEST_ASSERT_FLOAT_WITHIN(3.0f, 30.0f, sim_heading_observation(1.5f, 0.5f));
+  // Hovering, GPS noise alone does not move it.
+  const float hover = sim_heading_observation(0.0f, 0.5f);
+  TEST_ASSERT_TRUE(hover < 1.0f || hover > 359.0f);
 }
 
 void test_navigation_vertical_speed_fusion(void) {
@@ -1056,8 +1377,7 @@ void test_navigation_vertical_speed_fusion(void) {
     if (i % 5 == 0) nav_test_altitude_sample(height, time_millis());
     sim_vertical(2, 0.01f);
   }
-  TEST_ASSERT_FLOAT_WITHIN(0.15f, velocity, state.vertical_speed);
-  TEST_ASSERT_TRUE(fabsf(state.baro_vertical_speed - velocity) > fabsf(state.vertical_speed - velocity));
+  TEST_ASSERT_FLOAT_WITHIN(0.15f, velocity, state.velocity.axis[2]);
 
   // A stationary craft with accelerometer bias converges to zero speed.
   navigation_test_setup();
@@ -1067,16 +1387,16 @@ void test_navigation_vertical_speed_fusion(void) {
     if (i % 5 == 0) nav_test_altitude_sample(0, time_millis());
     sim_vertical(0.3f, 0.01f);
   }
-  TEST_ASSERT_FLOAT_WITHIN(0.05f, 0, state.vertical_speed);
+  TEST_ASSERT_FLOAT_WITHIN(0.05f, 0, state.velocity.axis[2]);
 
   // Without barometer the integral leaks instead of running away: a residual
   // bias settles at bias * 5s rather than growing without bound.
-  set_altitude_source(false, 0);
+  set_altitude_source(false);
   for (int i = 0; i < 6000; i++) {
     time_test_advance_us(10000);
     sim_vertical(0.35f, 0.01f);
   }
-  TEST_ASSERT_FLOAT_WITHIN(0.05f, 0.25f, state.vertical_speed);
+  TEST_ASSERT_FLOAT_WITHIN(0.05f, 0.25f, state.velocity.axis[2]);
 }
 
 void test_navigation_closed_loop_return_with_irregular_samples(void) {
@@ -1095,8 +1415,10 @@ void test_navigation_closed_loop_return_with_irregular_samples(void) {
     if (time_millis() >= next_gps_ms) {
       state.gps_coord.lat = lrintf(north * 89.93f);
       state.gps_coord.lon = lrintf(east * 89.93f);
-      state.gps_vel_north = vn;
-      state.gps_vel_east = ve;
+      state.gps_velocity.north = vn;
+      state.velocity.axis[0] = state.gps_velocity.north;
+      state.gps_velocity.east = ve;
+      state.velocity.axis[1] = state.gps_velocity.east;
       state.gps_speed = hypotf(vn, ve);
       state.home_distance = hypotf(north, east);
       state.home_bearing = normalize_deg(atan2f(-east, -north) * RADTODEG);
@@ -1109,14 +1431,14 @@ void test_navigation_closed_loop_return_with_irregular_samples(void) {
     }
     state.heading = normalize_deg(heading * RADTODEG);
     set_tilt(roll, pitch);
-    const auto phase = state.rth_state;
-    nav_test_update_rth();
+    const auto phase = state.nav_state;
+    nav_test_update_control(dt);
     char context[120];
     snprintf(context, sizeof(context), "Return aborted: t=%.2f phase=%u distance=%.2f altitude=%.2f", (double)(i * dt), (unsigned)phase, (double)state.home_distance, (double)height);
-    TEST_ASSERT_TRUE_MESSAGE(state.rth_active, context);
+    TEST_ASSERT_TRUE_MESSAGE(state.nav_state >= NAV_STATE_CLIMB, context);
     pitch += dt / 0.1f * (state.rx_override.pitch * 60 * DEGTORAD - pitch);
     roll += dt / 0.1f * (state.rx_override.roll * 60 * DEGTORAD - roll);
-    heading += state.rth_yaw_rate * dt;
+    heading += state.nav_yaw_rate * dt;
     const float af = 9.81f * tanf(pitch);
     const float ar = 9.81f * tanf(roll);
     vn += dt * (af * cosf(heading) - ar * sinf(heading) - 0.12f * vn);
@@ -1129,7 +1451,7 @@ void test_navigation_closed_loop_return_with_irregular_samples(void) {
     height += vz * dt;
     max_height = MAX(max_height, height);
   }
-  TEST_ASSERT_EQUAL(RTH_STATE_HOVER_HOME, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_HOLD, state.nav_state);
   TEST_ASSERT_TRUE(hypotf(north, east) < 3);
   TEST_ASSERT_FLOAT_WITHIN(0.5f, 10, height);
   TEST_ASSERT_TRUE(max_height < 12);
@@ -1140,20 +1462,20 @@ void test_navigation_turns_before_horizontal_commands() {
   state.home_bearing = 180;
   state.altitude = 10;
   rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_TURN, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_TURN, state.nav_state);
   for (int i = 0; i < 100; i++) {
     rth_step(10000);
     TEST_ASSERT_EQUAL_FLOAT(0, state.rx_override.roll);
     TEST_ASSERT_EQUAL_FLOAT(0, state.rx_override.pitch);
   }
-  TEST_ASSERT_FLOAT_WITHIN(0.001f, 30 * DEGTORAD, state.rth_yaw_rate);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 30 * DEGTORAD, state.nav_yaw_rate);
   state.heading = 175;
   state.gyro.yaw = 15 * DEGTORAD;
   rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_TURN, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_TURN, state.nav_state);
   state.gyro.yaw = 0;
   rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_NAVIGATE, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_NAVIGATE, state.nav_state);
   TEST_ASSERT_EQUAL_FLOAT(0, state.rx_override.pitch);
   rth_step(10000);
   TEST_ASSERT_TRUE(state.rx_override.pitch > 0);
@@ -1166,11 +1488,11 @@ void test_navigation_turn_wraps_heading_and_respects_rate() {
   state.home_bearing = 350;
   rth_step(10000);
   for (int i = 0; i < 100; i++) rth_step(10000);
-  TEST_ASSERT_FLOAT_WITHIN(0.001f, -20 * DEGTORAD, state.rth_yaw_rate);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, -20 * DEGTORAD, state.nav_yaw_rate);
   state.heading = 350;
   state.home_bearing = 10;
   for (int i = 0; i < 100; i++) rth_step(10000);
-  TEST_ASSERT_FLOAT_WITHIN(0.001f, 20 * DEGTORAD, state.rth_yaw_rate);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 20 * DEGTORAD, state.nav_yaw_rate);
 }
 
 void test_navigation_stalled_turn_aborts() {
@@ -1179,25 +1501,37 @@ void test_navigation_stalled_turn_aborts() {
   state.home_bearing = 180;
   rth_step(10000);
   for (int i = 0; i < 1601; i++) rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_NAV_FAILED, state.rth_state);
-  TEST_ASSERT_TRUE(state.rth_active);
-  TEST_ASSERT_EQUAL_FLOAT(0, state.rth_yaw_rate);
+  TEST_ASSERT_EQUAL(NAV_STATE_NAV_FAILED, state.nav_state);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+  TEST_ASSERT_EQUAL_FLOAT(0, state.nav_yaw_rate);
   for (int i = 0; i < 1000; i++) rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_ABORTED, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_ABORTED, state.nav_state);
 }
 
-void test_navigation_heading_loss_stops_horizontal_commands() {
+void test_navigation_realign_turn_brakes_without_steering() {
   start_test_rth();
   state.altitude = 10;
   rth_step(10000);
   rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_NAVIGATE, state.rth_state);
-  state.rx_override.roll = state.rx_override.pitch = 0.2f;
+  TEST_ASSERT_EQUAL(NAV_STATE_NAVIGATE, state.nav_state);
+  // Moving north while the nose swings east, away from the target bearing.
+  state.velocity.axis[0] = 4;
   state.heading = 90;
   rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_TURN, state.rth_state);
-  TEST_ASSERT_EQUAL_FLOAT(0, state.rx_override.roll);
-  TEST_ASSERT_EQUAL_FLOAT(0, state.rx_override.pitch);
+  TEST_ASSERT_EQUAL(NAV_STATE_TURN, state.nav_state);
+  float roll = state.rx_override.roll, pitch = state.rx_override.pitch;
+  for (int i = 0; i < 300; i++) {
+    rth_step(10000);
+    TEST_ASSERT_EQUAL(NAV_STATE_TURN, state.nav_state);
+    // Tilt changes stay within the command slew; nothing snaps level.
+    TEST_ASSERT_TRUE(fabsf(state.rx_override.roll - roll) <= 0.0201f);
+    TEST_ASSERT_TRUE(fabsf(state.rx_override.pitch - pitch) <= 0.0201f);
+    roll = state.rx_override.roll;
+    pitch = state.rx_override.pitch;
+  }
+  // Nose east: right roll tilts south against the northward motion.
+  TEST_ASSERT_TRUE(state.rx_override.roll > 0.05f);
+  TEST_ASSERT_FLOAT_WITHIN(0.05f, 0, state.rx_override.pitch);
 }
 
 void test_navigation_acquires_heading_before_turning() {
@@ -1211,10 +1545,10 @@ void test_navigation_acquires_heading_before_turning() {
     state.altitude = 10;
     state.home_bearing = normalize_deg(true_heading + 90);
     rth_step(10000);
-    TEST_ASSERT_EQUAL(RTH_STATE_ACQUIRE_HEADING, state.rth_state);
+    TEST_ASSERT_EQUAL(NAV_STATE_ACQUIRE_HEADING, state.nav_state);
     float pitch = 0, speed = 0, north = 0, east = 0;
     state.looptime = 0.01f;
-    for (int i = 0; i < 1400 && state.rth_state == RTH_STATE_ACQUIRE_HEADING; i++) {
+    for (int i = 0; i < 1400 && state.nav_state == NAV_STATE_ACQUIRE_HEADING; i++) {
       const float previous_pitch = pitch;
       pitch += 0.01f / 0.2f * (state.rx_override.pitch * profile.rate.level_max_angle * DEGTORAD - pitch);
       state.gyro.pitch = (pitch - previous_pitch) / 0.01f;
@@ -1228,24 +1562,33 @@ void test_navigation_acquires_heading_before_turning() {
         state.gps_speed = speed;
         state.gps_heading = true_heading;
         state.gps_heading_accuracy = 1;
-        state.gps_coord.lat = 8990 + int32_t(north * 89.9f);
-        state.gps_coord.lon = int32_t(east * 89.9f);
+        state.gps_velocity.north = speed * cosf(true_heading * DEGTORAD);
+        state.velocity.axis[0] = state.gps_velocity.north;
+        state.gps_velocity.east = speed * sinf(true_heading * DEGTORAD);
+        state.velocity.axis[1] = state.gps_velocity.east;
+        state.position.lat = 8990 + int32_t(north * 89.9f);
+        state.position.lon = int32_t(east * 89.9f);
       }
       imu_test_attitude_update();
       rth_step(10000);
-      TEST_ASSERT_TRUE(state.rth_active);
-      TEST_ASSERT_EQUAL_FLOAT(0, state.rth_yaw_rate);
+      TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+      TEST_ASSERT_EQUAL_FLOAT(0, state.nav_yaw_rate);
       TEST_ASSERT_EQUAL_FLOAT(0, state.rx_override.roll);
       TEST_ASSERT_TRUE(state.rx_override.pitch <= MIN(35.0f, profile.rate.level_max_angle) / profile.rate.level_max_angle + 0.001f);
     }
-    TEST_ASSERT_EQUAL(RTH_STATE_TURN, state.rth_state);
+    TEST_ASSERT_EQUAL(NAV_STATE_TURN, state.nav_state);
     TEST_ASSERT_TRUE(state.heading_confidence >= 0.6f);
     TEST_ASSERT_FLOAT_WITHIN(5, true_heading, state.heading);
-    TEST_ASSERT_EQUAL_FLOAT(0, state.rx_override.pitch);
+    // The turn brakes the acquisition run from its tilt instead of snapping level.
+    const float acquisition_pitch = state.rx_override.pitch;
+    TEST_ASSERT_TRUE(acquisition_pitch > 0);
     rth_step(10000);
-    TEST_ASSERT_EQUAL(RTH_STATE_TURN, state.rth_state);
-    TEST_ASSERT_TRUE(state.rth_yaw_rate > 0);
-    TEST_ASSERT_EQUAL_FLOAT(0, state.rx_override.pitch);
+    TEST_ASSERT_EQUAL(NAV_STATE_TURN, state.nav_state);
+    TEST_ASSERT_TRUE(state.nav_yaw_rate > 0);
+    TEST_ASSERT_TRUE(state.rx_override.pitch < acquisition_pitch);
+    TEST_ASSERT_TRUE(acquisition_pitch - state.rx_override.pitch <= 0.0201f);
+    for (int i = 0; i < 300; i++) rth_step(10000);
+    TEST_ASSERT_TRUE(state.rx_override.pitch < 0);
   }
 }
 
@@ -1253,19 +1596,19 @@ void test_navigation_acquisition_failure_holds_and_can_cancel() {
   start_test_rth();
   state.heading_confidence = 0;
   state.altitude = 10;
-  state.rth_failsafe_active = true;
+  state.failsafe_owner = FAILSAFE_OWNER_RTH;
   rth_step(10000);
   for (int i = 0; i < 1501; i++) rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_HEADING_FAILED, state.rth_state);
-  TEST_ASSERT_TRUE(state.rth_active);
-  TEST_ASSERT_TRUE(state.rth_failsafe_active);
+  TEST_ASSERT_EQUAL(NAV_STATE_HEADING_FAILED, state.nav_state);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+  TEST_ASSERT_EQUAL(FAILSAFE_OWNER_RTH, state.failsafe_owner);
   TEST_ASSERT_TRUE(flags.controls_override);
   TEST_ASSERT_EQUAL_FLOAT(0, state.rx_override.pitch);
-  TEST_ASSERT_EQUAL_FLOAT(0, state.rth_yaw_rate);
-  TEST_ASSERT_TRUE(state.rx_override.throttle >= profile.navigation.rth_throttle_min);
-  nav_rth_stop();
+  TEST_ASSERT_EQUAL_FLOAT(0, state.nav_yaw_rate);
+  TEST_ASSERT_TRUE(state.rx_override.throttle >= profile.navigation.throttle_min);
+  nav_test_stop();
   TEST_ASSERT_FALSE(flags.controls_override);
-  TEST_ASSERT_EQUAL(RTH_STATE_INACTIVE, state.rth_state);
+  TEST_ASSERT_EQUAL(NAV_STATE_INACTIVE, state.nav_state);
 }
 
 void test_navigation_acquisition_distance_limit() {
@@ -1273,10 +1616,10 @@ void test_navigation_acquisition_distance_limit() {
   state.heading_confidence = 0;
   state.altitude = 10;
   rth_step(10000);
-  state.gps_coord.lon += 7200; // About 80m at the equator.
+  state.position.lon += 7200; // About 80m at the equator.
   rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_HEADING_FAILED, state.rth_state);
-  TEST_ASSERT_TRUE(state.rth_active);
+  TEST_ASSERT_EQUAL(NAV_STATE_HEADING_FAILED, state.nav_state);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
   TEST_ASSERT_EQUAL_FLOAT(0, state.rx_override.pitch);
 }
 
@@ -1286,14 +1629,14 @@ void test_navigation_gps_outage_does_not_extend_acquisition() {
   state.altitude = 10;
   rth_step(10000);
   for (int i = 0; i < 1400; i++) rth_step(10000);
-  nav_test_set_gps_sane(false);
+  flags.gps_valid = false;
   rth_step(10000);
   TEST_ASSERT_EQUAL_FLOAT(0, state.rx_override.pitch);
   rth_step(2000000);
-  nav_test_set_gps_sane(true);
+  flags.gps_valid = true;
   rth_step(10000);
-  TEST_ASSERT_EQUAL(RTH_STATE_HEADING_FAILED, state.rth_state);
-  TEST_ASSERT_TRUE(state.rth_active);
+  TEST_ASSERT_EQUAL(NAV_STATE_HEADING_FAILED, state.nav_state);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
 }
 
 // Exercise the horizontal controller with receiver delay, sample jitter,
@@ -1304,10 +1647,10 @@ void test_navigation_delayed_gps_cruise_and_arrival() {
   for (float cruise : speeds) {
     for (int delay : delays) {
       navigation_test_setup();
-      profile.navigation.rth_cruise_speed = cruise;
+      profile.navigation.travel_speed = cruise;
       profile.rate.level_max_angle = 65;
       state.heading_confidence = 0.5f;
-      state.rth_state = RTH_STATE_NAVIGATE;
+      state.nav_state = NAV_STATE_NAVIGATE;
       float position = -400, velocity = 0, pitch = 0;
       float positions[64], velocities[64];
       for (int i = 0; i < 64; i++) { positions[i] = position; velocities[i] = 0; }
@@ -1321,8 +1664,9 @@ void test_navigation_delayed_gps_cruise_and_arrival() {
         time_test_advance_us(10000);
         if (i >= next_sample) {
           const int index = (i + 64 - delay) % 64;
-          state.gps_coord.lat = lrintf(positions[index] * 89.93f);
-          state.gps_vel_north = velocities[index] + 0.3f * sinf(8 * t) + 0.15f * sinf(19 * t);
+          state.position.lat = lrintf(positions[index] * 89.93f);
+          state.gps_velocity.north = velocities[index] + 0.3f * sinf(8 * t) + 0.15f * sinf(19 * t);
+          state.velocity.axis[0] = state.gps_velocity.north;
           state.gps_last_update_ms = time_millis();
           next_sample += sample_count++ % 2 ? 8 : 12;
         }
@@ -1353,12 +1697,1170 @@ void test_navigation_delayed_gps_cruise_and_arrival() {
   }
 }
 
+// Two waypoints 20 m north, then 20 m east of that; the vehicle starts at home.
+static void mission_test_route(mission_end_action_t end_action) {
+  mission = {.count = 2, .end_action = end_action};
+  mission.waypoints[0] = {.coord = {.lon = 0, .lat = 2 * GPS_DEG_10M}, .altitude = 12, .speed = 0};
+  mission.waypoints[1] = {.coord = {.lon = 2 * GPS_DEG_10M, .lat = 2 * GPS_DEG_10M}, .altitude = 8, .speed = 30}; // 3 m/s
+}
+
+static void mission_test_airborne(float altitude) {
+  navigation_test_setup();
+  time_test_set_us(1000000);
+  flags.arm_state = 1;
+  flags.rx_ready = 1;
+  flags.in_air = 1;
+  flags.on_ground = 0;
+  flags.home_valid = true;
+  flags.gps_valid = true;
+  set_altitude_source(true);
+  state.altitude = altitude;
+  state.throttle = 0.5f;
+  state.position = state.home = {};
+  state.home_distance = 0;
+  mission_test_route(MISSION_END_HOLD);
+}
+
+static void mission_step(void) {
+  time_test_advance_us(10000);
+  set_altitude_source(true);
+  nav_update_multi(0.01f);
+}
+
+void test_navigation_leg_altitude_follows_along_track_progress(void) {
+  // 100 m north; 899 lat units are about 10 m at the equator.
+  const gps_coord_t origin = {.lon = 0, .lat = 0};
+  const gps_coord_t target = {.lon = 0, .lat = 8993};
+  const struct { int32_t lat, lon; float altitude; } cases[] = {
+      {0, 0, 10}, {4497, 0, 20}, {4497, 2000, 20}, {8993, 0, 30}, {-2000, 0, 10}, {12000, 0, 30}};
+  float rate;
+  for (const auto &test : cases) {
+    state.position = {.lon = test.lon, .lat = test.lat};
+    TEST_ASSERT_FLOAT_WITHIN(0.05f, test.altitude, nav_leg_altitude(origin, 10, target, 30, &rate));
+  }
+  // A leg without a direction flies at the target altitude.
+  TEST_ASSERT_EQUAL_FLOAT(30, nav_leg_altitude(origin, 10, origin, 30, &rate));
+}
+
+void test_navigation_mission_starts_only_airborne_near_the_route(void) {
+  mission_test_airborne(10);
+  mission.count = 0;
+  nav_test_mission_start();
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB);
+
+  mission_test_route(MISSION_END_HOLD);
+  flags.on_ground = 1;
+  nav_test_mission_start();
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB);
+  flags.on_ground = 0;
+  state.altitude = 1;
+  nav_test_mission_start();
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB);
+  state.altitude = 10;
+
+  // A route planned elsewhere is never flown.
+  mission.waypoints[0].coord.lat = 300 * GPS_DEG_10M;
+  nav_test_mission_start();
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB);
+
+  mission_test_route(MISSION_END_HOLD);
+  nav_test_mission_start();
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB && state.nav_target == NAV_TARGET_MISSION && flags.controls_override);
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+  // The first waypoint is higher: climb in place before steering.
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
+  TEST_ASSERT_EQUAL_STRING("MISSION", control_flight_mode_name());
+}
+
+void test_navigation_mission_flies_waypoints_in_order_and_holds_the_last(void) {
+  mission_test_airborne(12);
+  nav_test_mission_start();
+  TEST_ASSERT_EQUAL(NAV_STATE_TURN, state.nav_state);
+  rth_step(10000);
+  TEST_ASSERT_FLOAT_WITHIN(0.5f, 20, state.nav_target_distance);
+  TEST_ASSERT_FLOAT_WITHIN(1, 0, state.nav_target_bearing);
+
+  state.position = mission.waypoints[0].coord;
+  rth_step(10000);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  TEST_ASSERT_EQUAL(NAV_STATE_TURN, state.nav_state);
+  TEST_ASSERT_FLOAT_WITHIN(0.5f, 20, state.nav_target_distance);
+  TEST_ASSERT_FLOAT_WITHIN(1, 90, state.nav_target_bearing);
+
+  state.position = mission.waypoints[1].coord;
+  rth_step(10000);
+  TEST_ASSERT_EQUAL(NAV_STATE_HOLD, state.nav_state);
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  // Holding the last waypoint never advances past the route.
+  for (int i = 0; i < 1000; i++) rth_step(10000);
+  TEST_ASSERT_EQUAL(NAV_STATE_HOLD, state.nav_state);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  TEST_ASSERT_TRUE(state.nav_target == NAV_TARGET_MISSION && state.nav_state >= NAV_STATE_CLIMB);
+}
+
+void test_navigation_mission_hovers_out_a_waypoint_hold(void) {
+  mission_test_airborne(12);
+  mission.waypoints[0].hold = 5;
+  mission.waypoints[1].hold = 3;
+  mission.end_action = MISSION_END_RTH;
+  state.home_distance = 28;
+  nav_test_mission_start();
+  state.position = mission.waypoints[0].coord;
+  rth_step(10000);
+  TEST_ASSERT_EQUAL(NAV_STATE_HOLD, state.nav_state);
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+  for (int i = 0; i < 480; i++) rth_step(10000);
+  TEST_ASSERT_EQUAL(NAV_STATE_HOLD, state.nav_state);
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+
+  // Blown off the waypoint, the hold time keeps running from the arrival.
+  state.position.lat -= GPS_DEG_10M;
+  rth_step(10000);
+  TEST_ASSERT_EQUAL(NAV_STATE_TURN, state.nav_state);
+  state.position = mission.waypoints[0].coord;
+  for (int i = 0; i < 30; i++) rth_step(10000);
+  TEST_ASSERT_EQUAL(NAV_STATE_TURN, state.nav_state);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+
+  // The last waypoint holds before its end action.
+  state.position = mission.waypoints[1].coord;
+  rth_step(10000);
+  TEST_ASSERT_EQUAL(NAV_STATE_HOLD, state.nav_state);
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  for (int i = 0; i < 290; i++) rth_step(10000);
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  for (int i = 0; i < 20; i++) rth_step(10000);
+  TEST_ASSERT_EQUAL(NAV_TARGET_HOME, state.nav_target);
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
+}
+
+// GPS wander around the yaw hold radius with the nose far off the target
+// bearing navigates back instead of alternating between turn and navigate.
+void test_navigation_hold_wander_near_yaw_hold_radius_keeps_navigating(void) {
+  mission_test_airborne(12);
+  nav_test_mission_start();
+  state.position = mission.waypoints[0].coord;
+  rth_step(10000);
+  state.position = mission.waypoints[1].coord;
+  rth_step(10000);
+  TEST_ASSERT_EQUAL(NAV_STATE_HOLD, state.nav_state);
+
+  // South of the waypoint, the target bears north; the nose points east.
+  state.heading = 90;
+  const float south_m[] = {7, 7.5f, 8.5f, 7.5f, 8.5f, 9.5f, 7.5f, 8.5f, 7};
+  int turns = 0;
+  for (const float distance : south_m) {
+    state.position.lat = mission.waypoints[1].coord.lat - int32_t(distance * GPS_DEG_10M / 10);
+    for (int i = 0; i < 10; i++) {
+      const auto previous = state.nav_state;
+      rth_step(10000);
+      if (state.nav_state == NAV_STATE_TURN && previous != NAV_STATE_TURN)
+        turns++;
+    }
+  }
+  // Leaving the hold turns once; inside the yaw hold radius that is already aligned.
+  TEST_ASSERT_EQUAL(1, turns);
+  TEST_ASSERT_EQUAL(NAV_STATE_NAVIGATE, state.nav_state);
+
+  state.position = mission.waypoints[1].coord;
+  rth_step(10000);
+  TEST_ASSERT_EQUAL(NAV_STATE_HOLD, state.nav_state);
+
+  // A real excursion beyond the realign radius still turns first.
+  state.position.lat = mission.waypoints[1].coord.lat - 2 * GPS_DEG_10M;
+  rth_step(10000);
+  rth_step(10000);
+  TEST_ASSERT_EQUAL(NAV_STATE_TURN, state.nav_state);
+}
+
+void test_navigation_mission_end_returns_home(void) {
+  mission_test_airborne(12);
+  mission.end_action = MISSION_END_RTH;
+  state.home_distance = 28;
+  state.home_bearing = 225;
+  nav_test_mission_start();
+  state.position = mission.waypoints[0].coord;
+  rth_step(10000);
+  state.position = mission.waypoints[1].coord;
+  rth_step(10000);
+  TEST_ASSERT_NOT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
+  rth_step(10000);
+  TEST_ASSERT_EQUAL_FLOAT(28, state.nav_target_distance);
+  TEST_ASSERT_EQUAL_FLOAT(225, state.nav_target_bearing);
+  TEST_ASSERT_EQUAL_STRING("RTH", control_flight_mode_name());
+}
+
+void test_navigation_mission_switches_and_link_loss(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  const uint32_t rth_switch = 1U << AUX_RETURN_TO_HOME;
+  mission_test_airborne(12);
+  // A switch already on at arming does not start the mission.
+  state.aux_active = mission_switch;
+  flags.arm_state = 0;
+  mission_step();
+  flags.arm_state = 1;
+  mission_step();
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB);
+  state.aux_active = 0;
+  mission_step();
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+
+  // RTH has priority and retargets home without a second takeover.
+  state.aux_active = mission_switch | rth_switch;
+  mission_step();
+  TEST_ASSERT_NOT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB);
+
+  // Switching the mission off hands control back.
+  state.aux_active = 0;
+  mission_step();
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  state.aux_active = 0;
+  mission_step();
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB || flags.controls_override);
+
+  // Without mission_on_failsafe, a loss inside the hold-last window keeps the
+  // mission. Once failsafe engages, failsafe RTH returns home, otherwise
+  // failsafe takes over.
+  profile.navigation.mission_on_failsafe = false;
+  const bool failsafe_rth[] = {true, false};
+  for (bool rth_on_failsafe : failsafe_rth) {
+    profile.navigation.rth_on_failsafe = rth_on_failsafe;
+    flags.failsafe_signal_lost = 0;
+    flags.failsafe = 0;
+    state.failsafe_owner = FAILSAFE_OWNER_NONE;
+    state.aux_active = 0;
+    mission_step();
+    state.aux_active = mission_switch;
+    mission_step();
+    TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+    flags.failsafe_signal_lost = 1;
+    mission_step();
+    TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+    // Control engages failsafe after the window, owning it with failsafe RTH.
+    flags.failsafe = 1;
+    state.failsafe_owner = rth_on_failsafe ? FAILSAFE_OWNER_RTH : FAILSAFE_OWNER_NONE;
+    mission_step();
+    TEST_ASSERT_NOT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+    TEST_ASSERT_EQUAL(rth_on_failsafe, state.nav_state >= NAV_STATE_CLIMB);
+    nav_test_stop();
+  }
+  flags.failsafe = 0;
+  flags.failsafe_signal_lost = 0;
+}
+
+void test_navigation_mission_switch_ends_the_final_return(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  const uint32_t rth_switch = 1U << AUX_RETURN_TO_HOME;
+  mission_test_airborne(12);
+  mission.end_action = MISSION_END_RTH;
+  const auto fly_route = [&]() {
+    state.position = {};
+    state.aux_active = 0;
+    mission_step();
+    state.aux_active = mission_switch;
+    mission_step();
+    state.position = mission.waypoints[0].coord;
+    mission_step();
+    state.position = mission.waypoints[1].coord;
+    mission_step();
+    TEST_ASSERT_NOT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+    TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+  };
+
+  fly_route();
+  state.aux_active = 0;
+  mission_step();
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB || flags.controls_override);
+
+  // An RTH request takes that return over from the mission switch.
+  fly_route();
+  state.aux_active = mission_switch | rth_switch;
+  mission_step();
+  state.aux_active = rth_switch;
+  mission_step();
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+}
+
+void test_navigation_mission_link_loss_holds_altitude_with_low_stick(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  mission_test_airborne(12);
+  profile.navigation.rth_on_failsafe = false;
+  profile.navigation.mission_on_failsafe = false;
+  state.rx_frame_time_us = time_micros();
+  control_failsafe_update();
+  mission_step();
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+
+  // The pilot leaves the stick low while the mission flies the throttle.
+  state.rx_filtered.throttle = 0.0f;
+  for (int i = 0; i < 1100; i++) {
+    state.rx_frame_time_us = time_micros();
+    control_failsafe_update();
+    mission_step();
+  }
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+
+  // Past the hold-last window the mission ends in the failsafe hold, not idle.
+  flags.failsafe_signal_lost = 1;
+  for (int i = 0; i < 31; i++) {
+    control_failsafe_update();
+    mission_step();
+    TEST_ASSERT_TRUE(flags.controls_override);
+  }
+  TEST_ASSERT_FALSE(state.nav_target == NAV_TARGET_MISSION || state.nav_state >= NAV_STATE_CLIMB);
+  TEST_ASSERT_TRUE(flags.failsafe_hold);
+  TEST_ASSERT_TRUE(state.rx_override.throttle >= profile.navigation.throttle_min);
+  TEST_ASSERT_EQUAL_STRING("FS HOLD", control_flight_mode_name());
+  flags.failsafe_signal_lost = 0;
+}
+
+// Control and navigation as in the Flight loop, with the receiver frames
+// arriving unless the link is lost.
+static void mission_link_step(void) {
+  if (!flags.failsafe_signal_lost)
+    state.rx_frame_time_us = time_micros();
+  control_failsafe_update();
+  mission_step();
+}
+
+static void mission_link_start(void) {
+  mission_test_airborne(12);
+  state.rx_frame_time_us = time_micros();
+  control_failsafe_update();
+  mission_link_step();
+  state.aux_active = 1U << AUX_MISSION;
+  mission_link_step();
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+}
+
+void test_navigation_mission_continues_through_link_loss(void) {
+  mission_link_start();
+  flags.failsafe_signal_lost = 1;
+  for (int i = 0; i < 100; i++)
+    mission_link_step();
+  TEST_ASSERT_EQUAL(FAILSAFE_OWNER_MISSION, state.failsafe_owner);
+  TEST_ASSERT_NOT_EQUAL(FAILSAFE_OWNER_RTH, state.failsafe_owner);
+  TEST_ASSERT_TRUE(flags.failsafe);
+  TEST_ASSERT_FALSE(flags.failsafe_outputs_blocked);
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  TEST_ASSERT_EQUAL_STRING("FS MISSION", control_flight_mode_name());
+
+  // It finishes and holds the last waypoint for as long as the link is lost.
+  state.position = mission.waypoints[0].coord;
+  mission_link_step();
+  state.position = mission.waypoints[1].coord;
+  mission_link_step();
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  for (int i = 0; i < 3000; i++)
+    mission_link_step();
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  TEST_ASSERT_EQUAL(NAV_STATE_HOLD, state.nav_state);
+  TEST_ASSERT_EQUAL(FAILSAFE_OWNER_MISSION, state.failsafe_owner);
+  TEST_ASSERT_TRUE(flags.arm_state);
+
+  // The link returns with the mission switch off. The switches stay locked
+  // until a stick moves, which only unlocks them.
+  flags.failsafe_signal_lost = 0;
+  state.aux_active = 0;
+  for (int i = 0; i < 100; i++)
+    mission_link_step();
+  TEST_ASSERT_EQUAL(FAILSAFE_OWNER_MISSION, state.failsafe_owner);
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  state.rx.roll = 0.5f;
+  mission_link_step();
+  TEST_ASSERT_NOT_EQUAL(FAILSAFE_OWNER_MISSION, state.failsafe_owner);
+  TEST_ASSERT_FALSE(flags.failsafe);
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB || flags.controls_override);
+  state.rx.roll = 0.0f;
+}
+
+// Without mission_on_failsafe a link loss ends the mission, but never a landing.
+void test_navigation_mission_landing_finishes_through_link_loss(void) {
+  mission_link_start();
+  profile.navigation.mission_on_failsafe = false;
+  mission.waypoints[1].type = MISSION_WAYPOINT_LAND;
+  mission.waypoints[1].altitude = 0;
+  state.position = mission.waypoints[0].coord;
+  mission_link_step();
+  state.position = mission.waypoints[1].coord;
+  for (int i = 0; i < 10 && state.nav_state != NAV_STATE_LAND; i++)
+    mission_link_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_LAND, state.nav_state);
+
+  flags.failsafe_signal_lost = 1;
+  for (int i = 0; i < 150; i++)
+    mission_link_step();
+  TEST_ASSERT_TRUE(state.failsafe_owner == FAILSAFE_OWNER_MISSION);
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  TEST_ASSERT_EQUAL(NAV_STATE_LAND, state.nav_state);
+  flags.failsafe_signal_lost = 0;
+  profile.navigation.mission_on_failsafe = true;
+}
+
+void test_navigation_mission_link_recovery_keeps_the_mission_switch(void) {
+  mission_link_start();
+  mission.end_action = MISSION_END_RTH;
+  flags.failsafe_signal_lost = 1;
+  for (int i = 0; i < 100; i++)
+    mission_link_step();
+  TEST_ASSERT_EQUAL(FAILSAFE_OWNER_MISSION, state.failsafe_owner);
+
+  // The end action is part of the mission: the return keeps the loss.
+  state.position = mission.waypoints[0].coord;
+  mission_link_step();
+  state.position = mission.waypoints[1].coord;
+  mission_link_step();
+  TEST_ASSERT_NOT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+  TEST_ASSERT_EQUAL(FAILSAFE_OWNER_MISSION, state.failsafe_owner);
+  TEST_ASSERT_NOT_EQUAL(FAILSAFE_OWNER_RTH, state.failsafe_owner);
+
+  // A switch left on keeps the return flying once the sticks unlock it.
+  flags.failsafe_signal_lost = 0;
+  for (int i = 0; i < 100; i++)
+    mission_link_step();
+  state.rx.yaw = -0.5f;
+  mission_link_step();
+  TEST_ASSERT_NOT_EQUAL(FAILSAFE_OWNER_MISSION, state.failsafe_owner);
+  TEST_ASSERT_FALSE(flags.failsafe);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+  TEST_ASSERT_TRUE(flags.mission_engaged);
+  state.rx.yaw = 0.0f;
+
+  // Unlocked, the mission switch ends it as before.
+  state.aux_active = 0;
+  mission_link_step();
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB || flags.controls_override);
+}
+
+// A loss that starts on the mission's return rides out the hold-last window,
+// then the mission owns it rather than failsafe RTH.
+void test_navigation_mission_return_keeps_a_link_loss(void) {
+  mission_link_start();
+  profile.navigation.rth_on_failsafe = true;
+  mission.end_action = MISSION_END_RTH;
+  state.position = mission.waypoints[0].coord;
+  mission_link_step();
+  state.position = mission.waypoints[1].coord;
+  mission_link_step();
+  TEST_ASSERT_EQUAL(NAV_TARGET_HOME, state.nav_target);
+  TEST_ASSERT_TRUE(flags.mission_engaged);
+
+  flags.failsafe_signal_lost = 1;
+  mission_link_step();
+  TEST_ASSERT_EQUAL(FAILSAFE_OWNER_NONE, state.failsafe_owner);
+  TEST_ASSERT_FALSE(flags.failsafe);
+
+  for (int i = 0; i < 100; i++)
+    mission_link_step();
+  TEST_ASSERT_EQUAL(FAILSAFE_OWNER_MISSION, state.failsafe_owner);
+  TEST_ASSERT_TRUE(flags.mission_engaged);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+  TEST_ASSERT_EQUAL_STRING("FS MISSION", control_flight_mode_name());
+  flags.failsafe_signal_lost = 0;
+}
+
+void test_navigation_mission_link_loss_disarms_after_crash(void) {
+  mission_link_start();
+  flags.failsafe_signal_lost = 1;
+  for (int i = 0; i < 100; i++)
+    mission_link_step();
+  TEST_ASSERT_EQUAL(FAILSAFE_OWNER_MISSION, state.failsafe_owner);
+
+  set_tilt(1.5f, 0.0f);
+  for (int i = 0; i < 101; i++)
+    mission_link_step();
+  TEST_ASSERT_FALSE(flags.arm_state);
+  TEST_ASSERT_TRUE(flags.failsafe_outputs_blocked);
+  TEST_ASSERT_NOT_EQUAL(FAILSAFE_OWNER_MISSION, state.failsafe_owner);
+  set_tilt(0.0f, 0.0f);
+  flags.failsafe_signal_lost = 0;
+}
+
+// Ground effect lasts from arming until clear of the ground, once per arm.
+void test_navigation_ground_effect_ends_clear_of_the_ground(void) {
+  mission_test_airborne(0);
+  mission_step();
+  TEST_ASSERT_EQUAL(GROUND_EFFECT_LAUNCH, state.ground_effect);
+  state.altitude = 1;
+  for (int i = 0; i < 190; i++)
+    mission_step();
+  TEST_ASSERT_EQUAL(GROUND_EFFECT_LAUNCH, state.ground_effect);
+  for (int i = 0; i < 20; i++)
+    mission_step();
+  TEST_ASSERT_EQUAL(GROUND_EFFECT_NONE, state.ground_effect);
+  // Flying low later is not a takeoff.
+  state.altitude = 0.2f;
+  mission_step();
+  TEST_ASSERT_EQUAL(GROUND_EFFECT_NONE, state.ground_effect);
+
+  flags.arm_state = 0;
+  mission_step();
+  TEST_ASSERT_EQUAL(GROUND_EFFECT_NONE, state.ground_effect);
+  flags.arm_state = 1;
+  mission_step();
+  TEST_ASSERT_EQUAL(GROUND_EFFECT_LAUNCH, state.ground_effect);
+}
+
+// A launch from a hill may never climb above its ground: the takeoff ends
+// after 5 s of raised throttle anyway. Idling armed, even after a throttle
+// blip, does not count.
+void test_navigation_ground_effect_ends_after_throttle_up(void) {
+  mission_test_airborne(0);
+  state.throttle = 0.5f;
+  for (int i = 0; i < 100; i++)
+    mission_step();
+  state.throttle = 0.05f;
+  for (int i = 0; i < 1000; i++)
+    mission_step();
+  TEST_ASSERT_EQUAL(GROUND_EFFECT_LAUNCH, state.ground_effect);
+  state.throttle = 0.5f;
+  state.altitude = -20;
+  for (int i = 0; i < 390; i++)
+    mission_step();
+  TEST_ASSERT_EQUAL(GROUND_EFFECT_LAUNCH, state.ground_effect);
+  for (int i = 0; i < 20; i++)
+    mission_step();
+  TEST_ASSERT_EQUAL(GROUND_EFFECT_NONE, state.ground_effect);
+  // Lowering the throttle in flight does not start the takeoff again.
+  state.throttle = 0.05f;
+  mission_step();
+  TEST_ASSERT_EQUAL(GROUND_EFFECT_NONE, state.ground_effect);
+}
+
+// The RTH switch requests a return for as long as it is on: RTH starts once
+// it can, and a return that gave up waits until nothing requests navigation.
+void test_navigation_rth_switch_starts_once_possible(void) {
+  const uint32_t rth_switch = 1U << AUX_RETURN_TO_HOME;
+  mission_test_airborne(12);
+  flags.gps_valid = false;
+  state.aux_active = rth_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_INACTIVE, state.nav_state);
+  flags.gps_valid = true;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
+
+  nav_test_stop();
+  state.nav_state = NAV_STATE_ABORTED;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_ABORTED, state.nav_state);
+  state.aux_active = 0;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_INACTIVE, state.nav_state);
+  state.aux_active = rth_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
+}
+
+// Armed on the ground with the RTH switch on, valid GPS and home do not lift
+// off: the return starts only once the pilot has flown.
+void test_navigation_rth_switch_does_not_take_off(void) {
+  const uint32_t rth_switch = 1U << AUX_RETURN_TO_HOME;
+  mission_test_airborne(0);
+  flags.in_air = 0;
+  flags.on_ground = 1;
+  state.throttle = 0.0f;
+  state.aux_active = rth_switch;
+  for (int i = 0; i < 10; i++)
+    mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_INACTIVE, state.nav_state);
+  TEST_ASSERT_FALSE(flags.controls_override);
+
+  flags.in_air = 1;
+  flags.on_ground = 0;
+  state.throttle = 0.5f;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
+}
+
+void test_navigation_mission_resumes_at_the_interrupted_waypoint(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  const uint32_t rth_switch = 1U << AUX_RETURN_TO_HOME;
+  mission_test_airborne(12);
+  const auto toggle_mission = [&]() {
+    state.aux_active = 0;
+    mission_step();
+    state.aux_active = mission_switch;
+    mission_step();
+  };
+
+  toggle_mission();
+  state.position = mission.waypoints[0].coord;
+  mission_step();
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+
+  // Switching off and on continues toward the waypoint not yet reached.
+  state.position = {};
+  toggle_mission();
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+
+  // So does a mission interrupted by RTH.
+  state.aux_active = mission_switch | rth_switch;
+  mission_step();
+  TEST_ASSERT_NOT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  state.aux_active = 0;
+  mission_step();
+  toggle_mission();
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+
+  // A completed mission starts over.
+  state.position = mission.waypoints[1].coord;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_HOLD, state.nav_state);
+  toggle_mission();
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+
+  // A new flight starts over too.
+  state.position = mission.waypoints[0].coord;
+  mission_step();
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  flags.arm_state = 0;
+  mission_step();
+  flags.arm_state = 1;
+  state.position = {};
+  toggle_mission();
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+}
+
+// A route replaced in flight keeps the active waypoint index.
+void test_navigation_mission_replaced_in_flight_keeps_the_waypoint(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  mission_test_airborne(12);
+  state.heading_confidence = 1;
+  state.aux_active = mission_switch;
+  mission_step();
+  state.position = mission.waypoints[0].coord;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  const nav_state_t nav_state = state.nav_state;
+
+  // Edits elsewhere on the route leave the active leg alone.
+  mission_t updated = mission;
+  updated.count = 3;
+  updated.waypoints[0].altitude = 20;
+  updated.waypoints[2] = {.coord = {.lon = 4 * GPS_DEG_10M, .lat = 0}, .altitude = 10};
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, nav_mission_replace(&updated));
+  TEST_ASSERT_EQUAL_UINT8(3, mission.count);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  TEST_ASSERT_EQUAL(nav_state, state.nav_state);
+
+  // Moving the active waypoint flies to its new position and altitude.
+  updated.waypoints[1] = {.coord = {.lon = -2 * GPS_DEG_10M, .lat = 2 * GPS_DEG_10M}, .altitude = 20};
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, nav_mission_replace(&updated));
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  TEST_ASSERT_EQUAL_INT32(-2 * GPS_DEG_10M, nav_target_coord().lon);
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
+
+  // Rejected routes leave the flown one.
+  mission_t far = updated;
+  far.waypoints[1].coord.lat = 300 * GPS_DEG_10M;
+  TEST_ASSERT_EQUAL(NAV_RESULT_TOO_FAR, nav_mission_replace(&far));
+  const mission_t empty = {};
+  TEST_ASSERT_EQUAL(NAV_RESULT_NO_MISSION, nav_mission_replace(&empty));
+  TEST_ASSERT_EQUAL_UINT8(3, mission.count);
+  TEST_ASSERT_EQUAL_INT32(2 * GPS_DEG_10M, mission.waypoints[1].coord.lat);
+
+  // A route shortened past the active waypoint flies to its new end.
+  mission_t shorter = updated;
+  shorter.count = 1;
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, nav_mission_replace(&shorter));
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+  state.altitude = 20;
+  state.position = shorter.waypoints[0].coord;
+  for (int i = 0; i < 5; i++)
+    mission_step();
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  TEST_ASSERT_EQUAL(NAV_STATE_HOLD, state.nav_state);
+
+  // A completed mission stays complete when the route grows.
+  updated.waypoints[0].altitude = 20;
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, nav_mission_replace(&updated));
+  mission_step();
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+  TEST_ASSERT_EQUAL(NAV_STATE_HOLD, state.nav_state);
+
+  // An interrupted mission resumes within the replaced route.
+  state.aux_active = 0;
+  mission_step();
+  state.aux_active = mission_switch;
+  mission_step();
+  for (int i = 0; i < 5 && state.mission_index == 0; i++)
+    mission_step();
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  state.aux_active = 0;
+  mission_step();
+  TEST_ASSERT_NOT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, nav_mission_replace(&shorter));
+  state.position = {};
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+}
+
+// A paused mission resumes at its waypoint only while that waypoint is
+// unchanged; a route changed there starts over.
+void test_navigation_mission_replaced_while_paused_starts_a_changed_route_over(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  mission_test_airborne(12);
+  state.heading_confidence = 1;
+  state.aux_active = mission_switch;
+  mission_step();
+  state.position = mission.waypoints[0].coord;
+  mission_step();
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  state.aux_active = 0;
+  mission_step();
+  TEST_ASSERT_NOT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+
+  mission_t updated = mission;
+  updated.waypoints[0].altitude = 20;
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, nav_mission_replace(&updated));
+  TEST_ASSERT_EQUAL_UINT8(1, nav_route_resume());
+
+  updated.waypoints[1].coord.lat += GPS_DEG_10M;
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, nav_mission_replace(&updated));
+  TEST_ASSERT_EQUAL_UINT8(0, nav_route_resume());
+}
+
+static nav_command_result_t guided_command(nav_command_type_t type, mission_waypoint_t waypoint = {}, uint8_t index = 0) {
+  nav_command_t cmd = {.type = (uint8_t)type, .waypoint = waypoint, .index = index};
+  return nav_command_apply(&cmd);
+}
+
+// Ground station targets need the mission switch, even without a stored mission.
+void test_navigation_guided_needs_the_mission_switch(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  const mission_waypoint_t north = {.coord = {.lon = 0, .lat = 2 * GPS_DEG_10M}, .altitude = 15};
+  mission_test_airborne(12);
+  mission.count = 0;
+  mission_step();
+  TEST_ASSERT_FALSE(flags.guided_ready);
+  TEST_ASSERT_EQUAL(NAV_RESULT_NO_AUTHORITY, guided_command(NAV_COMMAND_GOTO, north));
+
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_TRUE(flags.guided_ready);
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB);
+
+  // Rejected targets leave the vehicle with the pilot.
+  mission_waypoint_t low = north;
+  low.altitude = 1;
+  TEST_ASSERT_EQUAL(NAV_RESULT_INVALID, guided_command(NAV_COMMAND_GOTO, low));
+  mission_waypoint_t far = north;
+  far.coord.lat = 300 * GPS_DEG_10M;
+  TEST_ASSERT_EQUAL(NAV_RESULT_TOO_FAR, guided_command(NAV_COMMAND_GOTO, far));
+  TEST_ASSERT_EQUAL(NAV_RESULT_INVALID, guided_command(NAV_COMMAND_SET_ALT, {.altitude = 20}));
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB || flags.controls_override);
+
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_GOTO, north));
+  TEST_ASSERT_TRUE(state.nav_target == NAV_TARGET_GUIDED && state.nav_state >= NAV_STATE_CLIMB && flags.controls_override);
+  TEST_ASSERT_NOT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  // The target is higher: climb in place first.
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
+  TEST_ASSERT_EQUAL_STRING("GUIDED", control_flight_mode_name());
+  mission_step();
+  TEST_ASSERT_FLOAT_WITHIN(0.5f, 20, state.nav_target_distance);
+
+  // Arriving holds the target.
+  state.altitude = 15;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_TURN, state.nav_state);
+  state.position = north.coord;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_HOLD, state.nav_state);
+  TEST_ASSERT_EQUAL(NAV_TARGET_GUIDED, state.nav_target);
+
+  // Switching the mission off hands control back.
+  state.aux_active = 0;
+  mission_step();
+  TEST_ASSERT_FALSE(state.nav_target == NAV_TARGET_GUIDED || state.nav_state >= NAV_STATE_CLIMB || flags.controls_override || flags.guided_ready);
+}
+
+void test_navigation_guided_commands_retarget_without_releasing_control(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  const mission_waypoint_t east = {.coord = {.lon = 2 * GPS_DEG_10M, .lat = 0}, .altitude = 12};
+  mission_test_airborne(12);
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  state.position = mission.waypoints[0].coord;
+  mission_step();
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+
+  // HOLD stops at once, without turning toward a target.
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_HOLD));
+  TEST_ASSERT_TRUE(state.nav_target == NAV_TARGET_GUIDED && state.nav_state >= NAV_STATE_CLIMB);
+  TEST_ASSERT_NOT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  TEST_ASSERT_EQUAL(NAV_STATE_BRAKE, state.nav_state);
+  mission_step();
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, 0, state.nav_target_distance);
+
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_SET_ALT, {.altitude = 20}));
+  TEST_ASSERT_EQUAL_FLOAT(20, nav_route.guided.altitude);
+  TEST_ASSERT_EQUAL(NAV_RESULT_INVALID, guided_command(NAV_COMMAND_SET_ALT, {.altitude = 6000}));
+
+  // The mission resumes at the waypoint it was flying to.
+  TEST_ASSERT_EQUAL(NAV_RESULT_NO_MISSION, guided_command(NAV_COMMAND_MISSION, {}, 2));
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_MISSION, {}, NAV_COMMAND_MISSION_RESUME));
+  TEST_ASSERT_TRUE(state.nav_target == NAV_TARGET_MISSION && state.nav_state >= NAV_STATE_CLIMB);
+  TEST_ASSERT_NOT_EQUAL(NAV_TARGET_GUIDED, state.nav_target);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_GOTO, east));
+  TEST_ASSERT_EQUAL(NAV_TARGET_GUIDED, state.nav_target);
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_MISSION, {}, 0));
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+
+  // RTH flies home; the mission switch still ends it.
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_RTH));
+  TEST_ASSERT_EQUAL(NAV_TARGET_HOME, state.nav_target);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
+  TEST_ASSERT_EQUAL_STRING("RTH", control_flight_mode_name());
+  state.aux_active = 0;
+  mission_step();
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB || flags.controls_override);
+}
+
+void test_navigation_guided_yields_to_rth_and_failsafe(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  const uint32_t rth_switch = 1U << AUX_RETURN_TO_HOME;
+  mission_test_airborne(12);
+  mission.count = 0;
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_HOLD));
+
+  // The RTH switch retargets home and locks the ground station out.
+  state.aux_active = mission_switch | rth_switch;
+  mission_step();
+  TEST_ASSERT_FALSE(state.nav_target == NAV_TARGET_GUIDED || flags.guided_ready);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+  TEST_ASSERT_EQUAL(NAV_RESULT_NO_AUTHORITY, guided_command(NAV_COMMAND_HOLD));
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB);
+
+  // Failsafe never continues away from the pilot.
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_HOLD));
+  flags.failsafe_signal_lost = 1;
+  flags.failsafe = 1;
+  state.failsafe_owner = FAILSAFE_OWNER_RTH;
+  mission_step();
+  TEST_ASSERT_FALSE(state.nav_target == NAV_TARGET_GUIDED || flags.guided_ready);
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+  TEST_ASSERT_EQUAL(NAV_RESULT_NO_AUTHORITY, guided_command(NAV_COMMAND_HOLD));
+  flags.failsafe = 0;
+  flags.failsafe_signal_lost = 0;
+}
+
+// A rescue that gave up stays aborted only while an RTH request lasts: the
+// mission switch left on keeps neither RTH nor failsafe RTH from starting,
+// and grants the ground station nothing until it is turned on again.
+void test_navigation_abort_does_not_hold_with_the_mission_switch(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  const uint32_t rth_switch = 1U << AUX_RETURN_TO_HOME;
+  mission_test_airborne(12);
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+
+  // GPS lost for longer than the pause gives up the mission.
+  flags.gps_valid = false;
+  for (int i = 0; i < 1100 && state.nav_state != NAV_STATE_ABORTED; i++)
+    mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_ABORTED, state.nav_state);
+  flags.gps_valid = true;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_INACTIVE, state.nav_state);
+  TEST_ASSERT_FALSE(flags.guided_ready);
+  state.aux_active = mission_switch | rth_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
+
+  state.aux_active = mission_switch;
+  nav_test_stop();
+  state.nav_state = NAV_STATE_ABORTED;
+  mission_step();
+  flags.failsafe_signal_lost = 1;
+  flags.failsafe = 1;
+  flags.failsafe_hold = 1;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
+  flags.failsafe_hold = 0;
+  flags.failsafe = 0;
+  flags.failsafe_signal_lost = 0;
+}
+
+// As for a mission, a switch left on through takeoff grants nothing until
+// it is turned on in flight.
+void test_navigation_guided_needs_a_switch_edge_in_flight(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  mission_test_airborne(0);
+  mission.count = 0;
+  state.aux_active = mission_switch;
+  mission_step();
+  state.altitude = 12;
+  mission_step();
+  TEST_ASSERT_FALSE(flags.guided_ready);
+  TEST_ASSERT_EQUAL(NAV_RESULT_NO_AUTHORITY, guided_command(NAV_COMMAND_HOLD));
+
+  state.aux_active = 0;
+  mission_step();
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_TRUE(flags.guided_ready);
+}
+
+// Guided flight keeps its authority below the start altitude, so the ground
+// station can still stop or recall the vehicle.
+void test_navigation_guided_keeps_authority_below_the_start_altitude(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  mission_test_airborne(12);
+  mission.count = 0;
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_HOLD));
+
+  state.altitude = 1;
+  mission_step();
+  TEST_ASSERT_TRUE(flags.guided_ready);
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_RTH));
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB);
+
+  // Without guided flight owning the controls, low flight grants nothing.
+  state.aux_active = 0;
+  mission_step();
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_FALSE(flags.guided_ready || state.nav_state >= NAV_STATE_CLIMB);
+}
+
+// HOLD steers in the earth frame, so an untrusted heading is learned first.
+void test_navigation_guided_hold_acquires_an_untrusted_heading(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  mission_test_airborne(12);
+  mission.count = 0;
+  state.aux_active = mission_switch;
+  mission_step();
+  state.heading_confidence = 0.5f * NAV_MIN_HEADING_CONFIDENCE;
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_HOLD));
+  TEST_ASSERT_EQUAL(NAV_TARGET_GUIDED, state.nav_target);
+  TEST_ASSERT_EQUAL(NAV_STATE_ACQUIRE_HEADING, state.nav_state);
+
+  // A failed acquisition holds until it gives up; commands cannot restart it.
+  time_test_advance_us(16000000); // past the 15 s acquisition timeout
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_HEADING_FAILED, state.nav_state);
+  TEST_ASSERT_FALSE(flags.guided_ready);
+  TEST_ASSERT_EQUAL(NAV_RESULT_NO_AUTHORITY, guided_command(NAV_COMMAND_HOLD));
+  TEST_ASSERT_EQUAL(NAV_STATE_HEADING_FAILED, state.nav_state);
+}
+
+// Raising the target during a climb is progress toward the new altitude, not a stall.
+void test_navigation_guided_raised_climb_continues(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  const mission_waypoint_t north = {.coord = {.lon = 0, .lat = 2 * GPS_DEG_10M}, .altitude = 15};
+  mission_test_airborne(12);
+  mission.count = 0;
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_GOTO, north));
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
+  state.altitude = 14;
+  mission_step();
+
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_SET_ALT, {.altitude = 40}));
+  for (int i = 0; i < 12; i++) {
+    state.altitude += 1;
+    time_test_advance_us(990000);
+    mission_step();
+  }
+  TEST_ASSERT_TRUE(state.nav_state >= NAV_STATE_CLIMB && state.nav_target == NAV_TARGET_GUIDED);
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
+}
+
+// Braking tilts in the earth frame: losing the heading relearns it instead
+// of holding wherever the brake was abandoned.
+void test_navigation_guided_brake_relearns_a_lost_heading(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  mission_test_airborne(12);
+  mission.count = 0;
+  state.heading_confidence = 1;
+  state.aux_active = mission_switch;
+  mission_step();
+  state.velocity = {{3, 0, 0}};
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_HOLD));
+  TEST_ASSERT_EQUAL(NAV_STATE_BRAKE, state.nav_state);
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_BRAKE, state.nav_state);
+
+  state.heading_confidence = 0;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_ACQUIRE_HEADING, state.nav_state);
+}
+
+// A new target while flying or holding keeps flying: no level turn, no climb in place.
+void test_navigation_guided_retarget_continues_the_leg(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  const mission_waypoint_t north = {.coord = {.lon = 0, .lat = 2 * GPS_DEG_10M}, .altitude = 12};
+  const mission_waypoint_t east = {.coord = {.lon = 2 * GPS_DEG_10M, .lat = 0}, .altitude = 12};
+  mission_test_airborne(12);
+  mission.count = 0;
+  state.aux_active = mission_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_HOLD));
+  TEST_ASSERT_EQUAL(NAV_STATE_BRAKE, state.nav_state);
+
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_GOTO, north));
+  TEST_ASSERT_EQUAL(NAV_STATE_NAVIGATE, state.nav_state);
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_NAVIGATE, state.nav_state);
+
+  mission_waypoint_t higher = north;
+  higher.altitude = 30;
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_GOTO, higher));
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_NAVIGATE, state.nav_state);
+
+  // Blown off the line, an altitude change keeps it.
+  const gps_coord_t origin = nav_route.leg_origin;
+  state.position.lon += GPS_DEG_10M / 2;
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_SET_ALT, {.altitude = 20}));
+  TEST_ASSERT_EQUAL_INT32(origin.lat, nav_route.leg_origin.lat);
+  TEST_ASSERT_EQUAL_INT32(origin.lon, nav_route.leg_origin.lon);
+  float rate;
+  TEST_ASSERT_EQUAL_FLOAT(12, nav_leg_altitude(nav_route.altitude_origin, nav_route.leg_altitude, north.coord, 20, &rate));
+  state.position.lon -= GPS_DEG_10M / 2;
+
+  // A sharp change of direction still realigns first.
+  TEST_ASSERT_EQUAL(NAV_RESULT_OK, guided_command(NAV_COMMAND_GOTO, east));
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_TURN, state.nav_state);
+}
+
+static void guided_nav_update(void) {
+  time_test_advance_us(10000);
+  state.gps_last_update_ms = time_millis();
+  // Arming re-zeroes the altitude estimate.
+  const float altitude = state.altitude;
+  nav_test_set_vertical(altitude, 0.0f);
+  nav_update();
+  state.altitude = altitude;
+}
+
+static uint8_t guided_status(quic_rt_status_t *status) {
+  uint8_t payload[QUIC_RT_STATUS_SIZE];
+  uint8_t destination = 0;
+  time_test_advance_us(200000);
+  if (!quic_rt_status(payload, &destination))
+    return 0;
+  memcpy(status, payload + 2, sizeof(*status));
+  return destination;
+}
+
+static uint8_t guided_status_result(const quic_rt_status_t &status) {
+  return status.result_index >> QUIC_RT_RESULT_SHIFT;
+}
+
+// A resent command is acknowledged with its first result, not applied again.
+void test_navigation_guided_link_acknowledges_resends_once(void) {
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  mission_test_airborne(12);
+  mission.count = 0;
+  // The first update latches arming; the switch then comes on in flight.
+  guided_nav_update();
+  state.aux_active = mission_switch;
+  guided_nav_update();
+  TEST_ASSERT_TRUE(flags.guided_ready);
+
+  const uint8_t hold[] = {QUIC_RT_VERSION, QUIC_RT_COMMAND, NAV_COMMAND_HOLD, 42};
+  quic_rt_receive(0x10, hold, sizeof(hold));
+  guided_nav_update();
+  TEST_ASSERT_EQUAL(NAV_TARGET_GUIDED, state.nav_target);
+  const gps_coord_t held = nav_route.guided.coord;
+
+  quic_rt_status_t status;
+  TEST_ASSERT_EQUAL_HEX8(0x10, guided_status(&status));
+  TEST_ASSERT_EQUAL_UINT8(42, status.command_id);
+  TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_OK, guided_status_result(status));
+  TEST_ASSERT_EQUAL(NAV_TARGET_GUIDED, (status.flags >> QUIC_RT_FLAG_NAV_TARGET_SHIFT) & 0x3);
+  TEST_ASSERT_TRUE(status.flags & QUIC_RT_FLAG_GUIDED_READY);
+  TEST_ASSERT_TRUE(status.flags & QUIC_RT_FLAG_NAVIGATING);
+  // Absolute coordinates, independent of when the GPS frame arrives.
+  TEST_ASSERT_EQUAL_INT32(held.lat, status.target_lat);
+  TEST_ASSERT_EQUAL_INT32(held.lon, status.target_lon);
+
+  // The ack was lost: the same HOLD again must not move the hold point.
+  state.position.lat += GPS_DEG_10M;
+  quic_rt_receive(0x10, hold, sizeof(hold));
+  guided_nav_update();
+  TEST_ASSERT_EQUAL_INT32(held.lat, nav_route.guided.coord.lat);
+
+  const uint8_t next[] = {QUIC_RT_VERSION, QUIC_RT_COMMAND, NAV_COMMAND_HOLD, 43};
+  quic_rt_receive(0x10, next, sizeof(next));
+  guided_nav_update();
+  TEST_ASSERT_EQUAL_INT32(state.position.lat, nav_route.guided.coord.lat);
+
+  // A restarted ground station reuses ids: after silence its first command is
+  // neither acknowledged early nor suppressed.
+  time_test_advance_us(3100000);
+  state.position.lat += GPS_DEG_10M;
+  quic_rt_receive(0x10, next, sizeof(next));
+  TEST_ASSERT_EQUAL_HEX8(0x10, guided_status(&status));
+  TEST_ASSERT_EQUAL_UINT8(QUIC_RT_RESULT_NONE, guided_status_result(status));
+  guided_nav_update();
+  TEST_ASSERT_EQUAL_INT32(state.position.lat, nav_route.guided.coord.lat);
+  guided_status(&status);
+  TEST_ASSERT_EQUAL_UINT8(43, status.command_id);
+  TEST_ASSERT_EQUAL_UINT8(NAV_RESULT_OK, guided_status_result(status));
+}
+
 extern void test_navigation_motor_loop_nominal();
 extern void test_navigation_plant_specific_force_and_motor_signs();
 extern void test_navigation_motor_loop_delayed_gps_and_wind();
+extern void test_navigation_motor_loop_brakes_in_wind();
+extern void test_navigation_motor_loop_guided_hold_stops_smoothly();
+extern void test_navigation_motor_loop_goto_flies_smoothly();
+extern void test_navigation_motor_loop_climb_holds_position();
 extern void test_navigation_motor_loop_wrong_hover();
 extern void test_navigation_motor_loop_sensor_outages();
 extern void test_navigation_motor_loop_rc_loss_and_handback();
+extern void test_navigation_motor_loop_mission();
+extern void test_navigation_motor_loop_wrong_heading();
+extern void test_navigation_motor_loop_gusty_cruise();
+extern void test_navigation_motor_loop_pass_mission();
+extern void test_navigation_motor_loop_takeoff_and_land();
+extern void test_navigation_motor_loop_takeoff_stick_abort();
+extern void test_navigation_motor_loop_takeoff_rth_switch_cancels();
+extern void test_navigation_motor_loop_land_on_slope();
+extern void test_navigation_motor_loop_land_reposition();
+extern void test_navigation_motor_loop_takeoff_from_a_slope();
+extern void test_navigation_motor_loop_takeoff_spinup_cancels();
+extern void test_navigation_motor_loop_land_through_gps_loss();
+extern void test_navigation_motor_loop_gps_glitch();
+extern void test_navigation_motor_loop_gps_stall();
+extern void test_navigation_motor_loop_baro_drift();
+extern void test_navigation_motor_loop_home_altitude_averaged();
+extern void test_navigation_motor_loop_home_after_arming();
 
 int main() {
   UNITY_BEGIN();
@@ -1368,13 +2870,15 @@ int main() {
   RUN_TEST(test_navigation_heading_east_target_north_commands_left_roll);
   RUN_TEST(test_navigation_north_velocity_overshoot_commands_backward_pitch);
   RUN_TEST(test_navigation_east_velocity_overshoot_commands_left_roll);
+  RUN_TEST(test_navigation_takeover_keeps_speed_toward_the_target);
   RUN_TEST(test_navigation_command_respects_level_angle_limit);
   RUN_TEST(test_navigation_rth_requires_recent_altitude_source);
+  RUN_TEST(test_navigation_accepts_only_a_good_fix);
   RUN_TEST(test_navigation_resets_gps_jump_baseline_after_outage);
+  RUN_TEST(test_navigation_gps_jump_settles_where_gps_is);
   RUN_TEST(test_navigation_yaw_rate_bypasses_pilot_curves);
-  RUN_TEST(test_navigation_climb_publishes_gps_acceleration);
+  RUN_TEST(test_navigation_publishes_gps_acceleration);
   RUN_TEST(test_navigation_throttle_bypasses_pilot_curves);
-  RUN_TEST(test_navigation_vertical_rate_uses_sample_interval);
   RUN_TEST(test_navigation_altitude_integral_unwinds_after_saturation);
   RUN_TEST(test_navigation_descent_uses_configured_throttle_minimum);
   RUN_TEST(test_navigation_rth_accepts_unestablished_heading);
@@ -1395,6 +2899,8 @@ int main() {
   RUN_TEST(test_navigation_flapping_gps_does_not_extend_return);
   RUN_TEST(test_navigation_gps_recovery_resumes_original_climb);
   RUN_TEST(test_navigation_stalled_climb_and_return_abort);
+  RUN_TEST(test_navigation_slow_final_approach_is_progress);
+  RUN_TEST(test_navigation_holds_yaw_close_to_the_target);
   RUN_TEST(test_navigation_hover_does_not_timeout);
   RUN_TEST(test_navigation_failsafe_rth_waits_for_stable_link_and_sticks);
   RUN_TEST(test_navigation_flapping_link_does_not_interrupt_rth);
@@ -1407,20 +2913,80 @@ int main() {
   RUN_TEST(test_navigation_wrong_learned_hover_does_not_drop);
   RUN_TEST(test_navigation_failsafe_on_ground_does_not_start_rth);
   RUN_TEST(test_navigation_rth_starts_close_to_home);
+  RUN_TEST(test_navigation_leg_altitude_follows_along_track_progress);
+  RUN_TEST(test_navigation_mission_starts_only_airborne_near_the_route);
+  RUN_TEST(test_navigation_mission_flies_waypoints_in_order_and_holds_the_last);
+  RUN_TEST(test_navigation_mission_hovers_out_a_waypoint_hold);
+  RUN_TEST(test_navigation_hold_wander_near_yaw_hold_radius_keeps_navigating);
+  RUN_TEST(test_navigation_mission_end_returns_home);
+  RUN_TEST(test_navigation_mission_switches_and_link_loss);
+  RUN_TEST(test_navigation_mission_continues_through_link_loss);
+  RUN_TEST(test_navigation_mission_landing_finishes_through_link_loss);
+  RUN_TEST(test_navigation_mission_link_recovery_keeps_the_mission_switch);
+  RUN_TEST(test_navigation_mission_return_keeps_a_link_loss);
+  RUN_TEST(test_navigation_mission_link_loss_disarms_after_crash);
+  RUN_TEST(test_navigation_mission_switch_ends_the_final_return);
+  RUN_TEST(test_navigation_mission_link_loss_holds_altitude_with_low_stick);
+  RUN_TEST(test_navigation_ground_effect_ends_clear_of_the_ground);
+  RUN_TEST(test_navigation_ground_effect_ends_after_throttle_up);
+  RUN_TEST(test_navigation_rth_switch_starts_once_possible);
+  RUN_TEST(test_navigation_rth_switch_does_not_take_off);
+  RUN_TEST(test_navigation_mission_resumes_at_the_interrupted_waypoint);
+  RUN_TEST(test_navigation_mission_replaced_in_flight_keeps_the_waypoint);
+  RUN_TEST(test_navigation_mission_replaced_while_paused_starts_a_changed_route_over);
+  RUN_TEST(test_navigation_guided_needs_the_mission_switch);
+  RUN_TEST(test_navigation_guided_commands_retarget_without_releasing_control);
+  RUN_TEST(test_navigation_guided_yields_to_rth_and_failsafe);
+  RUN_TEST(test_navigation_guided_link_acknowledges_resends_once);
+  RUN_TEST(test_navigation_abort_does_not_hold_with_the_mission_switch);
+  RUN_TEST(test_navigation_guided_needs_a_switch_edge_in_flight);
+  RUN_TEST(test_navigation_guided_keeps_authority_below_the_start_altitude);
+  RUN_TEST(test_navigation_guided_hold_acquires_an_untrusted_heading);
+  RUN_TEST(test_navigation_guided_raised_climb_continues);
+  RUN_TEST(test_navigation_guided_retarget_continues_the_leg);
+  RUN_TEST(test_navigation_guided_brake_relearns_a_lost_heading);
   RUN_TEST(test_navigation_hover_learning);
   RUN_TEST(test_navigation_learned_hover_trims_rth);
+  RUN_TEST(test_navigation_ground_effect_holds_altitude_on_the_launch_ground);
+  RUN_TEST(test_navigation_touchdown_holds_the_ground_through_rotor_wash);
+  RUN_TEST(test_navigation_touchdown_glitch_does_not_hold_the_ground);
+  RUN_TEST(test_navigation_velocity_estimate_compensates_gps_delay);
+  RUN_TEST(test_navigation_velocity_spike_is_not_fused);
+  RUN_TEST(test_navigation_velocity_weighs_gps_by_its_accuracy);
+  RUN_TEST(test_navigation_heading_observed_from_accelerations);
   RUN_TEST(test_navigation_vertical_speed_fusion);
   RUN_TEST(test_navigation_closed_loop_return_with_irregular_samples);
   RUN_TEST(test_navigation_delayed_gps_cruise_and_arrival);
   RUN_TEST(test_navigation_turns_before_horizontal_commands);
   RUN_TEST(test_navigation_turn_wraps_heading_and_respects_rate);
   RUN_TEST(test_navigation_stalled_turn_aborts);
-  RUN_TEST(test_navigation_heading_loss_stops_horizontal_commands);
+  RUN_TEST(test_navigation_realign_turn_brakes_without_steering);
   RUN_TEST(test_navigation_plant_specific_force_and_motor_signs);
   RUN_TEST(test_navigation_motor_loop_nominal);
   RUN_TEST(test_navigation_motor_loop_delayed_gps_and_wind);
+  RUN_TEST(test_navigation_motor_loop_brakes_in_wind);
+  RUN_TEST(test_navigation_motor_loop_guided_hold_stops_smoothly);
+  RUN_TEST(test_navigation_motor_loop_goto_flies_smoothly);
+  RUN_TEST(test_navigation_motor_loop_climb_holds_position);
   RUN_TEST(test_navigation_motor_loop_wrong_hover);
   RUN_TEST(test_navigation_motor_loop_sensor_outages);
   RUN_TEST(test_navigation_motor_loop_rc_loss_and_handback);
+  RUN_TEST(test_navigation_motor_loop_mission);
+  RUN_TEST(test_navigation_motor_loop_wrong_heading);
+  RUN_TEST(test_navigation_motor_loop_gusty_cruise);
+  RUN_TEST(test_navigation_motor_loop_pass_mission);
+  RUN_TEST(test_navigation_motor_loop_takeoff_and_land);
+  RUN_TEST(test_navigation_motor_loop_takeoff_stick_abort);
+  RUN_TEST(test_navigation_motor_loop_takeoff_rth_switch_cancels);
+  RUN_TEST(test_navigation_motor_loop_land_on_slope);
+  RUN_TEST(test_navigation_motor_loop_land_reposition);
+  RUN_TEST(test_navigation_motor_loop_takeoff_from_a_slope);
+  RUN_TEST(test_navigation_motor_loop_takeoff_spinup_cancels);
+  RUN_TEST(test_navigation_motor_loop_land_through_gps_loss);
+  RUN_TEST(test_navigation_motor_loop_gps_glitch);
+  RUN_TEST(test_navigation_motor_loop_gps_stall);
+  RUN_TEST(test_navigation_motor_loop_baro_drift);
+  RUN_TEST(test_navigation_motor_loop_home_altitude_averaged);
+  RUN_TEST(test_navigation_motor_loop_home_after_arming);
   return UNITY_END();
 }

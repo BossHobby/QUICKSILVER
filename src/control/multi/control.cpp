@@ -31,7 +31,7 @@ static struct {
 } handback;
 
 static bool control_navigation_active(void) {
-  return flags.controls_override && (state.rth_active || state.failsafe_hold);
+  return flags.controls_override && (state.nav_state >= NAV_STATE_CLIMB || flags.failsafe_hold);
 }
 
 static void control_flight_mode() {
@@ -40,7 +40,7 @@ static void control_flight_mode() {
   if (control_navigation_active()) {
     // Navigation always flies self-level, whatever the flight mode switches say.
     state.angle_error = input_stick_vector(state.rx_filtered.axis);
-    const float yaw_rate = state.rth_yaw_rate;
+    const float yaw_rate = state.nav_yaw_rate;
 
     const vec3_t yaw_error = {
         .roll = state.GEstG.pitch * yaw_rate,
