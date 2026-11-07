@@ -42,40 +42,17 @@ void vec3_compress(compact_vec3_t *out, vec3_t *in, float scale);
 // like floats.
 inline vec3_t operator+(vec3_t a, vec3_t b) { return {{a.axis[0] + b.axis[0], a.axis[1] + b.axis[1], a.axis[2] + b.axis[2]}}; }
 inline vec3_t operator-(vec3_t a, vec3_t b) { return {{a.axis[0] - b.axis[0], a.axis[1] - b.axis[1], a.axis[2] - b.axis[2]}}; }
+inline vec3_t operator*(vec3_t a, vec3_t b) { return {{a.axis[0] * b.axis[0], a.axis[1] * b.axis[1], a.axis[2] * b.axis[2]}}; }
 inline vec3_t operator*(float s, vec3_t v) { return {{s * v.axis[0], s * v.axis[1], s * v.axis[2]}}; }
+inline vec3_t operator*(vec3_t v, float s) { return s * v; }
 inline vec3_t &operator+=(vec3_t &a, vec3_t b) { return a = a + b; }
-
-// Vec3 operations
-static inline vec3_t vec3_add(vec3_t a, vec3_t b) {
-  return (vec3_t){{a.axis[0] + b.axis[0],
-                   a.axis[1] + b.axis[1],
-                   a.axis[2] + b.axis[2]}};
-}
-
-static inline vec3_t vec3_sub(vec3_t a, vec3_t b) {
-  return (vec3_t){{a.axis[0] - b.axis[0],
-                   a.axis[1] - b.axis[1],
-                   a.axis[2] - b.axis[2]}};
-}
-
-static inline vec3_t vec3_mul(vec3_t v, float s) {
-  return (vec3_t){{v.axis[0] * s,
-                   v.axis[1] * s,
-                   v.axis[2] * s}};
-}
-
-static inline vec3_t vec3_mul_elem(vec3_t a, vec3_t b) {
-  return (vec3_t){{a.axis[0] * b.axis[0],
-                   a.axis[1] * b.axis[1],
-                   a.axis[2] * b.axis[2]}};
-}
+inline vec3_t &operator*=(vec3_t &v, float s) { return v = s * v; }
 
 static inline vec3_t vec3_cross(vec3_t a, vec3_t b) {
   return (vec3_t){{a.axis[1] * b.axis[2] - a.axis[2] * b.axis[1],
                    a.axis[2] * b.axis[0] - a.axis[0] * b.axis[2],
                    a.axis[0] * b.axis[1] - a.axis[1] * b.axis[0]}};
 }
-
 
 static inline vec3_t vec3_rotate(const vec3_t vec, const vec3_t rot) {
   return (vec3_t){{

@@ -65,11 +65,11 @@ const vec3_t *pid_get_ierror() {
 
 void pid_rates_update() {
   const pid_rate_t *rates = profile_current_pid_rates();
-  scaled_rates.kp = vec3_mul_elem(rates->kp, pid_scales[0]);
-  scaled_rates.ki = vec3_mul(vec3_mul_elem(rates->ki, pid_scales[1]), 1.0f / 3.0f);
-  scaled_rates.kd = vec3_mul_elem(rates->kd, pid_scales[2]);
+  scaled_rates.kp = rates->kp * pid_scales[0];
+  scaled_rates.ki = rates->ki * pid_scales[1] * (1.0f / 3.0f);
+  scaled_rates.kd = rates->kd * pid_scales[2];
 #ifdef VEHICLE_WING
-  scaled_rates.kff = vec3_mul(rates->kff, 0.01f);
+  scaled_rates.kff = rates->kff * 0.01f;
 #endif
 }
 
@@ -205,23 +205,23 @@ void pid_calc() {
 
   ierror = vec3_rotate(ierror, state.gyro_delta_angle);
 
-  const vec3_t setpoint_delta = vec3_sub(state.setpoint, lastsetpoint);
-  const vec3_t gyro_delta = vec3_sub(state.gyro, lastrate);
+  const vec3_t setpoint_delta = state.setpoint - lastsetpoint;
+  const vec3_t gyro_delta = state.gyro - lastrate;
 #ifdef VEHICLE_WING
   // Surface moment follows dynamic pressure (V^2); the body rate a steady
   // deflection holds follows V. Gains are tuned at cruise.
   const float speed_scale = state.wing_speed_scale;
   const float pid_speed_compensation = speed_scale * speed_scale;
-  const vec3_t current_kff = vec3_mul(scaled_rates.kff, speed_scale);
+  const vec3_t current_kff = scaled_rates.kff * speed_scale;
 #else
   const float pid_speed_compensation = 1.0f;
 #endif
-  const vec3_t current_kp = vec3_mul(scaled_rates.kp, v_compensation * pid_speed_compensation);
-  const vec3_t current_ki = vec3_mul(scaled_rates.ki, state.looptime * pid_speed_compensation);
-  const vec3_t current_kd = vec3_mul(scaled_rates.kd, state.looptime_inverse * pid_speed_compensation);
+  const vec3_t current_kp = scaled_rates.kp * (v_compensation * pid_speed_compensation);
+  const vec3_t current_ki = scaled_rates.ki * (state.looptime * pid_speed_compensation);
+  const vec3_t current_kd = scaled_rates.kd * (state.looptime_inverse * pid_speed_compensation);
   const vec3_t iterm_enable = pid_should_enable_iterm_vec();
   const vec3_t iterm_windup = pid_compute_iterm_windup_vec(&pid_output);
-  vec3_t setpoint_derivative = vec3_mul_elem(setpoint_delta, current_kd);
+  vec3_t setpoint_derivative = setpoint_delta * current_kd;
   if (state.rx_filter_hz > 0.1f) {
     setpoint_derivative = rx_filter.step(setpoint_derivative);
   }

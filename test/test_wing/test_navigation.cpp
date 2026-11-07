@@ -160,7 +160,7 @@ static float turn_gravity_error_deg(float bank, vec3_t gyro, vec3_t accel_raw) {
 
   state.accel_raw = accel_raw;
   state.gyro = gyro;
-  state.gyro_delta_angle = vec3_mul(state.gyro, state.looptime);
+  state.gyro_delta_angle = state.gyro * state.looptime;
   for (uint32_t ms = 1; ms <= 20000; ms++) {
     time_test_advance_us(1000);
     imu_calc();

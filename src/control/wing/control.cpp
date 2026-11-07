@@ -221,19 +221,19 @@ static void wing_calc_stabilized(wing_mode_t mode, bool launch_stabilized) {
 
     // The launch angle is independent of the pilot's level-mode limit.
     state.angle_error = input_angle_vector(0.0f, pitch);
-    state.setpoint = vec3_add((vec3_t){{angle_pid(0), angle_pid(1), 0.0f}}, wing_turn_rates());
+    state.setpoint = (vec3_t){{angle_pid(0), angle_pid(1), 0.0f}} + wing_turn_rates();
   } else if (mode == WING_MODE_LEVEL) {
     const float max_angle = profile.rate.level_max_angle * DEGTORAD;
     state.angle_error = input_angle_vector(state.rx_filtered.roll * max_angle, state.rx_filtered.pitch * max_angle);
     state.setpoint = (vec3_t){{angle_pid(0), angle_pid(1), input_rates_calc().yaw}};
     if (profile.wing.turn_coordination)
-      state.setpoint = vec3_add(state.setpoint, wing_turn_rates());
+      state.setpoint += wing_turn_rates();
   } else if (mode == WING_MODE_NAV) {
     // Until cruise locks its course, the pilot banks and yaws as in Level.
     const bool steer = state.wing_nav_state == WING_NAV_CRUISE_STEER || state.wing_nav_state == WING_NAV_CRUISE_NO_GPS;
     const float roll = steer ? state.rx_filtered.roll * profile.rate.level_max_angle * DEGTORAD : wing_nav_command.roll;
     state.angle_error = input_angle_vector(roll, wing_nav_command.pitch);
-    state.setpoint = vec3_add((vec3_t){{angle_pid(0), angle_pid(1), steer ? input_rates_calc().yaw : 0.0f}}, wing_turn_rates());
+    state.setpoint = (vec3_t){{angle_pid(0), angle_pid(1), steer ? input_rates_calc().yaw : 0.0f}} + wing_turn_rates();
   } else {
     state.setpoint = input_rates_calc();
   }

@@ -57,9 +57,9 @@ static inline vec3_t quat_rotate_vector(const quat_t *q, const vec3_t *v) {
   // Optimized version using vector triple product
   const vec3_t qv = {{q->x, q->y, q->z}};
   vec3_t cross = vec3_cross(qv, *v);
-  const vec3_t t = vec3_mul(cross, 2.0f);
-  vec3_t scaled = vec3_mul(t, q->w);
-  const vec3_t result = vec3_add(vec3_add(*v, scaled), vec3_cross(qv, t));
+  const vec3_t t = cross * 2.0f;
+  vec3_t scaled = t * q->w;
+  const vec3_t result = *v + scaled + vec3_cross(qv, t);
   return result;
 }
 
