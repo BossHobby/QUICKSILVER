@@ -4,6 +4,7 @@
 
 #include "control/control.h"
 #include "core/profile.h"
+#include "core/project.h"
 #include "util/util.h"
 
 extern profile_t profile;
@@ -12,7 +13,7 @@ extern profile_t profile;
 #define OUTLIMIT_FLOAT (profile.pid.small_angle.kp + profile.pid.big_angle.kp)
 #define ANGLE_PID_DTIME_FACTOR 0.0032f
 
-float angle_pid(int x) {
+HOT_CODE float angle_pid(int x) {
   static vec3_t lasterror;
 
   const float angle_error_abs = fabsf(state.angle_error.axis[x]);

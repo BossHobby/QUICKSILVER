@@ -54,7 +54,7 @@ void thread_stack_guard_init() {
   const uint8_t *guards[THREAD_MAX];
   for (uint32_t i = 0; i < THREAD_MAX; i++)
     guards[i] = threads[i].guard;
-  mpu_stack_guard_init(guards, THREAD_MAX);
+  mpu_init(guards, THREAD_MAX);
 }
 
 void thread_start(thread_id_t id) {
@@ -64,13 +64,10 @@ void thread_start(thread_id_t id) {
   configASSERT(thread.handle);
 }
 
-void threads_update() {
-  const uint8_t mask = TASK_MASK_DEFAULT | ((flags.arm_state || flags.in_air) ? TASK_MASK_IN_AIR : TASK_MASK_ON_GROUND);
-  // All threads are created before Flight starts applying context masks.
-  // Only this function suspends/resumes them; waits and notifications do not
-  // change which context they are allowed to run in.
-  if (mask == applied_mask)
-    return;
+// All threads are created before Flight starts applying context masks.
+// Only this suspends/resumes them; waits and notifications do not change which
+// context they are allowed to run in. Runs on arm/disarm transitions only.
+COLD_CODE static void threads_apply_mask(uint8_t mask) {
   applied_mask = mask;
   for (auto &thread : threads) {
     if (thread.handle == nullptr) {
@@ -86,6 +83,12 @@ void threads_update() {
       vTaskResume(thread.handle);
     }
   }
+}
+
+void threads_update() {
+  const uint8_t mask = TASK_MASK_DEFAULT | ((flags.arm_state || flags.in_air) ? TASK_MASK_IN_AIR : TASK_MASK_ON_GROUND);
+  if (mask != applied_mask)
+    threads_apply_mask(mask);
 }
 
 static uint32_t io_pending_tasks(TickType_t *remaining, TickType_t elapsed, uint32_t pending) {

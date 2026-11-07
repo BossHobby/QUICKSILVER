@@ -585,6 +585,21 @@ __attribute__((noinline)) static void blackbox_capture_frame() {
   xTaskNotifyGive(threads[THREAD_BLACKBOX].handle);
 }
 
+// Runs once when recording starts; out of line from the per-pass gate.
+COLD_CODE static void blackbox_start_session() {
+  // Session metadata stays fixed, including when the worker is delayed.
+  if (++capture.session_id == 0) {
+    ++capture.session_id;
+  }
+  capture.settings.field_flags = profile.blackbox.field_flags;
+  capture.settings.rate = blackbox_rate_div();
+  capture.settings.looptime = state.looptime_autodetect;
+  capture.sequence = 0;
+  capture.last_loop = state.loop_counter;
+  mailbox.recording.store(capture.session_id, std::memory_order_release);
+  xTaskNotifyGive(threads[THREAD_BLACKBOX].handle);
+}
+
 void blackbox_capture() {
   const bool requested = (target_info.features & FEATURE_BLACKBOX) && flags.arm_state && rx_aux_on(AUX_BLACKBOX);
   if (!requested) {
@@ -595,20 +610,8 @@ void blackbox_capture() {
     return;
   }
   if (mailbox.recording.load(std::memory_order_relaxed) == 0) {
-    if (flags.turtle_ready) {
-      return;
-    }
-    // Session metadata stays fixed, including when the worker is delayed.
-    if (++capture.session_id == 0) {
-      ++capture.session_id;
-    }
-    capture.settings.field_flags = profile.blackbox.field_flags;
-    capture.settings.rate = blackbox_rate_div();
-    capture.settings.looptime = state.looptime_autodetect;
-    capture.sequence = 0;
-    capture.last_loop = state.loop_counter;
-    mailbox.recording.store(capture.session_id, std::memory_order_release);
-    xTaskNotifyGive(threads[THREAD_BLACKBOX].handle);
+    if (!flags.turtle_ready)
+      blackbox_start_session();
     return;
   }
   if ((uint32_t)(state.loop_counter - capture.last_loop) < capture.settings.rate) {

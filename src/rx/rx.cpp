@@ -373,7 +373,7 @@ TickType_t rx_update() {
   return rx_service_deadline();
 }
 
-void rx_process() {
+HOT_CODE void rx_process() {
 #ifndef SIMULATOR
   // Signal-loss detection stays in Flight even when the IO worker is delayed.
   if (flags.rx_ready && time_micros() - state.last_frame_time_us > FAILSAFE_DETECT_TIME_US) {

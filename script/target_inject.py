@@ -39,6 +39,24 @@ def process_elf(target_yaml: str, target_elf: str):
         assert f.tell() <= section_end
 
 
+def fast_code_report_action(source, target, env):
+    # ITCM overflow is a link error; report the margin before it is reached.
+    with open(env.subst("$BUILD_DIR/${PROGNAME}.elf"), "rb") as f:
+        symtab = ELFFile(f).get_section_by_name(".symtab")
+        if symtab is None:
+            return
+        symbols = {}
+        for name in ("_fast_code_start", "_fast_code_end", "_fast_code_limit"):
+            found = symtab.get_symbol_by_name(name)
+            if not found:
+                return
+            symbols[name] = found[0]["st_value"]
+
+    used = symbols["_fast_code_end"] - symbols["_fast_code_start"]
+    free = symbols["_fast_code_limit"] - symbols["_fast_code_end"]
+    print(f"ITCM fast code: {used} B used, {free} B free")
+
+
 def process_elf_action(source, target, env):
     target_name = get_custom_option(env, "target_name", env["PIOENV"])
     target_yaml = env.subst(f"targets/{target_name}.yaml")

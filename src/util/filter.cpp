@@ -11,7 +11,7 @@ constexpr float NOTCH_Q = 3.0f;
 // 1 / sqrtf(powf(2, 1.0f / order) - 1): keeps the cascade's -3 dB point at hz.
 static constexpr float ORDER_CORRECTION[FILTER_MAX_ORDER + 1] = {0.0f, 1.0f, 1.55377397403f, 1.9614591767f};
 
-void filter_coeff_t::coeff(filter_type_t type, float cutoff_hz, float period_us) {
+HOT_CODE void filter_coeff_t::coeff(filter_type_t type, float cutoff_hz, float period_us) {
   // Profiles are external input; unknown types pass through as before.
   const uint8_t poles = type <= FILTER_MAX_ORDER ? type : FILTER_NONE;
   if (order == poles && hz == cutoff_hz && sample_period_us == period_us) {
@@ -28,6 +28,32 @@ void filter_coeff_t::coeff(filter_type_t type, float cutoff_hz, float period_us)
   // alpha = dt / (rc + dt) with rc = 1 / (2 pi correction hz)
   const float w = 2.0f * M_PI_F * ORDER_CORRECTION[poles] * cutoff_hz * period_us * 1e-6f;
   alpha = w / (1.0f + w);
+}
+
+// Each pole moves toward its input; with vectors every axis updates before
+// the next pole, so the axes are independent chains the FPU overlaps.
+template <typename value_t>
+__attribute__((always_inline)) static inline value_t filter_lp_step(filter_t<value_t> &filter, value_t v) {
+  for (uint32_t p = 0; p < filter.order; p++) {
+    filter.pole[p] += filter.alpha * (v - filter.pole[p]);
+    v = filter.pole[p];
+  }
+  return v;
+}
+
+template <>
+HOT_CODE float filter_t<float>::step(float v) {
+  return filter_lp_step(*this, v);
+}
+
+template <>
+HOT_CODE vec3_t filter_t<vec3_t>::step(vec3_t v) {
+  return filter_lp_step(*this, v);
+}
+
+template <>
+HOT_CODE vec4_t filter_t<vec4_t>::step(vec4_t v) {
+  return filter_lp_step(*this, v);
 }
 
 void filter_biquad_notch_t::init(float cutoff_hz, float period_us) {
@@ -59,6 +85,23 @@ void filter_biquad_notch_t::coeff(float cutoff_hz, float period_us) {
 
   hz = cutoff_hz;
   sample_period_us = period_us;
+}
+
+HOT_CODE float filter_biquad_notch_t::step(float in) {
+  if (hz < 0.1f) {
+    return in;
+  }
+
+  // Notch symmetry: b0 == b2 and b1 == a1.
+  const float result = b0 * (in + x2) + b1 * (x1 - y1) - a2 * y2;
+
+  x2 = x1;
+  x1 = in;
+
+  y2 = y1;
+  y1 = result;
+
+  return result;
 }
 
 // 16Hz hpf filter for throttle compensation

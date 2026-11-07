@@ -177,7 +177,7 @@ COLD_CODE void motor_test_calc(bool motortest_usb) {
   }
 }
 
-void motor_mixer_calc(void) {
+HOT_CODE void motor_mixer_calc(void) {
   state.mixer_source[OUTPUT_SOURCE_THROTTLE] = state.throttle;
   state.mixer_source[OUTPUT_SOURCE_ROLL] = state.pidoutput.roll;
   state.mixer_source[OUTPUT_SOURCE_PITCH] = state.pidoutput.pitch;

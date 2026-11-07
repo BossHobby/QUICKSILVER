@@ -311,6 +311,19 @@ COLD_CODE static void failsafe_update_signal_lost(uint32_t now_us) {
   control_failsafe_disarm();
 }
 
+#ifdef VEHICLE_MULTI
+// A failsafe RTH that stays tilted over has crashed: drop the outputs.
+COLD_CODE static void failsafe_rth_crash_disarm(uint32_t now_us) {
+  failsafe_rth = {};
+  state.rth_failsafe_active = false;
+  flags.failsafe = 1;
+  flags.failsafe_outputs_blocked = 1;
+  failsafe_set_phase(FAILSAFE_PHASE_STAGE2_DROP, now_us);
+  failsafe_rearm_allows_prearm_hold = true;
+  flags.arm_state = 0;
+}
+#endif
+
 void control_failsafe_update() {
   const uint32_t now_us = time_micros();
 #ifdef VEHICLE_MULTI
@@ -332,13 +345,7 @@ void control_failsafe_update() {
 
 #ifdef VEHICLE_MULTI
   if (failsafe_rth_crashed(now_us)) {
-    failsafe_rth = {};
-    state.rth_failsafe_active = false;
-    flags.failsafe = 1;
-    flags.failsafe_outputs_blocked = 1;
-    failsafe_set_phase(FAILSAFE_PHASE_STAGE2_DROP, now_us);
-    failsafe_rearm_allows_prearm_hold = true;
-    flags.arm_state = 0;
+    failsafe_rth_crash_disarm(now_us);
     return;
   }
   if (state.rth_failsafe_active) {

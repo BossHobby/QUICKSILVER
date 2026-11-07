@@ -325,7 +325,7 @@ static vec3_t imu_gravity_reference(vec3_t accel) {
 }
 #endif
 
-void imu_calc() {
+HOT_CODE void imu_calc() {
   // Predict gravity from the gyro delta, then correct it with filtered acceleration.
   const vec3_t rot = {{
       -state.gyro_delta_angle.axis[1],

@@ -95,8 +95,9 @@ LoopFillZerobss:
 
   bl system_check_for_bootloader
   bl SystemInit
-  bl __libc_init_array
+  /* Copy FAST_RAM and DMA_RAM before constructors can initialize objects there */
   bl memory_section_init
+  bl __libc_init_array
   bl main
 
 LoopForever:
