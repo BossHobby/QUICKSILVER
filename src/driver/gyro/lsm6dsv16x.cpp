@@ -12,8 +12,6 @@
 #define SPI_SPEED_SLOW MHZ_TO_HZ(0.5)
 #define SPI_SPEED_FAST MHZ_TO_HZ(10)
 
-extern spi_bus_device_t gyro_bus;
-
 gyro_types_t lsm6dsv16x_detect() {
   const uint8_t id = lsm6dsv16x_read(LSM6DSV_WHO_AM_I);
   switch (id) {
@@ -99,7 +97,7 @@ void lsm6dsv16x_read_gyro_data(gyro_data_t *data) {
       spi_make_seg_const(LSM6DSV_OUT_TEMP_L | 0x80),
       spi_make_seg_buffer(gyro_buf, NULL, sizeof(gyro_buf)),
   };
-  spi_seg_submit_wait(&gyro_bus, segs);
+  gyro_spi_read(segs);
 
   // Temperature: 16-bit signed, 256 LSB/°C, offset 0°C
   data->temp = (float)((int16_t)((gyro_buf[0] << 8) | gyro_buf[1])) / 256.0f;

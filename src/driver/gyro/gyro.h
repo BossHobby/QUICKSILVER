@@ -1,7 +1,9 @@
 #pragma once
 
+#include <stddef.h>
 #include <stdint.h>
 
+#include "driver/spi.h"
 #include "util/vector.h"
 
 typedef enum {
@@ -43,6 +45,7 @@ typedef struct {
 } gyro_clock_t;
 
 extern gyro_types_t gyro_type;
+extern spi_bus_device_t gyro_bus;
 
 // Captures the EXTI-owned clock with interrupts masked.
 gyro_clock_t gyro_clock_snapshot();
@@ -52,3 +55,9 @@ bool gyro_exti_state();
 gyro_types_t gyro_init();
 gyro_data_t gyro_read();
 void gyro_calibrate();
+void gyro_spi_read_ex(const spi_txn_segment_t *segs, uint32_t count);
+
+template <size_t N>
+inline void gyro_spi_read(const spi_txn_segment_t (&segs)[N]) {
+  gyro_spi_read_ex(segs, N);
+}

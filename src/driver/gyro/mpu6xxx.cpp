@@ -21,8 +21,6 @@
 
 #define SPI_SPEED_INIT MHZ_TO_HZ(0.5)
 
-extern spi_bus_device_t gyro_bus;
-
 static uint32_t mpu6xxx_fast_divider() {
   switch (gyro_type) {
   default:
@@ -118,7 +116,7 @@ void mpu6xxx_read_gyro_data(gyro_data_t *data) {
       spi_make_seg_const(MPU_RA_ACCEL_XOUT_H | 0x80),
       spi_make_seg_buffer(gyro_buf, NULL, sizeof(gyro_buf)),
   };
-  spi_seg_submit_wait(&gyro_bus, segs);
+  gyro_spi_read(segs);
 
   data->accel.pitch = -(int16_t)((gyro_buf[0] << 8) | gyro_buf[1]);
   data->accel.roll = -(int16_t)((gyro_buf[2] << 8) | gyro_buf[3]);

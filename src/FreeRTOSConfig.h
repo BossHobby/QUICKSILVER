@@ -18,6 +18,9 @@
 #define configKERNEL_PROVIDED_STATIC_MEMORY 1
 #define configUSE_MUTEXES 1
 #define configUSE_TASK_NOTIFICATIONS 1
+// Index 0 is each task's own wake signal. Index 1 wakes a task blocked on its
+// synchronous gyro SPI DMA read.
+#define configTASK_NOTIFICATION_ARRAY_ENTRIES 2
 #define INCLUDE_xTaskGetSchedulerState 1
 #define INCLUDE_xTaskGetIdleTaskHandle 1
 #define INCLUDE_vTaskDelay 1

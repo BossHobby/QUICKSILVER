@@ -12,8 +12,6 @@
 #define SPI_SPEED_SLOW MHZ_TO_HZ(4)
 #define SPI_SPEED_FAST MHZ_TO_HZ(10)
 
-extern spi_bus_device_t gyro_bus;
-
 static int8_t gyro_cas = 0; // not ready
 
 static void bmi323_reset_to_spi() {
@@ -182,7 +180,7 @@ void bmi323_read_gyro_data(gyro_data_t *data) {
       spi_make_seg_const(BMI323_REG_ACC_DATA_X_LSB | 0x80, 0xFF),
       spi_make_seg_buffer(gyro_buf, NULL, sizeof(gyro_buf)),
   };
-  spi_seg_submit_wait(&gyro_bus, segs);
+  gyro_spi_read(segs);
 
   data->accel.pitch = -(int16_t)((gyro_buf[1] << 8) | gyro_buf[0]);
   data->accel.roll = -(int16_t)((gyro_buf[3] << 8) | gyro_buf[2]);

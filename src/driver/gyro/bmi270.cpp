@@ -14,7 +14,6 @@
 #define SPI_SPEED_SLOW MHZ_TO_HZ(0.5)
 #define SPI_SPEED_FAST MHZ_TO_HZ(10.5)
 
-extern spi_bus_device_t gyro_bus;
 extern const uint8_t bmi270_config_file[8192];
 
 static int8_t gyro_cas = 0;
@@ -202,14 +201,14 @@ void bmi270_read_gyro_data(gyro_data_t *data) {
         spi_make_seg_const(BMI270_REG_ACC_DATA_X_LSB | 0x80, 0xFF),
         spi_make_seg_buffer(gyro_buf, NULL, 12),
     };
-    spi_seg_submit_wait(&gyro_bus, segs);
+    gyro_spi_read(segs);
   }
   {
     const spi_txn_segment_t segs[] = {
         spi_make_seg_const(BMI270_REG_TEMPERATURE_LSB | 0x80, 0xFF),
         spi_make_seg_buffer(gyro_buf + 12, NULL, 2),
     };
-    spi_seg_submit_wait(&gyro_bus, segs);
+    gyro_spi_read(segs);
   }
 
   data->accel.pitch = -(int16_t)((gyro_buf[1] << 8) | gyro_buf[0]);
