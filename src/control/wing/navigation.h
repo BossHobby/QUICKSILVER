@@ -15,4 +15,4 @@ typedef struct {
 
 extern wing_nav_command_t wing_nav_command;
 
-void nav_update_wing(bool gps_valid, bool home_valid);
+void nav_update_wing(float dt);

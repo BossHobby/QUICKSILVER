@@ -263,16 +263,16 @@ static void fly_gps(float bank, float airspeed, float wind_north, float wind_eas
   state.attitude.roll = bank;
   state.GEstG = {{sinf(bank), 0.0f, cosf(bank)}};
   state.gyro = {{0.0f, -turn_rate * sinf(bank), turn_rate * cosf(bank)}};
-  state.gps_lock = true;
+  state.gps_health.lock = true;
   state.rx_filtered.throttle = profile.navigation.cruise_throttle / 1.0526316f + 0.05f;
   for (int i = 0; i < loops; i++) {
     time_test_advance_us((uint32_t)(state.looptime * 1e6f));
     if (i % (int)(0.1f / state.looptime) == 0) {
       const float heading = start_heading + turn_rate * (i + 1) * state.looptime;
-      state.gps_vel_north = airspeed * cosf(heading) + wind_north + gps_glitch_north;
+      state.gps_velocity.north = airspeed * cosf(heading) + wind_north + gps_glitch_north;
       gps_glitch_north = 0.0f;
-      state.gps_vel_east = airspeed * sinf(heading) + wind_east;
-      state.gps_speed = hypotf(state.gps_vel_north, state.gps_vel_east);
+      state.gps_velocity.east = airspeed * sinf(heading) + wind_east;
+      state.gps_speed = vec2_magnitude(vec3_horizontal(state.gps_velocity));
       state.gps_last_update_ms = time_millis();
     }
     control();
@@ -505,7 +505,7 @@ static void test_autotrim_saves_on_disarm_with_switch_on() {
   control();
   // The disarming pass started armed, without configuration ownership.
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_SAVE_PENDING, state.wing_autotrim_state);
-  state.gps_lock = 1;
+  state.gps_health.lock = 1;
   state.gps_speed = 10.0f; // A disarmed wing still gliding defers the save.
   control();
   TEST_ASSERT_EQUAL(WING_AUTOTRIM_SAVE_PENDING, state.wing_autotrim_state);

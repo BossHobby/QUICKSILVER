@@ -49,6 +49,18 @@ typedef enum {
   GPS_SPOOFING_MULTIPLE = 3,  // indicated by multiple sources
 } gps_spoofing_t;
 
+// Receiver solution and interference status in one byte, written only by the
+// GPS driver in IO.
+typedef struct {
+  uint8_t lock : 1;     // valid 3D fix with enough satellites; cleared after 500 ms without NAV-PVT
+  uint8_t jamming : 2;  // gps_jamming_t from the receiver (M9/M10); unknown when stale
+  uint8_t spoofing : 2; // gps_spoofing_t from M10 SEC-SIG; unknown when stale
+} gps_health_t;
+
+// Encoded as a {lock, jamming, spoofing} map; bitfields have no address for
+// the member encoders.
+cbor_result_t cbor_encode_gps_health_t(cbor_value_t *enc, const gps_health_t *health);
+
 // MON-RF antenna supervisor state.
 typedef enum {
   GPS_ANTENNA_INIT = 0,

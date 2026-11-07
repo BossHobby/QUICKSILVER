@@ -88,6 +88,7 @@ typedef enum {
   CRSF_FRAMETYPE_MSP_RESP = 0x7B,  // reply with 58 byte chunked binary
   CRSF_FRAMETYPE_MSP_WRITE = 0x7C, // write with 8 byte chunked binary (OpenTX outbound telemetry buffer limit)
   CRSF_FRAMETYPE_QUIC = 0x83,      // QUIC stream chunk, see io/quic_crsf.h
+  CRSF_FRAMETYPE_QUIC_RT = 0x84,   // realtime ground station link, see io/quic_rt.h
 } crsf_frame_type_t;
 
 typedef enum {
@@ -426,3 +427,4 @@ uint32_t crsf_tlm_frame_attitude(uint8_t *buf);
 uint32_t crsf_tlm_frame_device_info(uint8_t *buf, uint8_t destination);
 uint32_t crsf_tlm_frame_msp_resp(uint8_t *buf, uint8_t origin, const uint8_t *payload, uint8_t size);
 uint32_t crsf_frame_quic(uint8_t *buf, uint8_t destination, const uint8_t *payload, uint8_t size);
+uint32_t crsf_frame_quic_rt(uint8_t *buf, uint8_t destination, const uint8_t *payload, uint8_t size);

@@ -5,7 +5,6 @@
 #include <string.h>
 
 #include "control/control.h"
-#include "control/navigation.h"
 #include "core/debug.h"
 #include "core/profile.h"
 #include "core/project.h"
@@ -14,6 +13,7 @@
 #include "io/gps.h"
 #include "io/msp.h"
 #include "io/quic_crsf.h"
+#include "io/quic_rt.h"
 #include "rx/crsf.h"
 #include "util/crc.h"
 #include "util/ring_buffer.h"
@@ -38,6 +38,11 @@
 #define CRSF_GPS_HOME_INTERVAL_MS 10000
 #define CRSF_BAUDRATE_CHANGE_DELAY_US 4000
 #define CRSF_BAUDRATE_ERROR_FALLBACK_COUNT 200
+
+// While a configurator session holds the downlink, its idle slots still carry
+// one standard telemetry frame per interval: the ground station takes
+// position and battery from them.
+static constexpr uint32_t CRSF_SESSION_TELEMETRY_INTERVAL_US = 200000;
 
 typedef enum {
   RATE_LORA_4HZ = 0,
@@ -362,12 +367,18 @@ static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
     break;
   }
 
-  case CRSF_FRAMETYPE_QUIC: {
+  case CRSF_FRAMETYPE_QUIC:
+  case CRSF_FRAMETYPE_QUIC_RT: {
     const crsf_extended_header_t *extended = (const crsf_extended_header_t *)&rx_data[1];
     if (payload_length < CRSF_FRAME_ORIGIN_DEST_SIZE || extended->destination != CRSF_ADDRESS_FLIGHT_CONTROLLER)
       break;
 
-    quic_crsf_receive(extended->origin, (const uint8_t *)(extended + 1), payload_length - CRSF_FRAME_ORIGIN_DEST_SIZE);
+    const uint8_t *body = (const uint8_t *)(extended + 1);
+    const uint8_t body_size = payload_length - CRSF_FRAME_ORIGIN_DEST_SIZE;
+    if (rx_data[0] == CRSF_FRAMETYPE_QUIC)
+      quic_crsf_receive(extended->origin, body, body_size);
+    else
+      quic_rt_receive(extended->origin, body, body_size);
     break;
   }
 
@@ -498,6 +509,21 @@ static void rx_serial_send_crsf_telemetry() {
   if ((now - telemetry_time) < CRSF_TELEMETRY_INTERVAL_US)
     return;
 
+  // Ground station status is small and periodic; it also flows while armed
+  // and during a configurator session.
+  if (serial_bytes_free(&serial_rx) >= CRSF_FRAME_SIZE_MAX) {
+    uint8_t payload[QUIC_RT_STATUS_SIZE];
+    uint8_t destination;
+    const uint8_t payload_size = quic_rt_status(payload, &destination);
+    if (payload_size) {
+      const uint32_t nav_size = crsf_frame_quic_rt(crsf_telemetry_packet, destination, payload, payload_size);
+      if (rx_serial_crsf_queue_frame(crsf_telemetry_packet, nav_size)) {
+        telemetry_time = now;
+        return;
+      }
+    }
+  }
+
   // Give the configurator the downlink while its session is active.
   if (serial_bytes_free(&serial_rx) >= CRSF_FRAME_SIZE_MAX) {
     const uint32_t configurator_size = quic_crsf_frame(crsf_telemetry_packet);
@@ -507,7 +533,8 @@ static void rx_serial_send_crsf_telemetry() {
     }
   }
 
-  if (quic_crsf_active())
+  static uint32_t session_telemetry_time = 0;
+  if (quic_crsf_active() && (now - session_telemetry_time) < CRSF_SESSION_TELEMETRY_INTERVAL_US)
     return;
 
   uint32_t telemetry_size = 0;
@@ -519,9 +546,9 @@ static void rx_serial_send_crsf_telemetry() {
   bool gps_time_frame = false;
   static bool gps_home_sent = false;
   static uint32_t gps_home_sent_ms = 0;
-  if (!nav_home_valid())
+  if (!flags.home_valid)
     gps_home_sent = false;
-  const bool gps_home_due = gps_enabled && nav_home_valid() &&
+  const bool gps_home_due = gps_enabled && flags.home_valid &&
                             (!gps_home_sent || (time_millis() - gps_home_sent_ms) >= CRSF_GPS_HOME_INTERVAL_MS);
   bool gps_home_frame = false;
 
@@ -536,7 +563,7 @@ static void rx_serial_send_crsf_telemetry() {
       telemetry_size = crsf_tlm_frame_gps_extended(crsf_telemetry_packet);
     break;
   case 3:
-    if (state.baro_detected)
+    if (flags.baro_detected)
       telemetry_size = crsf_tlm_frame_baro_altitude(crsf_telemetry_packet);
     break;
   case 4:
@@ -567,7 +594,7 @@ static void rx_serial_send_crsf_telemetry() {
   if (!rx_serial_crsf_queue_frame(crsf_telemetry_packet, telemetry_size))
     return;
 
-  telemetry_time = now;
+  telemetry_time = session_telemetry_time = now;
   if (gps_home_frame) {
     gps_home_sent = true;
     gps_home_sent_ms = time_millis();

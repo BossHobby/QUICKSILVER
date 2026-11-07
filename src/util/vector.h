@@ -12,6 +12,9 @@ typedef union {
   float axis[2];
 } vec2_t;
 
+cbor_result_t cbor_encode_vec2_t(cbor_value_t *enc, const vec2_t *vec);
+cbor_result_t cbor_decode_vec2_t(cbor_value_t *dec, vec2_t *vec);
+
 inline vec2_t operator+(vec2_t a, vec2_t b) { return {{a.north + b.north, a.east + b.east}}; }
 inline vec2_t operator-(vec2_t a, vec2_t b) { return {{a.north - b.north, a.east - b.east}}; }
 inline vec2_t operator*(float s, vec2_t v) { return {{s * v.north, s * v.east}}; }
@@ -32,11 +35,17 @@ static inline float vec2_magnitude(vec2_t v) {
   return sqrtf(vec2_dot(v, v));
 }
 
+// Body rates and angles use roll, pitch, yaw; earth-frame vectors north, east, up.
 typedef union {
   struct {
     float roll;
     float pitch;
     float yaw;
+  };
+  struct {
+    float north;
+    float east;
+    float up;
   };
   float axis[3];
 } vec3_t;
@@ -50,6 +59,11 @@ static inline float vec3_dot(vec3_t a, vec3_t b) {
 
 static inline float vec3_magnitude(vec3_t v) {
   return sqrtf(vec3_dot(v, v));
+}
+
+// North and east of an earth-frame vector.
+static inline vec2_t vec3_horizontal(vec3_t v) {
+  return {{v.north, v.east}};
 }
 
 typedef union {

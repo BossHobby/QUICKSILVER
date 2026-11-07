@@ -221,7 +221,7 @@ void test_attitude_accel_correction(void) {
 void test_attitude_gps_heading_fusion(void) {
   attitude_test_setup();
   // Set GPS data
-  state.gps_lock = true;
+  state.gps_health.lock = true;
   state.gps_speed = 10.0f; // 10 m/s
   state.gps_heading = 45.0f; // 45 degrees
   state.gps_heading_accuracy = 2.0f; // Good accuracy
@@ -244,7 +244,7 @@ void test_attitude_gps_heading_fusion(void) {
 void test_attitude_gps_suppression_yaw_stick(void) {
   attitude_test_setup();
   // Set GPS data
-  state.gps_lock = true;
+  state.gps_health.lock = true;
   state.gps_speed = 10.0f;
   state.gps_heading = 90.0f;
   state.gps_heading_accuracy = 2.0f;
@@ -270,7 +270,7 @@ void test_attitude_gps_suppression_yaw_stick(void) {
 void test_attitude_gps_suppression_roll(void) {
   attitude_test_setup();
   // Set GPS data
-  state.gps_lock = true;
+  state.gps_health.lock = true;
   state.gps_speed = 10.0f;
   state.gps_heading = 180.0f;
   state.gps_heading_accuracy = 2.0f;
@@ -314,7 +314,7 @@ void test_attitude_gps_suppression_roll(void) {
 void test_attitude_no_gps_when_stationary(void) {
   attitude_test_setup();
   // Set GPS data but low speed
-  state.gps_lock = true;
+  state.gps_health.lock = true;
   state.gps_speed = 1.0f; // Below minimum threshold
   state.gps_heading = 270.0f;
   state.gps_heading_accuracy = 2.0f;
@@ -333,7 +333,7 @@ void test_attitude_no_gps_when_stationary(void) {
 
 void test_attitude_gps_heading_requires_fresh_sample(void) {
   attitude_test_setup();
-  state.gps_lock = true;
+  state.gps_health.lock = true;
   state.gps_speed = 10.0f;
   state.gps_heading = 90.0f;
   state.gps_heading_accuracy = 2.0f;
@@ -391,7 +391,7 @@ void test_attitude_heading_wraparound(void) {
 
 void test_attitude_gps_reacquisition_does_not_snap_yaw(void) {
   attitude_test_setup();
-  state.gps_lock = true;
+  state.gps_health.lock = true;
   state.gps_speed = 10.0f;
   state.gps_heading_accuracy = 1.0f;
   set_imu_data(0, 0, 0, 0, 0, 1);
@@ -413,10 +413,10 @@ void test_attitude_gps_reacquisition_does_not_snap_yaw(void) {
 void test_attitude_rth_sideways_motion_does_not_correct_heading(void) {
   attitude_test_setup();
   flags.controls_override = 1;
-  state.rth_active = true;
-  state.rth_state = RTH_STATE_NAVIGATE;
+  state.nav_state = NAV_STATE_CLIMB;
+  state.nav_state = NAV_STATE_NAVIGATE;
   state.rx_override.roll = 0.15f;
-  state.gps_lock = true;
+  state.gps_health.lock = true;
   state.gps_speed = 4;
   state.gps_heading = 90;
   state.gps_heading_accuracy = 1;
@@ -431,12 +431,12 @@ void test_attitude_rth_sideways_motion_does_not_correct_heading(void) {
 void test_attitude_rth_large_heading_error_can_recover(void) {
   attitude_test_setup();
   flags.controls_override = 1;
-  state.rth_active = true;
-  state.rth_state = RTH_STATE_NAVIGATE;
-  state.home_bearing = 180;
-  state.gps_vel_east = 4;
+  state.nav_state = NAV_STATE_CLIMB;
+  state.nav_state = NAV_STATE_NAVIGATE;
+  state.nav_target_bearing = 180;
+  state.gps_velocity.east = 4;
   state.rx_override.pitch = 0.15f;
-  state.gps_lock = true;
+  state.gps_health.lock = true;
   state.gps_speed = 4;
   state.gps_heading = 90;
   state.gps_heading_accuracy = 1;
@@ -454,7 +454,7 @@ void test_attitude_heading_correction_is_sample_rate_independent(void) {
   float headings[2];
   for (int run = 0; run < 2; run++) {
     attitude_test_setup();
-    state.gps_lock = true;
+    state.gps_health.lock = true;
     state.gps_speed = 10;
     state.gps_heading_accuracy = 1;
     set_imu_data(0, 0, 0, 0, 0, 1);
@@ -474,17 +474,17 @@ void test_attitude_heading_correction_is_sample_rate_independent(void) {
   TEST_ASSERT_FLOAT_WITHIN(0.2f, headings[0], headings[1]);
 }
 
-static float run_rth_heading_recovery(uint8_t phase, float speed_home, float accuracy, bool fresh) {
+static float run_rth_heading_recovery(nav_state_t phase, float speed_home, float accuracy, bool fresh) {
   attitude_test_setup();
   flags.controls_override = 1;
-  state.rth_active = true;
-  state.rth_state = phase;
+  state.nav_state = NAV_STATE_CLIMB;
+  state.nav_state = phase;
   state.rx_override.pitch = 0.1f;
-  state.gps_lock = true;
+  state.gps_health.lock = true;
   state.gps_speed = 4;
-  state.gps_vel_north = -2;
-  state.gps_vel_east = sqrtf(12);
-  state.home_bearing = speed_home > 0 ? 120 : 300;
+  state.gps_velocity.north = -2;
+  state.gps_velocity.east = sqrtf(12);
+  state.nav_target_bearing = speed_home > 0 ? 120 : 300;
   state.gps_heading = 120;
   state.gps_heading_accuracy = accuracy;
   const float pitch = 8 * DEGTORAD;
@@ -498,17 +498,17 @@ static float run_rth_heading_recovery(uint8_t phase, float speed_home, float acc
 }
 
 void test_attitude_acquisition_rejects_bad_course() {
-  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0, run_rth_heading_recovery(RTH_STATE_ACQUIRE_HEADING, -4, 20, true));
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0, run_rth_heading_recovery(NAV_STATE_ACQUIRE_HEADING, -4, 20, true));
   TEST_ASSERT_TRUE(state.heading_correction_flags & HEADING_POOR_ACCURACY);
   TEST_ASSERT_EQUAL_FLOAT(0, state.heading_confidence);
-  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0, run_rth_heading_recovery(RTH_STATE_ACQUIRE_HEADING, -4, 1, false));
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0, run_rth_heading_recovery(NAV_STATE_ACQUIRE_HEADING, -4, 1, false));
   TEST_ASSERT_TRUE(state.heading_correction_flags & HEADING_STALE);
   TEST_ASSERT_EQUAL_FLOAT(0, state.heading_confidence);
 }
 
 void test_attitude_forward_flight_builds_and_hover_retains_confidence() {
   attitude_test_setup();
-  state.gps_lock = true;
+  state.gps_health.lock = true;
   state.gps_speed = 4;
   state.gps_heading = 90;
   state.gps_heading_accuracy = 1;
@@ -539,7 +539,7 @@ void test_attitude_forward_flight_builds_and_hover_retains_confidence() {
 static void run_rth_forward_flight(float pitch_deg, float speed, float course, uint32_t loops) {
   state.rx_override.pitch = pitch_deg / 65.0f;
   state.gps_speed = speed;
-  state.gps_vel_north = speed;
+  state.gps_velocity.north = speed;
   state.gps_heading = course;
   const float pitch = pitch_deg * DEGTORAD;
   for (uint32_t i = 0; i < loops; i++) {
@@ -552,10 +552,10 @@ static void run_rth_forward_flight(float pitch_deg, float speed, float course, u
 void test_attitude_rth_weak_aligned_course_retains_confidence() {
   attitude_test_setup();
   flags.controls_override = 1;
-  state.rth_active = true;
-  state.rth_state = RTH_STATE_NAVIGATE;
-  state.home_bearing = 0;
-  state.gps_lock = true;
+  state.nav_state = NAV_STATE_CLIMB;
+  state.nav_state = NAV_STATE_NAVIGATE;
+  state.nav_target_bearing = 0;
+  state.gps_health.lock = true;
   state.gps_heading_accuracy = 2;
   run_rth_forward_flight(30, 8, 0, 10000);
   TEST_ASSERT_TRUE(state.heading_confidence > 0.9f);
@@ -575,7 +575,7 @@ void test_attitude_rth_weak_aligned_course_retains_confidence() {
 
 void test_attitude_yaw_between_gps_samples_suppresses_correction() {
   attitude_test_setup();
-  state.gps_lock = true;
+  state.gps_health.lock = true;
   state.gps_speed = 4;
   state.gps_heading_accuracy = 1;
   set_imu_data(0, 0, 0, 0, 0, 1);
@@ -595,25 +595,25 @@ void test_attitude_yaw_between_gps_samples_suppresses_correction() {
 }
 
 void test_attitude_rth_recovery_strengthens_when_moving_away(void) {
-  const float toward = run_rth_heading_recovery(RTH_STATE_NAVIGATE, 4, 1, true);
-  const float away = run_rth_heading_recovery(RTH_STATE_NAVIGATE, -4, 1, true);
+  const float toward = run_rth_heading_recovery(NAV_STATE_NAVIGATE, 4, 1, true);
+  const float away = run_rth_heading_recovery(NAV_STATE_NAVIGATE, -4, 1, true);
   TEST_ASSERT_TRUE(away > toward + 30);
   TEST_ASSERT_FLOAT_WITHIN(5, 120, away);
 }
 
 void test_attitude_rth_recovery_requires_valid_course_and_phase(void) {
-  const uint8_t phases[] = {RTH_STATE_CLIMB, RTH_STATE_TURN, RTH_STATE_HOVER_HOME};
-  for (const uint8_t phase : phases) {
+  const nav_state_t phases[] = {NAV_STATE_CLIMB, NAV_STATE_TURN, NAV_STATE_HOLD};
+  for (const nav_state_t phase : phases) {
     TEST_ASSERT_FLOAT_WITHIN(0.01f, 0, run_rth_heading_recovery(phase, -4, 1, true));
-    TEST_ASSERT_TRUE(state.heading_correction_flags & HEADING_RTH_PHASE);
+    TEST_ASSERT_TRUE(state.heading_correction_flags & HEADING_NAV_PHASE);
   }
-  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0, run_rth_heading_recovery(RTH_STATE_NAVIGATE, -4, 20, true));
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0, run_rth_heading_recovery(NAV_STATE_NAVIGATE, -4, 20, true));
   TEST_ASSERT_TRUE(state.heading_correction_flags & HEADING_POOR_ACCURACY);
-  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0, run_rth_heading_recovery(RTH_STATE_NAVIGATE, -4, NAN, true));
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0, run_rth_heading_recovery(NAV_STATE_NAVIGATE, -4, NAN, true));
   TEST_ASSERT_TRUE(state.heading_correction_flags & HEADING_POOR_ACCURACY);
-  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0, run_rth_heading_recovery(RTH_STATE_NAVIGATE, -4, 1, false));
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0, run_rth_heading_recovery(NAV_STATE_NAVIGATE, -4, 1, false));
   TEST_ASSERT_TRUE(state.heading_correction_flags & HEADING_STALE);
-  state.gps_lock = false;
+  state.gps_health.lock = false;
   imu_test_attitude_update();
   TEST_ASSERT_TRUE(state.heading_correction_flags & HEADING_NO_FIX);
   state.gps_speed = 0;
@@ -629,7 +629,7 @@ void test_attitude_rth_recovery_requires_valid_course_and_phase(void) {
 
 void test_attitude_normal_heading_pitch_weight_matches_vehicle(void) {
   attitude_test_setup();
-  state.gps_lock = true;
+  state.gps_health.lock = true;
   state.gps_speed = 4;
   state.gps_heading_accuracy = 1;
   set_imu_data(0, 0, 0, 0, 0, 1);
@@ -714,44 +714,64 @@ void test_attitude_euler_pitch_saturates_at_vertical(void) {
   }
 }
 
-void test_attitude_imu_pipeline_drag_deceleration_stays_level(void) {
+// Level flight east, then drag decelerates the craft at 0.5 g while it stays
+// level, GPS measuring that deceleration and navigation in nav_state. The
+// accelerometer reads it as nose-down tilt; uncompensated, the estimate
+// drifts about 8 degrees. Returns the largest gravity-estimate tilt, degrees.
+static float drag_deceleration_tilt_deg(nav_state_t nav_state, float speed_accuracy) {
   imu_pipeline_setup(0, 0);
   flags.arm_state = 1;
-  state.gps_lock = true;
+  flags.gps_valid = 1;
+  state.gps_health.lock = true;
   state.gps_heading = 90;
   state.gps_heading_accuracy = 2;
   state.gps_speed = 12;
-
-  // Level flight east, then drag decelerates the craft at 0.5 g while it
-  // stays level and RTH publishes that deceleration. The accelerometer reads
-  // it as nose-down tilt; uncompensated, the estimate drifts about 8 degrees.
+  state.gps_speed_accuracy = speed_accuracy;
+  float tilt = 0.0f;
   for (int i = 0; i < 3000; i++) {
     const bool braking = i >= 1000;
     time_test_advance_us(1000);
     if ((i % 100) == 0)
       state.gps_last_update_ms = time_millis();
-    state.nav_accel_east = braking ? -0.5f * 9.80665f : 0.0f;
+    // Navigation takes over on a heading learned before, from forward flight
+    // or accelerations; level flight alone teaches a multirotor none.
+    state.nav_state = braking ? nav_state : NAV_STATE_INACTIVE;
+    state.heading_confidence = 1.0f;
+    state.gps_accel.east = braking ? -0.5f * 9.80665f : 0.0f;
     state.accel_raw = (vec3_t){{0, braking ? 0.5f : 0.0f, 1}};
     imu_calc();
-    TEST_ASSERT_FLOAT_WITHIN(sinf(1.0f * DEGTORAD), 0, state.GEstG.pitch);
-    TEST_ASSERT_FLOAT_WITHIN(sinf(1.0f * DEGTORAD), 0, state.GEstG.roll);
+    tilt = MAX(tilt, asinf(MIN(hypotf(state.GEstG.pitch, state.GEstG.roll), 1.0f)) * RADTODEG);
   }
   TEST_ASSERT_FLOAT_WITHIN(1.0f, 90, state.heading);
+  state.nav_state = NAV_STATE_INACTIVE;
+  return tilt;
+}
+
+void test_attitude_imu_pipeline_drag_deceleration_stays_level(void) {
+  // Steering on the learned heading, a drag brake while climbing included.
+  TEST_ASSERT_LESS_THAN_FLOAT(1.0f, drag_deceleration_tilt_deg(NAV_STATE_CLIMB, 0.2f));
+  TEST_ASSERT_LESS_THAN_FLOAT(1.0f, drag_deceleration_tilt_deg(NAV_STATE_NAVIGATE, 0.2f));
+  // Not steering, or relearning the heading, which would turn the
+  // acceleration onto the wrong axis: the IMU does not take it.
+  TEST_ASSERT_GREATER_THAN_FLOAT(3.0f, drag_deceleration_tilt_deg(NAV_STATE_INACTIVE, 0.2f));
+  TEST_ASSERT_GREATER_THAN_FLOAT(3.0f, drag_deceleration_tilt_deg(NAV_STATE_ACQUIRE_HEADING, 0.2f));
+  // A receiver unsure of its velocity would differentiate into false tilt.
+  TEST_ASSERT_GREATER_THAN_FLOAT(3.0f, drag_deceleration_tilt_deg(NAV_STATE_CLIMB, 2.0f));
 }
 
 void test_attitude_course_accuracy_tapers_recovery() {
-  const float good = run_rth_heading_recovery(RTH_STATE_ACQUIRE_HEADING, -4, 5, true);
+  const float good = run_rth_heading_recovery(NAV_STATE_ACQUIRE_HEADING, -4, 5, true);
   const float good_confidence = state.heading_confidence;
-  const float moderate = run_rth_heading_recovery(RTH_STATE_ACQUIRE_HEADING, -4, 10, true);
+  const float moderate = run_rth_heading_recovery(NAV_STATE_ACQUIRE_HEADING, -4, 10, true);
   TEST_ASSERT_FALSE(state.heading_correction_flags & HEADING_POOR_ACCURACY);
   TEST_ASSERT_TRUE(moderate > 20);
   TEST_ASSERT_TRUE(moderate < good);
   TEST_ASSERT_TRUE(state.heading_confidence > 0);
   TEST_ASSERT_TRUE(state.heading_confidence < good_confidence);
-  const float poor = run_rth_heading_recovery(RTH_STATE_ACQUIRE_HEADING, -4, 14, true);
+  const float poor = run_rth_heading_recovery(NAV_STATE_ACQUIRE_HEADING, -4, 14, true);
   TEST_ASSERT_TRUE(poor > 0);
   TEST_ASSERT_TRUE(poor < moderate);
-  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0, run_rth_heading_recovery(RTH_STATE_ACQUIRE_HEADING, -4, 15, true));
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0, run_rth_heading_recovery(NAV_STATE_ACQUIRE_HEADING, -4, 15, true));
   TEST_ASSERT_TRUE(state.heading_correction_flags & HEADING_POOR_ACCURACY);
 }
 
@@ -770,7 +790,7 @@ void test_imu_without_gps_publishes_tilt_without_heading_estimator() {
     state.GEstG = state.accel_raw;
     imu_init();
     // A stray fix/course must not enable the GPS path without configuration.
-    state.gps_lock = true;
+    state.gps_health.lock = true;
     state.gps_heading = 90;
     state.gps_speed = 10;
     for (unsigned i = 0; i < 100; i++) {

@@ -3,12 +3,12 @@
 #include <string.h>
 
 #include "control/control.h"
+#include "control/mission.h"
+#include "control/navigation.h"
 #include "core/profile.h"
 #include "driver/osd/osd.h"
 #include "driver/time.h"
-#ifdef VEHICLE_MULTI
-#include "control/multi/navigation.h"
-#endif
+#include "osd/render.h"
 
 #define LABEL_LEN 22
 #define LABEL_MAX_LEN 64
@@ -140,6 +140,51 @@ static void osd_status_show(osd_status_mode_t mode, osd_status_entries_t entry) 
   osd_status_show_text(mode, entry, labels[entry]);
 }
 
+#ifndef VEHICLE_ROVER
+// Appends " <distance>" to the navigation target and terminates.
+static const char *osd_with_distance(const char *text, char *end) {
+  *end++ = ' ';
+  end = osd_format_distance(end, state.nav_target_distance);
+  *end = 0;
+  return text;
+}
+
+// "GUIDED FLY" and the distance to the ground station target.
+static const char *osd_guided_message(const char *action) {
+  static char text[LABEL_LEN + 1];
+  // Actions are short literals: "GUIDED " and the distance leave 10 characters.
+  strcpy(text, "GUIDED ");
+  strcpy(text + 7, action);
+  return osd_with_distance(text, text + strlen(text));
+}
+
+// "WP 3/8 FLY": the active waypoint, counted from one, the mission length and
+// the distance to the waypoint.
+// Formatted by hand: newlib reentrancy is disabled, so printf stays off the OSD thread.
+static const char *osd_mission_message(const char *action) {
+  static char text[LABEL_LEN + 1];
+  const uint8_t numbers[2] = {(uint8_t)(state.mission_index + 1), mission.count};
+  char *p = text;
+  *p++ = 'W';
+  *p++ = 'P';
+  for (uint32_t i = 0; i < 2; i++) {
+    *p++ = i ? '/' : ' ';
+    if (numbers[i] >= 10)
+      *p++ = '0' + numbers[i] / 10;
+    *p++ = '0' + numbers[i] % 10;
+  }
+  *p++ = ' ';
+  // Actions are short literals: "WP 32/32 " and the distance leave 8 characters.
+  strcpy(p, action);
+  return osd_with_distance(text, p + strlen(action));
+}
+
+// The mission switch also grants ground station commands without a stored mission.
+static const char *osd_no_mission_message() {
+  return flags.guided_ready ? "GUIDED: READY" : "MISSION: NONE";
+}
+#endif
+
 #ifdef VEHICLE_WING
 // Messages fit LABEL_LEN so they read without scrolling.
 static const char *osd_wing_autolaunch_message(void) {
@@ -151,11 +196,11 @@ static const char *osd_wing_autolaunch_message(void) {
   }
 
   // A finished or aborted launch is announced once; it stays silent until disarm.
-  const wing_launch_state_t launch_state = (wing_launch_state_t)state.wing_launch_state;
+  const wing_launch_state_t launch_state = state.wing_launch_state;
   if (launch_state == WING_LAUNCH_DONE || launch_state == WING_LAUNCH_ABORTED) {
     return NULL;
   }
-  if (!state.wing_launch_available) {
+  if (!flags.wing_launch_available) {
     return "LAUNCH: SET BEFORE ARM";
   }
   if (state.rx_filtered.throttle < THROTTLE_SAFETY) {
@@ -194,7 +239,7 @@ static const char *osd_wing_autotrim_message(void) {
   }
 
   // Captured and saved trims are announced once.
-  const uint8_t autotrim_state = state.wing_autotrim_state;
+  const wing_autotrim_state_t autotrim_state = state.wing_autotrim_state;
   if (autotrim_state == WING_AUTOTRIM_SAVE_PENDING || autotrim_state == WING_AUTOTRIM_SAVED) {
     return NULL;
   }
@@ -213,12 +258,22 @@ static const char *osd_wing_autotrim_message(void) {
 }
 
 static const char *osd_wing_nav_message(void) {
-  const bool rth = state.wing_nav_failsafe || rx_aux_on(AUX_RETURN_TO_HOME);
+  const bool rth = flags.wing_nav_failsafe || rx_aux_on(AUX_RETURN_TO_HOME);
+  // A mission switch that loiters could not start its route.
+  const bool mission_unavailable = !rth && rx_aux_on(AUX_MISSION);
   switch (state.wing_nav_state) {
   case WING_NAV_LOITER:
+    if (mission_unavailable)
+      return mission.count ? "MISSION: UNAVAILABLE" : osd_no_mission_message();
     return rth ? "RTH: NO HOME" : NULL;
   case WING_NAV_LOITER_BANK:
+    if (mission_unavailable)
+      return "MISSION: NO GPS";
     return rth ? "RTH: NO GPS" : "LOITER: NO GPS";
+  case WING_NAV_MISSION:
+    return state.nav_target == NAV_TARGET_GUIDED ? osd_guided_message("FLY") : osd_mission_message("FLY");
+  case WING_NAV_MISSION_HOLD:
+    return state.nav_target == NAV_TARGET_GUIDED ? osd_guided_message("CIRCLE") : osd_mission_message("CIRCLE");
   case WING_NAV_RTH_RETURN:
     return "RETURN HOME";
   case WING_NAV_RTH_HOME:
@@ -229,6 +284,11 @@ static const char *osd_wing_nav_message(void) {
     return "FS: DESCENDING";
   case WING_NAV_CRUISE_NO_GPS:
     return "CRUISE: NO GPS";
+  case WING_NAV_INACTIVE:
+    // Starting needs a switch edge in flight, after any launch.
+    if (mission_unavailable && flags.arm_state)
+      return mission.count ? "MISSION: TOGGLE IN AIR" : osd_no_mission_message();
+    return NULL;
   default:
     return NULL;
   }
@@ -236,11 +296,11 @@ static const char *osd_wing_nav_message(void) {
 
 // Announce one-shot launch and autotrim results for the default status time.
 static const char *osd_wing_result_message(void) {
-  static uint8_t last_launch_state = WING_LAUNCH_IDLE;
-  static uint8_t last_autotrim_state = WING_AUTOTRIM_IDLE;
+  static wing_launch_state_t last_launch_state = WING_LAUNCH_IDLE;
+  static wing_autotrim_state_t last_autotrim_state = WING_AUTOTRIM_IDLE;
 
-  const uint8_t launch_state = state.wing_launch_state;
-  const uint8_t autotrim_state = state.wing_autotrim_state;
+  const wing_launch_state_t launch_state = state.wing_launch_state;
+  const wing_autotrim_state_t autotrim_state = state.wing_autotrim_state;
   const bool launch_changed = launch_state != last_launch_state;
   const bool autotrim_changed = autotrim_state != last_autotrim_state;
   last_launch_state = launch_state;
@@ -263,43 +323,107 @@ static const char *osd_wing_result_message(void) {
 #endif
 
 #ifdef VEHICLE_MULTI
+// What a mission or ground station target shows for the phase; the other
+// phases read the same as on a return.
+static const char *osd_target_action() {
+  switch (state.nav_state) {
+  case NAV_STATE_CLIMB:
+    return "CLIMB";
+  case NAV_STATE_TURN:
+    return "TURN";
+  case NAV_STATE_NAVIGATE:
+    return "FLY";
+  case NAV_STATE_HOLD:
+  case NAV_STATE_BRAKE:
+    return "HOLD";
+  default:
+    return NULL;
+  }
+}
+
 static const char *osd_rth_message() {
-  if (state.rth_state == RTH_STATE_ABORTED) {
+  if (state.nav_state == NAV_STATE_ABORTED) {
     return "ABORTED";
   }
 
-  if (state.rth_active) {
-    switch (state.rth_state) {
-    case RTH_STATE_CLIMB:
-      return "CLIMB";
-    case RTH_STATE_ACQUIRE_HEADING:
-      return "ACQUIRING HEADING";
-    case RTH_STATE_TURN:
-      return "TURN HOME";
-    case RTH_STATE_NAVIGATE:
-      return "RETURN HOME";
-    case RTH_STATE_HOVER_HOME:
-      return "HOLD HOME";
-    case RTH_STATE_HEADING_FAILED:
-      return "HEADING FAILED";
-    case RTH_STATE_NAV_FAILED:
-      return "NAV FAILED";
+  if (state.nav_target == NAV_TARGET_MISSION) {
+    switch (state.nav_state) {
+    case NAV_STATE_TAKEOFF_READY:
+      return "TAKEOFF: RAISE THR";
+    case NAV_STATE_TAKEOFF_SPINUP:
+      return "TAKEOFF: SPINUP";
+    case NAV_STATE_TAKEOFF:
+      return "TAKEOFF: CLIMBING";
+    case NAV_STATE_LAND:
+      return "LAND: DESCENDING";
+    default:
+      break;
     }
   }
 
+  const char *action = osd_target_action();
+  if (action && state.nav_target == NAV_TARGET_GUIDED)
+    return osd_guided_message(action);
+  if (action && state.nav_target == NAV_TARGET_MISSION) {
+    // The leg to a LAND waypoint is named for the landing it ends in.
+    const bool leg = state.nav_state == NAV_STATE_TURN || state.nav_state == NAV_STATE_NAVIGATE;
+    if (leg && mission.waypoints[state.mission_index].type == MISSION_WAYPOINT_LAND)
+      action = "LAND";
+    return osd_mission_message(action);
+  }
+
+  switch (state.nav_state) {
+  case NAV_STATE_CLIMB:
+    return "CLIMB";
+  case NAV_STATE_ACQUIRE_HEADING:
+    return "ACQUIRING HEADING";
+  case NAV_STATE_TURN:
+    return "TURN HOME";
+  case NAV_STATE_NAVIGATE:
+    return "RETURN HOME";
+  case NAV_STATE_HOLD:
+  case NAV_STATE_BRAKE:
+    return "HOLD HOME";
+  case NAV_STATE_HEADING_FAILED:
+    return "HEADING FAILED";
+  case NAV_STATE_NAV_FAILED:
+    return "NAV FAILED";
+  default:
+    break;
+  }
+
   if (rx_aux_on(AUX_RETURN_TO_HOME)) {
-    if (!flags.arm_state) return "ARM FIRST";
-    return "UNAVAILABLE";
+    if (!flags.arm_state) return "RTH: ARM FIRST";
+    return "RTH: UNAVAILABLE";
   }
 
   // Arming is always allowed; warn when failsafe RTH will not be available.
   if (profile.navigation.rth_on_failsafe && profile.serial.gps != SERIAL_PORT_INVALID) {
-    if (!nav_altitude_ready())
+    if (!flags.altitude_valid)
       return "NO BARO";
-    if (flags.arm_state && !nav_rth_home_valid())
+    if (flags.arm_state && !flags.home_valid)
       return "NO HOME";
-    if (!flags.arm_state && !nav_gps_ready())
+    if (!flags.arm_state && !flags.gps_valid)
       return "NO GPS FIX";
+  }
+
+  if (rx_aux_on(AUX_MISSION)) {
+    if (mission.count == 0) return osd_no_mission_message();
+    // Starting needs a switch edge in flight, clear of the ground, or for a
+    // takeoff, at its waypoint after arming and before throttling up.
+    if (mission.waypoints[0].type == MISSION_WAYPOINT_TAKEOFF && !flags.in_air) {
+      // Name what keeps the takeoff from starting; the distance needs a fix.
+      if (!flags.gps_valid)
+        return "TAKEOFF: NO GPS FIX";
+      if (!flags.altitude_valid)
+        return "TAKEOFF: NO BARO";
+      if (!nav_within(mission.waypoints[0].coord, MISSION_TAKEOFF_MAX_DISTANCE))
+        return "TAKEOFF: MOVE TO WP 1";
+      if (flags.arm_state && !flags.home_valid)
+        return "TAKEOFF: NO HOME";
+      return flags.arm_state ? "TAKEOFF: TOGGLE SWITCH" : "TAKEOFF: ARM FIRST";
+    }
+    return flags.arm_state ? "MISSION: TOGGLE IN AIR" : "MISSION: ARM FIRST";
   }
   return NULL;
 }
@@ -367,14 +491,14 @@ bool osd_status_update(osd_element_t *el) {
     // only show failsafe if rx was ready
 #ifdef VEHICLE_MULTI
     const char *rth_message = osd_rth_message();
-    if (rth_message && (state.rth_failsafe_active || state.rth_state == RTH_STATE_ABORTED)) {
+    if (rth_message && (state.failsafe_owner != FAILSAFE_OWNER_NONE || state.nav_state == NAV_STATE_ABORTED)) {
       osd_status_show_text(MODE_HOLD, STATUS_RTH, rth_message);
       return osd_status_print(el);
     }
 #endif
 #ifdef VEHICLE_WING
     const char *nav_message = osd_wing_nav_message();
-    if (nav_message && state.wing_nav_failsafe) {
+    if (nav_message && (state.failsafe_owner == FAILSAFE_OWNER_MISSION || flags.wing_nav_failsafe)) {
       osd_status_show_text(MODE_HOLD, STATUS_RTH, nav_message);
       return osd_status_print(el);
     }
@@ -437,11 +561,11 @@ bool osd_status_update(osd_element_t *el) {
 
   // Spoofing can keep a valid-looking fix; critical jamming has lost it.
   // Either outranks navigation phases, which would still trust GPS.
-  if (state.gps_spoofing >= GPS_SPOOFING_INDICATED) {
+  if (state.gps_health.spoofing >= GPS_SPOOFING_INDICATED) {
     osd_status_show_text(MODE_HOLD, STATUS_GPS, "GPS: SPOOFING");
     return osd_status_print(el);
   }
-  if (state.gps_jamming == GPS_JAMMING_CRITICAL) {
+  if (state.gps_health.jamming == GPS_JAMMING_CRITICAL) {
     osd_status_show_text(MODE_HOLD, STATUS_GPS, "GPS: JAMMED");
     return osd_status_print(el);
   }
@@ -494,7 +618,7 @@ bool osd_status_update(osd_element_t *el) {
 
   // Interference with the fix intact can last a whole flight near a
   // transmitter, so it yields to every navigation message.
-  if (state.gps_jamming == GPS_JAMMING_WARNING) {
+  if (state.gps_health.jamming == GPS_JAMMING_WARNING) {
     osd_status_show_text(MODE_HOLD, STATUS_GPS, "GPS: INTERFERENCE");
     return osd_status_print(el);
   }
