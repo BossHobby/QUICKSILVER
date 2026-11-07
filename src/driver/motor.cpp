@@ -87,7 +87,7 @@ void motor_set_all(float pwm) {
   }
 }
 
-void motor_update() {
+HOT_CODE void motor_update() {
   motor_wait_for_ready();
 
 #ifdef USE_MOTOR_DSHOT

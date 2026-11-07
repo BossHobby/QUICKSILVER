@@ -70,6 +70,16 @@ static uint32_t flight_timer_remainder;
 
 extern "C" __attribute__((__used__)) void
 memory_section_init() {
+#ifdef USE_FAST_CODE
+  extern uint8_t _fast_code_start;
+  extern uint8_t _fast_code_end;
+  extern uint8_t _fast_code_data;
+  memcpy(&_fast_code_start, &_fast_code_data, (size_t)(&_fast_code_end - &_fast_code_start));
+  // ITCM is not behind the instruction cache; only the copy must complete
+  // before the first fetch from it.
+  __DSB();
+  __ISB();
+#endif
 #ifdef USE_FAST_RAM
   extern uint8_t _fast_ram_start;
   extern uint8_t _fast_ram_end;
@@ -136,6 +146,14 @@ void flight_reset_runtime() {
   skip_loop_sample = true;
 }
 
+// Halves the loop rate after sustained overload; runs at most a few times.
+COLD_CODE static void flight_reduce_rate() {
+  state.looptime_autodetect = MIN(500.0f, state.looptime_autodetect * 2.0f);
+  flight_nominal_period = US_TO_CYCLES(state.looptime_autodetect);
+  state.looptime_warning++;
+  control_filter_update(false);
+}
+
 static void flight_update_rate(uint32_t runtime_us) {
   if (skip_loop_sample.exchange(false)) {
     runtime_sum = 0;
@@ -155,13 +173,8 @@ static void flight_update_rate(uint32_t runtime_us) {
   const bool overloaded = runtime_sum / 200.0f > state.looptime_autodetect + 5.0f;
   runtime_sum = 0;
   runtime_samples = 0;
-  if (!overloaded || state.looptime_autodetect >= 500.0f)
-    return;
-
-  state.looptime_autodetect = MIN(500.0f, state.looptime_autodetect * 2.0f);
-  flight_nominal_period = US_TO_CYCLES(state.looptime_autodetect);
-  state.looptime_warning++;
-  control_filter_update(false);
+  if (overloaded && state.looptime_autodetect < 500.0f)
+    flight_reduce_rate();
 }
 
 // Publishes system load (0-100 percent) into state.cpu_load from the idle
@@ -367,7 +380,7 @@ COLD_CODE static void flight_init() {
   timer_up_start(flight_timer);
 }
 
-void flight_thread(void *) {
+HOT_CODE void flight_thread(void *) {
   flight_init();
 
   while (1) {

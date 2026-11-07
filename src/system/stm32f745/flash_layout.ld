@@ -19,6 +19,8 @@ _Min_Stack_Size = 0x1000; /* interrupts only; failloop resets out of handler mod
 /* Memories definition */
 MEMORY
 {
+  /* 16K ITCM RAM; address 0 stays free so no function equals nullptr */
+  ITCM_RAM (rx)      : ORIGIN = 0x00000004, LENGTH = 16K - 4
   FLASH (rx)         : ORIGIN = 0x08000000, LENGTH = 96K
   FLASH_CONFIG (r)   : ORIGIN = 0x08018000, LENGTH = 32K
   FLASH_CODE   (rx)  : ORIGIN = 0x08020000, LENGTH = 920K
@@ -59,6 +61,20 @@ SECTIONS
     . = ALIGN(4);
     _etext = .;        /* define a global symbols at end of code */
   } >FLASH_CODE
+
+  /* Flight loop code, marked HOT_CODE, executes from zero-wait ITCM RAM.
+     memory_section_init() copies it from FLASH_CODE before main(). */
+  .fast_code :
+  {
+    . = ALIGN(4);
+    _fast_code_start = .;
+    *(.fast_code)
+    *(.fast_code*)
+    . = ALIGN(4);
+    _fast_code_end = .;
+  } >ITCM_RAM AT> FLASH_CODE
+  _fast_code_data = LOADADDR(.fast_code);
+  _fast_code_limit = ORIGIN(ITCM_RAM) + LENGTH(ITCM_RAM);
 
   /* Constant data into "FLASH" Rom type memory */
   .rodata :

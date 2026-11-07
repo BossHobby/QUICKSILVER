@@ -3,6 +3,7 @@
 #include <math.h>
 
 #include "control/control.h"
+#include "core/project.h"
 #include "driver/motor.h"
 #include "driver/servo.h"
 #include "util/util.h"
@@ -147,7 +148,7 @@ static float output_finalize_pwm_motor(float *value, float motor_limit) {
 #endif
 }
 
-void output_finalize_motor_values(void) {
+HOT_CODE void output_finalize_motor_values(void) {
   state.thrsum = 0.0f;
   uint8_t motor_count = 0;
 
@@ -199,7 +200,7 @@ static bool output_allowed(uint8_t index, const profile_output_t *output) {
   return flags.arm_state || flags.motortest_override;
 }
 
-void output_write_values() {
+HOT_CODE void output_write_values() {
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
     const profile_output_t *output = &profile.outputs[i];
     if (output->protocol == OUTPUT_PROTOCOL_NONE || output->target_output >= MOTOR_PIN_MAX) {

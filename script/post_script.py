@@ -9,10 +9,10 @@ import serial.tools.list_ports
 Import("env")
 
 try:
-    from target_inject import target_hash, process_elf_action, inject_target, copy_hex
+    from target_inject import target_hash, process_elf_action, fast_code_report_action, inject_target, copy_hex
 except ImportError:
     env.Execute("$PYTHONEXE -m pip install pyelftools pyyaml cbor2")
-    from target_inject import target_hash, process_elf_action, inject_target, copy_hex
+    from target_inject import target_hash, process_elf_action, fast_code_report_action, inject_target, copy_hex
 
 
 def before_upload(source, target, env):
@@ -49,6 +49,7 @@ env.AddPostAction(
             process_elf_action,
             "Injecting target config into $BUILD_DIR/${PROGNAME}.elf",
         ),
+        env.VerboseAction(fast_code_report_action, "Checking ITCM fast code usage"),
         env.VerboseAction(
             " ".join(
                 objcopy_args

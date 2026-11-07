@@ -265,7 +265,9 @@ float gyro_update_period() {
   }
 }
 
-gyro_data_t gyro_read() {
+// Stays in flash: the sample transfer, not this code, sets the read time, and
+// inlining it into HOT_CODE sixaxis_read() would put every driver in ITCM.
+__attribute__((noinline)) gyro_data_t gyro_read() {
   gyro_data_t data = {};
 
   switch (gyro_type) {

@@ -828,7 +828,7 @@ bool control_failsafe_active() {
   return flags.failsafe_outputs_blocked;
 }
 
-void control() {
+HOT_CODE void control() {
   const bool armed_at_start = flags.arm_state;
   const float previous_throttle = state.throttle;
   bool motortest_usb = false;

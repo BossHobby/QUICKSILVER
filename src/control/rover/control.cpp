@@ -5,6 +5,7 @@
 #include "control/control.h"
 #include "control/output.h"
 #include "core/profile.h"
+#include "core/project.h"
 #include "driver/motor.h"
 #include "io/blackbox.h"
 #include "io/usb_configurator.h"
@@ -331,7 +332,7 @@ bool control_failsafe_active() {
   return flags.failsafe_outputs_blocked;
 }
 
-void control() {
+HOT_CODE void control() {
   bool motortest_usb = false;
   if (flags.usb_active && motor_test.active) {
     flags.arm_state = 1;

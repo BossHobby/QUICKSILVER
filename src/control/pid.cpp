@@ -184,7 +184,7 @@ static inline float pid_tda_compensation() {
   return constrain(tda_compensation, profile.pid.throttle_dterm_attenuation.tda_percent, 1.0f);
 }
 
-void pid_calc() {
+HOT_CODE void pid_calc() {
   rx_filter.coeff(FILTER_LP_PT1, state.rx_filter_hz, state.looptime_autodetect);
 
   const float dynamic_throttle = state.throttle + state.throttle * (1.0f - state.throttle);

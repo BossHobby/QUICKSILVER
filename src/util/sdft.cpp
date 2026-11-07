@@ -3,6 +3,8 @@
 #include <string.h>
 
 #include "sdft.h"
+
+#include "core/project.h"
 #include "util/util.h"
 
 // from https://www.dsprelated.com/showarticle/776.php
@@ -64,7 +66,7 @@ void sdft_update_period(sdft_t *sdft, float sample_period_us) {
   memcpy(sdft->notch_hz, notch_hz, sizeof(notch_hz));
 }
 
-bool sdft_push(sdft_t *sdft, float val) {
+HOT_CODE bool sdft_push(sdft_t *sdft, float val) {
   if (sdft->sample_period_us <= 0.0f) {
     return false;
   }
@@ -94,7 +96,7 @@ bool sdft_push(sdft_t *sdft, float val) {
   return false;
 }
 
-bool sdft_update(sdft_t *sdft) {
+HOT_CODE bool sdft_update(sdft_t *sdft) {
   if (sdft->sample_period_us <= 0.0f) {
     return false;
   }

@@ -48,16 +48,17 @@ struct filter_t : filter_coeff_t {
       p = {};
   }
 
-  // Each pole moves toward its input; with vectors every axis updates before
-  // the next pole, so the axes are independent chains the FPU overlaps.
-  value_t step(value_t v) {
-    for (uint32_t p = 0; p < order; p++) {
-      pole[p] += alpha * (v - pole[p]);
-      v = pole[p];
-    }
-    return v;
-  }
+  // Specialized in filter.cpp for each value type in use: LTO drops the
+  // HOT_CODE section from template instances, not from specializations.
+  value_t step(value_t v);
 };
+
+template <>
+float filter_t<float>::step(float v);
+template <>
+vec3_t filter_t<vec3_t>::step(vec3_t v);
+template <>
+vec4_t filter_t<vec4_t>::step(vec4_t v);
 
 // Second-order notch with its own history. Disabled below 0.1 Hz.
 struct filter_biquad_notch_t {
@@ -78,22 +79,7 @@ struct filter_biquad_notch_t {
   void init(float cutoff_hz, float period_us);
   void coeff(float cutoff_hz, float period_us);
 
-  float step(float in) {
-    if (hz < 0.1f) {
-      return in;
-    }
-
-    // Notch symmetry: b0 == b2 and b1 == a1.
-    const float result = b0 * (in + x2) + b1 * (x1 - y1) - a2 * y2;
-
-    x2 = x1;
-    x1 = in;
-
-    y2 = y1;
-    y1 = result;
-
-    return result;
-  }
+  float step(float in);
 };
 
 typedef struct {

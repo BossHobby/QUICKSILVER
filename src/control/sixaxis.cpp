@@ -119,7 +119,7 @@ static vec3_t sixaxis_apply_orientation(vec3_t v) {
   };
 }
 
-void sixaxis_read() {
+HOT_CODE void sixaxis_read() {
   const gyro_data_t data = gyro_read();
 
   const vec3_t accel = sixaxis_apply_orientation(data.accel);

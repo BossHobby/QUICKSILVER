@@ -94,10 +94,11 @@ LoopFillZerobss:
   bl system_check_for_bootloader
 /* Call the clock system initialization function.*/
   bl  SystemInit   
+/* Copy FAST_CODE into ITCM before any constructor can call it */
+  bl  memory_section_init
 /* Call static constructors */
   bl __libc_init_array
 /* Call the application's entry point.*/
-  bl  memory_section_init
   bl  main
   bx  lr  
 .size  Reset_Handler, .-Reset_Handler

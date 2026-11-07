@@ -226,7 +226,7 @@ static float control_throttle_input(void) {
   return pilot;
 }
 
-void control() {
+HOT_CODE void control() {
   if (rx_aux_on(AUX_TURTLE) && !rx_aux_on(AUX_MOTOR_TEST)) {
     turtle_mode_start();
   } else {
