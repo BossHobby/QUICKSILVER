@@ -9,8 +9,6 @@
 
 void time_init();
 
-uint32_t time_micros();
-
 void time_delay_us(uint32_t us);
 void time_delay_ms(uint32_t ms);
 
