@@ -114,3 +114,11 @@ Environment names include the vehicle prefix. Current `platformio.ini` and gener
 - `src/driver/`: peripheral APIs and `mcu/{stm32,at32,native}/` implementations; `src/system/`: startup/linker/platform configuration.
 - `src/io/`: USB Configurator, QUIC/MSP, Blackbox, GPS, battery and VTX.
 - `src/rx/`: receivers; `src/osd/`: rendering/menus; `src/util/`: shared algorithms/helpers.
+
+## Talking to a board
+
+- With a board attached over USB, use the configurator CLI from the sibling checkout: `node ../Configurator/script/fc.mjs <command>` (run `npm install` there once). `--help` lists commands; `../Configurator/AGENTS.md` documents them.
+- Typical checks: `info` for the flashed `git_version` and MCU, `profile <path>` and `set <path>=<json>` for settings, `state <path> --watch 100 --count 20` for live values such as `gyro`, `cpu_load` or `vbat_filtered`, `blackbox list` and `blackbox get <index> --format json|bbl` to pull flight logs, `profile-export`/`profile-import` and `target-export`/`target-import` for the configurator's `.yaml` files, and `reboot` after flashing or to apply settings that need it.
+- Firmware replies map to the QUIC handlers in `src/io/quic.cpp`; an error reply such as `INVALID VALUE` comes back on stderr with a non-zero exit.
+- USB is ground-only, so the board must be disarmed. Profile writes persist to flash; restore values changed for testing. Hardware results from the CLI are hardware validation; report them separately from build and native-test evidence.
+- When a task needs board access the CLI lacks (a new QUIC command or value, a new action), extend `../Configurator/cli/fc.ts` alongside the firmware change instead of using one-off scripts; see `../Configurator/AGENTS.md`.
