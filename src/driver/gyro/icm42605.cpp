@@ -22,8 +22,6 @@
 #define AAF_DELTSQR 25
 #define AAF_BITSHIFT 10
 
-extern spi_bus_device_t gyro_bus;
-
 gyro_types_t icm42605_detect() {
   const uint8_t id = icm42605_read(ICM42605_WHO_AM_I);
   switch (id) {
@@ -126,7 +124,7 @@ void icm42605_read_gyro_data(gyro_data_t *data) {
       spi_make_seg_const(ICM42605_TEMP_DATA1 | 0x80),
       spi_make_seg_buffer(gyro_buf, NULL, sizeof(gyro_buf)),
   };
-  spi_seg_submit_wait(&gyro_bus, segs);
+  gyro_spi_read(segs);
 
   data->temp = (float)((int16_t)((gyro_buf[0] << 8) | gyro_buf[1])) / 132.48f + 25.f;
 

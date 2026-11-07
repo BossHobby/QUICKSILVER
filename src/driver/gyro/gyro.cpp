@@ -1,5 +1,8 @@
 #include "driver/gyro/gyro.h"
 
+#include <FreeRTOS.h>
+#include <task.h>
+
 #include "core/project.h"
 #include "driver/exti.h"
 #include "driver/interrupt.h"
@@ -19,6 +22,8 @@ spi_bus_device_t gyro_bus = {};
 #endif
 
 #define GYRO_CLOCK_MAX_MISSED 3
+
+static constexpr UBaseType_t GYRO_NOTIFY_INDEX = 1;
 
 // EXTI owns this clock except initialization and the masked calibration reset.
 // SPI reads remain in Flight.
@@ -87,6 +92,37 @@ void gyro_test_clock_update(uint32_t sample) { gyro_clock_update(sample); }
 #endif
 
 #ifdef USE_GYRO
+
+#ifndef STM32F4
+// Runs from the SPI completion interrupt after the received bytes are copied.
+static void gyro_spi_read_done(void *arg) {
+  BaseType_t wake = pdFALSE;
+  vTaskNotifyGiveIndexedFromISR(static_cast<TaskHandle_t>(arg), GYRO_NOTIFY_INDEX, &wake);
+  portYIELD_FROM_ISR(wake);
+}
+#endif
+
+// Reads are synchronous for the caller: Flight, or OSD/USB calibration while
+// they own the configuration. With DMA the caller blocks until completion so
+// workers can run meanwhile. F4 polls instead: SPI1 DMA there must wait for
+// DShot to release DMA2, stalling the read behind a frame.
+// Out of line: every driver's sample read shares it.
+__attribute__((noinline)) void gyro_spi_read_ex(const spi_txn_segment_t *segs, uint32_t count) {
+#ifndef STM32F4
+  if (spi_port_has_dma(gyro_bus.port)) {
+    spi_seg_submit_ex(&gyro_bus, {
+                                     .segs = segs,
+                                     .seg_count = count,
+                                     .done_fn = gyro_spi_read_done,
+                                     .done_fn_arg = xTaskGetCurrentTaskHandle(),
+                                 });
+    spi_txn_continue(&gyro_bus);
+    ulTaskNotifyTakeIndexed(GYRO_NOTIFY_INDEX, pdTRUE, portMAX_DELAY);
+    return;
+  }
+#endif
+  spi_seg_submit_wait_ex(&gyro_bus, segs, count);
+}
 
 static bool gyro_exti_conflicts(gpio_pins_t pin) {
   return pin != PIN_NONE && gpio_pin_defs[pin].pin_index == gpio_pin_defs[target.gyro.exti].pin_index;
