@@ -119,8 +119,7 @@ static struct {
   uint32_t last_gps_ms; // latest GPS fix compared, so heading pairs with its velocity
   bool turn_start_valid;
   uint32_t turn_start_gps_ms;
-  float turn_start_north; // GPS velocity, m/s
-  float turn_start_east;
+  vec2_t turn_start_vel; // GPS velocity, m/s
   float turn_start_scale;
   float samples[SPEED_LEARN_SAMPLES]; // cruise speed per turn this flight, m/s
   uint8_t sample_count;
@@ -786,7 +785,8 @@ static void wing_learn_cruise_speed() {
     return;
 
   if (!restart) {
-    const float velocity_change = hypotf(state.gps_vel_north - speed_learn.turn_start_north, state.gps_vel_east - speed_learn.turn_start_east);
+    const vec2_t gps_vel = {{state.gps_vel_north, state.gps_vel_east}};
+    const float velocity_change = vec2_magnitude(gps_vel - speed_learn.turn_start_vel);
     const float nose_change = 2.0f * fabsf(fastsin(0.5f * heading_change));
     const float scale = 0.5f * (state.wing_speed_scale + speed_learn.turn_start_scale);
     speed_learn.samples[speed_learn.sample_next] = velocity_change / nose_change * scale;
@@ -805,8 +805,7 @@ static void wing_learn_cruise_speed() {
   speed_learn.turn_start_valid = true;
   speed_learn.turn_start_gps_ms = gps_ms;
   speed_learn.heading_change = 0.0f;
-  speed_learn.turn_start_north = state.gps_vel_north;
-  speed_learn.turn_start_east = state.gps_vel_east;
+  speed_learn.turn_start_vel = {{state.gps_vel_north, state.gps_vel_east}};
   speed_learn.turn_start_scale = state.wing_speed_scale;
 }
 

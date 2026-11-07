@@ -3,6 +3,35 @@
 #include <math.h>
 #include <cbor.h>
 
+// Horizontal earth-frame vector for navigation; units follow the quantity.
+typedef union {
+  struct {
+    float north;
+    float east;
+  };
+  float axis[2];
+} vec2_t;
+
+inline vec2_t operator+(vec2_t a, vec2_t b) { return {{a.north + b.north, a.east + b.east}}; }
+inline vec2_t operator-(vec2_t a, vec2_t b) { return {{a.north - b.north, a.east - b.east}}; }
+inline vec2_t operator*(float s, vec2_t v) { return {{s * v.north, s * v.east}}; }
+inline vec2_t operator*(vec2_t v, float s) { return s * v; }
+inline vec2_t &operator+=(vec2_t &a, vec2_t b) { return a = a + b; }
+inline vec2_t &operator*=(vec2_t &v, float s) { return v = s * v; }
+
+static inline float vec2_dot(vec2_t a, vec2_t b) {
+  return a.north * b.north + a.east * b.east;
+}
+
+// z component of a x b with z down: positive when b lies clockwise (right) of a.
+static inline float vec2_cross(vec2_t a, vec2_t b) {
+  return a.north * b.east - a.east * b.north;
+}
+
+static inline float vec2_magnitude(vec2_t v) {
+  return sqrtf(vec2_dot(v, v));
+}
+
 typedef union {
   struct {
     float roll;
