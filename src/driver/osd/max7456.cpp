@@ -294,7 +294,7 @@ bool max7456_is_ready() {
   return true;
 }
 
-void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size) {
+void max7456_read_character(uint8_t addr, uint8_t *out, const uint8_t size) {
   // make sure we do not collide with a dma write
   spi_txn_wait(&bus);
 
@@ -321,7 +321,7 @@ void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size) {
   max7456_init_display();
 }
 
-void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size) {
+void max7456_write_character(uint8_t addr, const uint8_t *in, const uint8_t size) {
   // make sure we do not collide with a dma write
   spi_txn_wait(&bus);
 

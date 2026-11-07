@@ -1,0 +1,11 @@
+; WS2812 data at 800 kHz: ten cycles per bit, high for three, then the data
+; bit for four, then low for the last three including the next pull. An empty
+; FIFO stalls with the line low, which latches the LEDs.
+
+.program rgb_led
+.wrap_target
+    out x, 1
+    set pins, 1             [2]
+    mov pins, x             [3]
+    set pins, 0             [1]
+.wrap

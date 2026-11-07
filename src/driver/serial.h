@@ -62,6 +62,16 @@ typedef struct {
   serial_dma_request_t dma_request;
 } usart_port_def_t;
 
+// Hardware ports at their index, then the soft ports.
+#define SERIAL_PORT_SLOTS (SERIAL_PORT_MAX + SERIAL_SOFT_COUNT)
+
+static inline uint32_t serial_port_slot(serial_ports_t port) {
+  return port < SERIAL_PORT_MAX ? port : SERIAL_PORT_MAX + (port - SERIAL_SOFT_START);
+}
+
+// The serial_port_t each port was initialized with.
+extern serial_port_t *serial_ports[SERIAL_PORT_SLOTS];
+
 extern serial_port_t serial_rx;
 extern serial_port_t serial_displayport;
 extern serial_port_t serial_vtx;

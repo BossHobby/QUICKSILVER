@@ -74,6 +74,7 @@ TARGET_SDCARD_MEMBERS
 TARGET_GYRO_SPI_DEVICE_MEMBERS
 TARGET_RX_SPI_DEVICE_MEMBERS
 TARGET_I2C_DEVICE_MEMBERS
+TARGET_VIDEO_OSD_MEMBERS
 TARGET_DEFAULTS_SERIAL_MEMBERS
 TARGET_DEFAULTS_RECEIVER_MEMBERS
 TARGET_DEFAULTS_VTX_MEMBERS
@@ -113,6 +114,7 @@ TARGET_SPI_DEVICE_MEMBERS
 TARGET_SDCARD_MEMBERS
 TARGET_RX_SPI_DEVICE_MEMBERS
 TARGET_I2C_DEVICE_MEMBERS
+TARGET_VIDEO_OSD_MEMBERS
 TARGET_DEFAULTS_SERIAL_MEMBERS
 TARGET_DEFAULTS_RECEIVER_MEMBERS
 TARGET_DEFAULTS_VTX_MEMBERS
@@ -150,7 +152,12 @@ enum gpio_ports_t {
   GPIO_PORT_MAX,
 };
 
+#ifdef RP2350
+// One bank of up to 48 pins, named PA0 to PA47.
+#define GPIO_PIN_MAX 48
+#else
 #define GPIO_PIN_MAX 16
+#endif
 
 static consteval auto make_gpio_pin_lookup() {
   struct {
@@ -194,7 +201,7 @@ cbor_result_t cbor_encode_gpio_pins_t(cbor_value_t *enc, const gpio_pins_t *t) {
     buf[1] = 'A' + port;
 
     if (pin >= 10) {
-      buf[2] = '1';
+      buf[2] = '0' + pin / 10;
       buf[3] = '0' + pin % 10;
       size = 4;
     } else {
@@ -235,7 +242,7 @@ cbor_result_t cbor_decode_gpio_pins_t(cbor_value_t *dec, gpio_pins_t *t) {
     return CBOR_ERR_INVALID_TYPE;
   }
 
-  uint32_t val = (buf[1] - 'A') * GPIO_PORT_MAX;
+  uint32_t val = (buf[1] - 'A') * GPIO_PIN_MAX;
   if (size == 4) {
     val += (buf[2] - '0') * 10;
     val += buf[3] - '0';
@@ -538,6 +545,10 @@ bool target_gyro_spi_device_valid(const target_gyro_spi_device_t *dev) {
 
 bool target_spi_port_valid(const target_spi_port_t *port) {
   return port->index != 0 && port->miso != PIN_NONE && port->mosi != PIN_NONE && port->sck != PIN_NONE;
+}
+
+bool target_video_osd_valid(const target_video_osd_t *osd) {
+  return osd->white != PIN_NONE && osd->enable != PIN_NONE && osd->sync != PIN_NONE;
 }
 
 bool target_i2c_port_valid(const target_i2c_port_t *port) {

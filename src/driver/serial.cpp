@@ -7,7 +7,7 @@
 
 #ifdef USE_SERIAL
 
-serial_port_t *serial_ports[SERIAL_PORT_MAX];
+serial_port_t *serial_ports[SERIAL_PORT_SLOTS];
 
 extern const usart_port_def_t usart_port_defs[SERIAL_PORT_MAX];
 extern void serial_hard_init(serial_port_t *serial, serial_port_config_t config, bool swap);
@@ -136,20 +136,22 @@ void serial_init(serial_port_t *serial, serial_port_config_t config) {
   }
   serial->config = config;
 
-  for (uint32_t i = 0; i < SERIAL_PORT_MAX; i++) {
+  for (uint32_t i = 0; i < SERIAL_PORT_SLOTS; i++) {
     if (serial_ports[i] == serial) {
       serial_ports[i] = NULL;
     }
   }
 
-  serial_ports[port] = serial;
+  serial_ports[serial_port_slot(port)] = serial;
 
   serial->rx_error_count = 0;
   ring_buffer_clear(serial->rx_buffer);
   ring_buffer_clear(serial->tx_buffer);
 
   if (serial_is_soft(config.port)) {
+#ifdef USE_SOFT_SERIAL
     soft_serial_init(config);
+#endif
   } else {
     const bool swap = serial_hard_pin_init(serial, config);
     serial_hard_init(serial, config, swap);
@@ -168,10 +170,12 @@ bool serial_set_baudrate(serial_port_t *serial, uint32_t baudrate) {
 
   bool success = false;
   if (serial_is_soft(port)) {
+#ifdef USE_SOFT_SERIAL
     serial_port_config_t config = serial->config;
     config.baudrate = baudrate;
     soft_serial_init(config);
     success = true;
+#endif
   } else if (port < SERIAL_PORT_MAX) {
     success = serial_hard_set_baudrate(serial, baudrate);
   }
@@ -223,8 +227,9 @@ uint32_t serial_read_bytes(serial_port_t *serial, uint8_t *data, const uint32_t 
   return ring_buffer_read_multi(serial->rx_buffer, data, size);
 }
 
+#ifdef USE_SOFT_SERIAL_BITBANG
 void soft_serial_tx_isr(serial_ports_t port) {
-  serial_port_t *serial = serial_ports[port];
+  serial_port_t *serial = serial_ports[serial_port_slot(port)];
 
   uint8_t data = 0;
   if (ring_buffer_read(serial->tx_buffer, &data)) {
@@ -236,11 +241,12 @@ void soft_serial_tx_isr(serial_ports_t port) {
 }
 
 void soft_serial_rx_isr(serial_ports_t port) {
-  serial_port_t *serial = serial_ports[port];
+  serial_port_t *serial = serial_ports[serial_port_slot(port)];
 
   const uint8_t data = soft_serial_read_byte(port);
   ring_buffer_write(serial->rx_buffer, data);
   serial_rx_notify_from_isr(serial);
 }
+#endif
 
 #endif

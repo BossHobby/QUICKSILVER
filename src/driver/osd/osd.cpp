@@ -7,6 +7,7 @@
 #include "core/tasks.h"
 #include "driver/osd/displayport.h"
 #include "driver/osd/max7456.h"
+#include "driver/osd/video_osd.h"
 #include "io/simulator.h"
 #include "util/util.h"
 
@@ -25,6 +26,11 @@ static uint8_t rows = HD_ROWS;
 
 static bool blink_phase = false;
 
+// MAX7456 blinks in hardware; the others redraw blinking characters.
+static bool osd_soft_blink() {
+  return osd_device == OSD_DEVICE_DISPLAYPORT || osd_device == OSD_DEVICE_VIDEO;
+}
+
 void osd_device_init() {
 #ifdef USE_DIGITAL_VTX
   if (profile.serial.hdzero != SERIAL_PORT_INVALID) {
@@ -41,6 +47,14 @@ void osd_device_init() {
     osd_device = OSD_DEVICE_MAX7456;
     cols = MAX7456_COLS;
     rows = MAX7456_ROWS;
+  } else
+#endif
+#ifdef USE_VIDEO_OSD
+  if (target_video_osd_valid(&target.video_osd) && video_osd_init()) {
+    target_set_feature(FEATURE_OSD);
+    osd_device = OSD_DEVICE_VIDEO;
+    cols = SD_COLS;
+    rows = SD_ROWS;
   } else
 #endif
 #ifdef SIMULATOR
@@ -62,6 +76,11 @@ void osd_intro() {
 #ifdef USE_MAX7456
   case OSD_DEVICE_MAX7456:
     max7456_intro();
+    break;
+#endif
+#ifdef USE_VIDEO_OSD
+  case OSD_DEVICE_VIDEO:
+    video_osd_intro();
     break;
 #endif
 #ifdef USE_DIGITAL_VTX
@@ -89,6 +108,13 @@ static bool osd_device_clear_async() {
 #ifdef USE_MAX7456
   case OSD_DEVICE_MAX7456:
     if (!max7456_clear_async()) {
+      return false;
+    }
+    break;
+#endif
+#ifdef USE_VIDEO_OSD
+  case OSD_DEVICE_VIDEO:
+    if (!video_osd_clear_async()) {
       return false;
     }
     break;
@@ -220,6 +246,12 @@ osd_system_t osd_check_system() {
     rows = MAX7456_ROWS;
     return max7456_check_system();
 #endif
+#ifdef USE_VIDEO_OSD
+  case OSD_DEVICE_VIDEO:
+    cols = SD_COLS;
+    rows = SD_ROWS;
+    return video_osd_check_system();
+#endif
 #ifdef USE_DIGITAL_VTX
   case OSD_DEVICE_DISPLAYPORT:
     cols = DISPLAYPORT_COLS;
@@ -260,6 +292,10 @@ static uint32_t osd_can_fit() {
   case OSD_DEVICE_MAX7456:
     return max7456_can_fit();
 #endif
+#ifdef USE_VIDEO_OSD
+  case OSD_DEVICE_VIDEO:
+    return video_osd_can_fit();
+#endif
 #ifdef USE_DIGITAL_VTX
   case OSD_DEVICE_DISPLAYPORT:
     return displayport_can_fit();
@@ -283,6 +319,10 @@ static bool osd_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *d
   case OSD_DEVICE_MAX7456:
     return max7456_push_string(attr, x, y, data, size);
 #endif
+#ifdef USE_VIDEO_OSD
+  case OSD_DEVICE_VIDEO:
+    return video_osd_push_string(attr, x, y, data, size);
+#endif
 #ifdef USE_DIGITAL_VTX
   case OSD_DEVICE_DISPLAYPORT:
     return displayport_push_string(attr, x, y, data, size);
@@ -301,6 +341,10 @@ static bool osd_flush() {
 #ifdef USE_MAX7456
   case OSD_DEVICE_MAX7456:
     return max7456_flush();
+#endif
+#ifdef USE_VIDEO_OSD
+  case OSD_DEVICE_VIDEO:
+    return video_osd_flush();
 #endif
 #ifdef USE_DIGITAL_VTX
   case OSD_DEVICE_DISPLAYPORT:
@@ -343,7 +387,7 @@ static bool osd_update_display() {
   uint8_t col = __builtin_ctzll(dirty_mask);
   const uint8_t start = col;
   const uint8_t attr = row_start[col].attr;
-  const bool do_blink = osd_device == OSD_DEVICE_DISPLAYPORT && (attr & OSD_ATTR_BLINK) && !blink_phase;
+  const bool do_blink = osd_soft_blink() && (attr & OSD_ATTR_BLINK) && !blink_phase;
   uint8_t size = 0;
 
   // A new string costs 8 bytes on MAX7456 (2 bytes per character), or 10
@@ -399,6 +443,10 @@ bool osd_is_ready(TickType_t *wait) {
   case OSD_DEVICE_MAX7456:
     return max7456_is_ready();
 #endif
+#ifdef USE_VIDEO_OSD
+  case OSD_DEVICE_VIDEO:
+    return video_osd_is_ready();
+#endif
 #ifdef USE_DIGITAL_VTX
   case OSD_DEVICE_DISPLAYPORT:
     return displayport_is_ready(wait);
@@ -423,7 +471,7 @@ bool osd_update(TickType_t *wait) {
   // Periodic refresh for displayport devices
   bool can_render = true;
 
-  if (osd_device == OSD_DEVICE_DISPLAYPORT) {
+  if (osd_soft_blink()) {
     const uint32_t now = time_millis();
 
     static uint32_t last_blink = 0;
@@ -433,6 +481,14 @@ bool osd_update(TickType_t *wait) {
       last_blink = now;
       can_render = false;
     }
+    if (wait) {
+      *wait = MIN(*wait, pdMS_TO_TICKS(251 - MIN(now - last_blink, 251U)));
+    }
+  }
+
+  // DisplayPort receivers can drop state; repaint everything periodically.
+  if (osd_device == OSD_DEVICE_DISPLAYPORT) {
+    const uint32_t now = time_millis();
 
     static uint32_t last_redraw = 0;
     if (now - last_redraw > 5000) {
@@ -442,13 +498,42 @@ bool osd_update(TickType_t *wait) {
       }
     }
     if (wait) {
-      const uint32_t blink_ms = 251 - MIN(now - last_blink, 251U);
-      const uint32_t redraw_ms = 5001 - MIN(now - last_redraw, 5001U);
-      *wait = MIN(*wait, pdMS_TO_TICKS(MIN(blink_ms, redraw_ms)));
+      *wait = MIN(*wait, pdMS_TO_TICKS(5001 - MIN(now - last_redraw, 5001U)));
     }
   }
 
   return can_render;
+}
+
+void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size) {
+  switch (osd_device) {
+#ifdef USE_MAX7456
+  case OSD_DEVICE_MAX7456:
+    return max7456_read_character(addr, out, size);
+#endif
+#ifdef USE_VIDEO_OSD
+  case OSD_DEVICE_VIDEO:
+    return video_osd_read_character(addr, out, size);
+#endif
+  default:
+    memset(out, 0, size);
+    break;
+  }
+}
+
+void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size) {
+  switch (osd_device) {
+#ifdef USE_MAX7456
+  case OSD_DEVICE_MAX7456:
+    return max7456_write_character(addr, in, size);
+#endif
+#ifdef USE_VIDEO_OSD
+  case OSD_DEVICE_VIDEO:
+    return video_osd_write_character(addr, in, size);
+#endif
+  default:
+    break;
+  }
 }
 
 void osd_write_str(const char *buffer) {

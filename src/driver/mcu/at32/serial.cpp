@@ -71,8 +71,6 @@ static const usart_stop_bit_num_type stop_bits_map[] = {
     USART_STOP_2_BIT,   // SERIAL_STOP_BITS_2
 };
 
-extern serial_port_t *serial_ports[SERIAL_PORT_MAX];
-
 typedef struct {
   dma_stream_t rx_stream;
   dma_stream_t tx_stream;

@@ -6,25 +6,6 @@
 #include "driver/gpio.h"
 #include "driver/motor.h"
 
-typedef struct {
-  uint32_t pin_mask;
-  uint32_t dshot_port;
-
-  uint32_t set_mask;
-  uint32_t reset_mask;
-} dshot_pin_t;
-
-typedef struct {
-  gpio_port_t *gpio;
-
-  uint32_t set_mask;
-  uint32_t reset_mask;
-
-  resource_tag_t timer_tag;
-
-  dma_device_t dma_device;
-} dshot_gpio_port_t;
-
 #define DSHOT_CMD_BEEP1 1
 #define DSHOT_CMD_BEEP2 2
 #define DSHOT_CMD_BEEP3 3
@@ -52,19 +33,53 @@ typedef struct {
 #define DSHOT_DIR_CHANGE_CMD_TIME_US 1000
 
 #define DSHOT_TIME profile.motor.dshot_time
+
+#define GCR_TIME ((DSHOT_TIME * 5) / 4)
+
+// 30us delay, 5us buffer, 21 bits for worst case, sampled three times per bit
+#define GCR_SYMBOL_TIME_MAX (((DSHOT_TIME_MAX * 5) / 4) * 3)
+#define GCR_DMA_BUFFER_SIZE (((30 + 5) * GCR_SYMBOL_TIME_MAX) / 1000 + 21 * 3)
+
+// Transport, one per MCU family; outputs are target output slots.
+// Prepares the pins of the outputs in mask, from motor_dshot_init().
+void dshot_init_outputs(uint32_t mask);
+// With bidirectional DShot, first decodes the replies to the previous frame
+// into state.dshot_rpm; then sends packets[i] to every output in mask.
+void dshot_send_frame(const uint16_t *packets, uint32_t mask);
+// True once the frame, and with bidirectional DShot the reply capture, ended.
+bool dshot_frame_done();
+
+// eRPM / 100 from a reply sampled three times per GCR bit, one sample per
+// element masked by pin_mask; 0 when invalid or stopped.
+uint32_t dshot_decode_gcr(uint16_t *dma_buffer, uint32_t pin_mask);
+
+#ifdef USE_DSHOT_BITBANG
+typedef struct {
+  uint32_t pin_mask;
+  uint32_t dshot_port;
+
+  uint32_t set_mask;
+  uint32_t reset_mask;
+} dshot_pin_t;
+
+typedef struct {
+  gpio_port_t *gpio;
+
+  uint32_t set_mask;
+  uint32_t reset_mask;
+
+  resource_tag_t timer_tag;
+
+  dma_device_t dma_device;
+} dshot_gpio_port_t;
+
 #define DSHOT_SYMBOL_TIME (PWM_CLOCK_FREQ_HZ / (3 * DSHOT_TIME * 1000) - 1)
+#define GCR_SYMBOL_TIME (PWM_CLOCK_FREQ_HZ / (3 * GCR_TIME * 1000) - 1)
 
 #define DSHOT_MAX_PORT_COUNT 3
 
 #define DSHOT_DMA_SYMBOLS (16)
 #define DSHOT_DMA_BUFFER_SIZE (3 * DSHOT_DMA_SYMBOLS)
-
-#define GCR_TIME ((DSHOT_TIME * 5) / 4)
-#define GCR_SYMBOL_TIME (PWM_CLOCK_FREQ_HZ / (3 * GCR_TIME * 1000) - 1)
-
-// 30us delay, 5us buffer, 21 bits for worst case
-#define GCR_SYMBOL_TIME_MAX (((DSHOT_TIME_MAX * 5) / 4) * 3)
-#define GCR_DMA_BUFFER_SIZE (((30 + 5) * GCR_SYMBOL_TIME_MAX) / 1000 + 21 * 3)
 
 extern volatile uint32_t dshot_phase;
 
@@ -83,6 +98,4 @@ void dshot_dma_setup_output(uint32_t index);
 
 void dshot_gpio_init_input(gpio_pins_t pin);
 void dshot_dma_setup_input(uint32_t index);
-
-// eRPM / 100 from one pin's reply; 0 when invalid or stopped.
-uint32_t dshot_decode_gcr(uint16_t *dma_buffer, uint32_t pin_mask);
+#endif

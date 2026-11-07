@@ -8,6 +8,10 @@
 #include "driver/mcu/at32/system.h"
 #endif
 
+#ifdef RP2350
+#include "driver/mcu/rp2350/system.h"
+#endif
+
 #ifdef SIMULATOR
 #include "driver/mcu/native/system.h"
 #endif

@@ -1,0 +1,75 @@
+; Analog OSD overlay at 150 MHz. The sync input is low during sync tips:
+; equalizing pulses last ~2.35 us, horizontal sync ~4.7 us and the broad
+; vertical sync pulses ~27 us.
+
+; Times each line from the middle of its sync pulse. The comparator slices a
+; slow, filtered edge at a level that moves with the picture; that moves the
+; falling and rising crossings in opposite directions, but not their middle.
+;
+; Pulses that end within 3.6 us are equalizing pulses and ignored; the first
+; 0.2 us of each are not sampled, to ride out chatter on the falling edge.
+; Then X, loaded from ISR, counts down once per two cycles until the pin
+; rises, and the rest of it once per cycle: IRQ 4 follows the pulse's middle
+; by a fixed time, 10.5 us into a line with a 4.7 us sync. A pulse still low
+; when X runs out is a broad one: it reloads Y with the field's line count
+; from OSR and raises relative IRQ 0 for the CPU to restart the field DMA.
+; Every horizontal sync after it, while lines remain, raises IRQ 4 for the
+; pixel state machine.
+.program video_osd_sync
+.wrap_target
+pulse:
+    wait 1 pin 0
+    wait 0 pin 0
+    set x, 31               [31]
+short:
+    jmp pin pulse               ; equalizing pulse
+    jmp x-- short           [14]
+    mov x, isr
+long:
+    jmp pin middle
+    jmp x-- long
+    mov y, osr                  ; broad pulse: vertical sync
+    irq set 0 rel
+    jmp pulse
+middle:
+    jmp x-- middle
+    jmp !y pulse
+    irq set 4
+    jmp y-- pulse
+.wrap
+
+; Outputs one line of 2-bit pixels per IRQ 4, starting 1.7 us later at twenty
+; cycles per pixel: bit 0 drives the white select, bit 1 the overlay enable.
+; Lines are 23 words. Within a word the second JMP spends the cycles that the
+; JMP Y-- and PULL take at a word boundary, so every pixel lasts twenty cycles.
+.program video_osd_pixels
+.wrap_target
+    wait 1 irq 4
+    set x, 7
+delay:
+    jmp x-- delay           [31]
+    set y, 22
+word:
+    pull block
+pixel:
+    out pins, 2
+    jmp !osre hold          [16]
+    jmp y-- word
+hold:
+    jmp !osre pixel         [1]
+    set pins, 0
+.wrap
+
+; Generates the video timing itself when no camera is connected. Each word
+; from the TX FIFO holds a loop count in its low half and an instruction in
+; its high half: a SET of the enable pin (low passes the terminated, idle
+; camera input as the sync level, high selects black), IRQ 4 to start a pixel
+; line, or relative IRQ 0 at the end of the frame. A word lasts 7 + 4 * count
+; cycles.
+.program video_osd_generate
+.wrap_target
+    out x, 16
+    out exec, 16
+delay:
+    jmp x-- delay           [3]
+.wrap

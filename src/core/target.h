@@ -98,12 +98,12 @@ typedef enum {
   SERIAL_PORT_INVALID,
   SERIAL_PORT1,
   SERIAL_PORT2,
-#if !defined(STM32F411)
+#if !defined(STM32F411) && !defined(RP2350)
   SERIAL_PORT3,
   SERIAL_PORT4,
   SERIAL_PORT5,
 #endif
-#ifndef STM32G4
+#if !defined(STM32G4) && !defined(RP2350)
   SERIAL_PORT6,
 #endif
 #if defined(STM32F7) || defined(STM32H7) || defined(AT32F4)
@@ -315,6 +315,22 @@ typedef struct {
   MEMBER(reset, gpio_pins_t)           \
   END_STRUCT()
 
+// Analog video overlay drawn by the MCU itself: sync comes from a comparator
+// on the camera signal; enable switches the video mux to the overlay level,
+// white selects white over black.
+typedef struct {
+  gpio_pins_t white;
+  gpio_pins_t enable;
+  gpio_pins_t sync;
+} target_video_osd_t;
+
+#define TARGET_VIDEO_OSD_MEMBERS   \
+  START_STRUCT(target_video_osd_t) \
+  MEMBER(white, gpio_pins_t)       \
+  MEMBER(enable, gpio_pins_t)      \
+  MEMBER(sync, gpio_pins_t)        \
+  END_STRUCT()
+
 typedef struct {
   i2c_ports_t port;
 } target_i2c_device_t;
@@ -390,6 +406,7 @@ typedef struct {
   target_gyro_spi_device_t gyro;
   uint8_t gyro_orientation;
   target_spi_device_t osd;
+  target_video_osd_t video_osd;
   target_spi_device_t flash;
   target_sdcard_t sdcard;
   target_rx_spi_device_t rx_spi;
@@ -428,6 +445,7 @@ typedef struct {
   MEMBER(gyro, target_gyro_spi_device_t)                                         \
   MEMBER(gyro_orientation, uint8_t)                                              \
   MEMBER(osd, target_spi_device_t)                                               \
+  MEMBER(video_osd, target_video_osd_t)                                          \
   MEMBER(flash, target_spi_device_t)                                             \
   MEMBER(sdcard, target_sdcard_t)                                                \
   MEMBER(rx_spi, target_rx_spi_device_t)                                         \
@@ -496,6 +514,7 @@ bool target_sdcard_sdio_valid();
 bool target_sdio_port_valid(const target_sdio_port_t *port);
 bool target_spi_port_valid(const target_spi_port_t *port);
 bool target_i2c_port_valid(const target_i2c_port_t *port);
+bool target_video_osd_valid(const target_video_osd_t *osd);
 void target_init();
 
 cbor_result_t cbor_encode_gpio_pins_t(cbor_value_t *enc, const gpio_pins_t *t);

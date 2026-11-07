@@ -57,7 +57,7 @@ static void handle_dma_stream_isr(const dma_stream_t stream) {
   case DMA_DEVICE_DSHOT_CH1:
   case DMA_DEVICE_DSHOT_CH2:
   case DMA_DEVICE_DSHOT_CH3:
-#ifdef USE_MOTOR_DSHOT
+#ifdef USE_DSHOT_BITBANG
     dshot_dma_isr(dev);
 #endif
     break;

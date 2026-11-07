@@ -64,11 +64,15 @@ bool adc_update() {
 }
 
 static float adc_to_mv(float raw) {
+#ifdef ADC_SUPPLY_REF_MV
+  const float vref_mv = ADC_SUPPLY_REF_MV;
+#else
   // Protect against division by zero
   if (adc_array[ADC_CHAN_VREF] == 0) {
     return 0;
   }
   const float vref_mv = (float)VREFINT_CAL * VREFINT_CAL_VREF / adc_array[ADC_CHAN_VREF];
+#endif
   return raw * vref_mv / 4095.0f;
 }
 

@@ -601,7 +601,7 @@ static void process_osd(quic_t *quic, cbor_value_t *dec) {
   check_cbor_error(QUIC_CMD_OSD);
 
   switch (cmd) {
-#ifdef USE_MAX7456
+#if defined(USE_MAX7456) || defined(USE_VIDEO_OSD)
   case QUIC_OSD_READ_CHAR: {
     uint8_t font[54];
     osd_read_character(index, font, 54);

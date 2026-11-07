@@ -1,0 +1,47 @@
+; Soft serial ports on PIO, 8N1 at eight cycles per bit. Each port runs one
+; state machine per direction; a half-duplex port puts both on one pin.
+
+; Y is 1 on a half-duplex port: the pin is released once the FIFO runs dry.
+; Raises relative IRQ 0 then, so the CPU can turn the line around and report
+; the end of the transmission.
+.program serial_soft_tx
+.wrap_target
+start:
+    pull block
+    set pindirs, 1
+    set pins, 0             [7] ; start bit
+    set x, 7
+bit:
+    out pins, 1             [6]
+    jmp x-- bit
+    set pins, 1             [7] ; stop bit
+    mov x, status               ; all ones once the TX FIFO is empty
+    jmp !x start
+    jmp !y done
+    set pindirs, 0
+done:
+    irq set 0 rel
+.wrap
+
+; Y holds the idle timeout in two-cycle loops. Once the line stays idle that
+; long after a byte, raises relative IRQ 0 like a UART's IDLE interrupt, then
+; waits for the next start bit without counting. Samples each bit in the
+; middle; bytes are pushed through autopush.
+.program serial_soft_rx
+.wrap_target
+idle:
+    mov x, y
+count:
+    jmp pin high
+    jmp start
+high:
+    jmp x-- count
+    irq set 0 rel
+    wait 0 pin 0
+start:
+    set x, 7                [9] ; to the middle of the first data bit
+bit:
+    in pins, 1              [6]
+    jmp x-- bit
+    wait 1 pin 0                ; the stop bit
+.wrap

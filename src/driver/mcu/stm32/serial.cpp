@@ -114,8 +114,6 @@ static uint32_t serial_direction_map(serial_direction_t direction) {
   return ll_direction;
 }
 
-extern serial_port_t *serial_ports[SERIAL_PORT_MAX];
-
 #if defined(STM32H7) || defined(STM32G4)
 typedef struct {
   dma_stream_t rx_stream;

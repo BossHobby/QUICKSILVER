@@ -5,10 +5,20 @@
 #ifndef SIMULATOR
 static constexpr uint32_t MPU_GUARD_REGION_FIRST = 1;
 
+#if defined(__ARM_ARCH_8M_MAIN__)
+static constexpr uint32_t MPU_GUARD_ATTR = 0;
+
+// ARMv8-M has no privileged no-access permission: the guard is read-only and
+// execute-never, so the write that overruns a stack faults.
+static void mpu_guard_region(uint32_t region, uintptr_t base) {
+  ARM_MPU_SetRegion(region, ARM_MPU_RBAR(base, ARM_MPU_SH_NON, 1, 0, 1), ARM_MPU_RLAR(base + MPU_GUARD_SIZE - 1, MPU_GUARD_ATTR));
+}
+#else
 static void mpu_guard_region(uint32_t region, uintptr_t base) {
   // Execute-never, no access; memory attributes are irrelevant without access.
   ARM_MPU_SetRegion(ARM_MPU_RBAR(region, base), ARM_MPU_RASR(1, ARM_MPU_AP_NONE, 0, 0, 1, 1, 0, ARM_MPU_REGION_SIZE_32B));
 }
+#endif
 
 #ifdef USE_FAST_CODE
 #ifdef USE_DMA_RAM
@@ -34,6 +44,10 @@ void mpu_init(const uint8_t *const *guards, uint32_t count) {
   const uintptr_t main_bottom = (uintptr_t)&_estack - (uintptr_t)&_Min_Stack_Size;
 
   ARM_MPU_Disable();
+#if defined(__ARM_ARCH_8M_MAIN__)
+  // Normal, non-cacheable memory for the guard regions.
+  ARM_MPU_SetMemAttr(MPU_GUARD_ATTR, ARM_MPU_ATTR(ARM_MPU_ATTR_NON_CACHEABLE, ARM_MPU_ATTR_NON_CACHEABLE));
+#endif
 #ifdef USE_FAST_CODE
   // memory_section_init() copied the code before main().
   mpu_itcm_region();

@@ -101,6 +101,11 @@ def copy_hex(source, target, env):
         env.subst(os.path.join("output", hex_name)),
     )
 
+    # RP2350 builds also carry the UF2 their bootrom flashes.
+    uf2 = env.subst("$BUILD_DIR/${PROGNAME}.uf2")
+    if os.path.isfile(uf2):
+        shutil.copy(uf2, env.subst(os.path.join("output", hex_name[: -len(".hex")] + ".uf2")))
+
 
 def target_hash(env):
     target_name = get_custom_option(env, "target_name", env["PIOENV"])

@@ -6,7 +6,7 @@
 
 typedef enum {
   ADC_DEVICE1,
-#if !defined(STM32F411)
+#if !defined(STM32F411) && !defined(RP2350)
   ADC_DEVICE2,
   ADC_DEVICE3,
 #endif

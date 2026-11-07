@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 
+#include "core/project.h"
 #include "driver/osd/osd.h"
 
 #define MAX7456_READ_FLAG 0x80
@@ -53,5 +54,5 @@ uint32_t max7456_can_fit();
 bool max7456_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size);
 bool max7456_flush();
 
-void osd_read_character(uint8_t addr, uint8_t *out, const uint8_t size);
-void osd_write_character(uint8_t addr, const uint8_t *in, const uint8_t size);
+void max7456_read_character(uint8_t addr, uint8_t *out, const uint8_t size);
+void max7456_write_character(uint8_t addr, const uint8_t *in, const uint8_t size);
