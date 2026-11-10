@@ -1361,6 +1361,7 @@ TickType_t osd_display() {
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BLACKBOX", 17, 22, &profile.receiver.aux[AUX_BLACKBOX]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "RETURN HOME", 17, 22, &profile.receiver.aux[AUX_RETURN_TO_HOME]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "MISSION", 17, 22, &profile.receiver.aux[AUX_MISSION]);
+      osd_menu_select_aux_adjust(4, OSD_AUTO, "POSHOLD", 17, 22, &profile.receiver.aux[AUX_POSHOLD]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "OSD PROFILE", 17, 22, &profile.receiver.aux[AUX_OSD_PROFILE]);
 #endif
       osd_menu_aux_outputs();

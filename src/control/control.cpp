@@ -147,6 +147,8 @@ const char *control_flight_mode_name(void) {
     return "FS RTH";
   if (flags.failsafe_hold)
     return "FS HOLD";
+  if (state.nav_state == NAV_STATE_POSHOLD)
+    return "POSHOLD";
   if (state.nav_target == NAV_TARGET_MISSION)
     return "MISSION";
   if (state.nav_target == NAV_TARGET_GUIDED)
@@ -270,10 +272,10 @@ static void failsafe_update_rth_ownership(uint32_t now_us) {
   if (state.nav_state < NAV_STATE_CLIMB || !profile.navigation.rth_on_failsafe || flags.rx_ready != 1 || !flags.arm_state) {
     state.failsafe_owner = FAILSAFE_OWNER_NONE;
   } else if (flags.failsafe_signal_lost &&
-             ((state.nav_target == NAV_TARGET_HOME && !flags.mission_engaged) ||
+             ((state.nav_target == NAV_TARGET_HOME && state.nav_state != NAV_STATE_POSHOLD && !flags.mission_engaged) ||
               now_us - state.rx_frame_time_us >= FAILSAFE_HOLD_TIME_US)) {
-    // A mission or ground station target, and a return the mission switch
-    // ends, rides out the hold-last window like manual flight, so a brief
+    // A mission or ground station target, position hold, and a return the
+    // mission switch ends, rides out the hold-last window like manual flight, so a brief
     // dropout neither ends it nor leaves failsafe owning the recovery. After
     // the window failsafe_update_mission has already let a continuing mission
     // claim the loss.

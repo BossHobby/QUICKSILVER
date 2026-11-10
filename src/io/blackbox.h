@@ -11,6 +11,7 @@
 //        the RTH state, named nav_state with its hover home phase named hold, orders aborted
 //        after inactive; every phase from climb on owns the controls.
 //        add the brake nav_state before a guided hold.
+//        add the pilot position hold nav_state after land.
 //        add the UTC start datetime to each directory entry.
 //        add the attitude field (roll, pitch, yaw in 0.1 degrees) after setpoint, shifting the
 //        later field bits; add the GPS velocity (north, east, down) and GPS fix (status,

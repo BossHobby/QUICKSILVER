@@ -69,6 +69,7 @@ typedef enum : uint8_t {
   NAV_STATE_TAKEOFF_SPINUP, // spinning up on the ground until lift-off
   NAV_STATE_TAKEOFF,        // lifted off, climbing in place
   NAV_STATE_LAND,          // descending on a mission LAND waypoint until touchdown disarms
+  NAV_STATE_POSHOLD,       // the pilot's position hold switch: holds a point the sticks move, and the altitude
 } nav_state_t;
 
 // Where rotor wash may make the barometer read low, and the ground it reads

@@ -39,8 +39,10 @@ static void control_flight_mode() {
 
   if (control_navigation_active()) {
     // Navigation always flies self-level, whatever the flight mode switches say.
+    // It turns at nav_yaw_rate; position hold passes the pilot's yaw stick
+    // through rx_override.yaw, flown at the pilot's rates.
     state.angle_error = input_stick_vector(state.rx_filtered.axis);
-    const float yaw_rate = state.nav_yaw_rate;
+    const float yaw_rate = state.nav_yaw_rate + rates.yaw;
 
     const vec3_t yaw_error = {
         .roll = state.GEstG.pitch * yaw_rate,

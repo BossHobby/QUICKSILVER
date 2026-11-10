@@ -1971,6 +1971,105 @@ void test_navigation_mission_switches_and_link_loss(void) {
   flags.failsafe_signal_lost = 0;
 }
 
+void test_navigation_poshold_switch(void) {
+  const uint32_t poshold_switch = 1U << AUX_POSHOLD;
+  const uint32_t mission_switch = 1U << AUX_MISSION;
+  const uint32_t rth_switch = 1U << AUX_RETURN_TO_HOME;
+  mission_test_airborne(1);
+  flags.home_valid = false;
+  state.aux_active = poshold_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_INACTIVE, state.nav_state);
+
+  // Clear of the ground it engages, without a home.
+  state.altitude = 12;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_POSHOLD, state.nav_state);
+  TEST_ASSERT_TRUE(flags.controls_override);
+  TEST_ASSERT_EQUAL_STRING("POSHOLD", control_flight_mode_name());
+
+  // Throttle does nothing; yaw passes through to the pilot's rates.
+  state.rx.throttle = 1.0f;
+  state.rx.yaw = 0.5f;
+  for (int i = 0; i < 100; i++) mission_step();
+  TEST_ASSERT_FLOAT_WITHIN(0.05f, 0.5f, state.rx_override.throttle);
+  TEST_ASSERT_EQUAL_FLOAT(0.5f, state.rx_override.yaw);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.nav_yaw_rate);
+  state.rx.throttle = state.rx.yaw = 0.0f;
+
+  // Pitch forward flies north at heading 0; a stale stick on a lost link does not.
+  state.rx.pitch = 0.5f;
+  for (int i = 0; i < 50; i++) mission_step();
+  TEST_ASSERT_TRUE(state.rx_override.pitch > 0.05f && nav_velocity.desired_velocity.north > 0.5f);
+  flags.failsafe_signal_lost = 1;
+  for (int i = 0; i < 300; i++) mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_POSHOLD, state.nav_state);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 0.0f, vec2_magnitude(nav_velocity.desired_velocity));
+  flags.failsafe_signal_lost = 0;
+
+  // Without a trusted heading the sticks fly level, as in angle mode.
+  state.heading_confidence = 0.0f;
+  mission_step();
+  TEST_ASSERT_EQUAL_FLOAT(0.5f, state.rx_override.pitch);
+  state.heading_confidence = 0.5f;
+  state.rx.pitch = 0.0f;
+
+  // RTH needs a home; with one it takes over and hands back to position hold.
+  state.aux_active = poshold_switch | rth_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_POSHOLD, state.nav_state);
+  flags.home_valid = true;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_CLIMB, state.nav_state);
+  state.aux_active = poshold_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_POSHOLD, state.nav_state);
+
+  // A mission takes over too, and position hold resumes when it ends.
+  state.aux_active = poshold_switch | mission_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  state.aux_active = poshold_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_POSHOLD, state.nav_state);
+
+  // A lost link neither stops it nor lets a preset switch position do so.
+  flags.failsafe_signal_lost = 1;
+  state.aux_active = 0;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_POSHOLD, state.nav_state);
+  // Once failsafe engages, the failsafe hold or failsafe RTH takes over.
+  profile.navigation.rth_on_failsafe = false;
+  flags.failsafe = flags.failsafe_hold = 1;
+  mission_step();
+  TEST_ASSERT_TRUE(state.nav_state < NAV_STATE_CLIMB && flags.controls_override);
+  flags.failsafe = flags.failsafe_hold = flags.failsafe_signal_lost = 0;
+  nav_test_stop();
+  flags.controls_override = 0;
+
+  // The switch off hands back.
+  state.aux_active = poshold_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_POSHOLD, state.nav_state);
+  state.aux_active = 0;
+  mission_step();
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB || flags.controls_override);
+
+  // Losing the barometer hands back; it engages again once it returns.
+  state.aux_active = poshold_switch;
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_POSHOLD, state.nav_state);
+  time_test_advance_us(10000);
+  flags.altitude_valid = false;
+  nav_update_multi(0.01f);
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB || flags.controls_override);
+  time_test_advance_us(10000);
+  nav_update_multi(0.01f);
+  TEST_ASSERT_FALSE(state.nav_state >= NAV_STATE_CLIMB);
+  mission_step();
+  TEST_ASSERT_EQUAL(NAV_STATE_POSHOLD, state.nav_state);
+}
+
 void test_navigation_mission_switch_ends_the_final_return(void) {
   const uint32_t mission_switch = 1U << AUX_MISSION;
   const uint32_t rth_switch = 1U << AUX_RETURN_TO_HOME;
@@ -2858,6 +2957,7 @@ extern void test_navigation_plant_specific_force_and_motor_signs();
 extern void test_navigation_motor_loop_delayed_gps_and_wind();
 extern void test_navigation_motor_loop_brakes_in_wind();
 extern void test_navigation_motor_loop_guided_hold_stops_smoothly();
+extern void test_navigation_motor_loop_poshold();
 extern void test_navigation_motor_loop_goto_flies_smoothly();
 extern void test_navigation_motor_loop_climb_holds_position();
 extern void test_navigation_motor_loop_wrong_hover();
@@ -2943,6 +3043,7 @@ int main() {
   RUN_TEST(test_navigation_hold_wander_near_yaw_hold_radius_keeps_navigating);
   RUN_TEST(test_navigation_mission_end_returns_home);
   RUN_TEST(test_navigation_mission_switches_and_link_loss);
+  RUN_TEST(test_navigation_poshold_switch);
   RUN_TEST(test_navigation_mission_continues_through_link_loss);
   RUN_TEST(test_navigation_mission_landing_finishes_through_link_loss);
   RUN_TEST(test_navigation_mission_link_recovery_keeps_the_mission_switch);
@@ -2989,6 +3090,7 @@ int main() {
   RUN_TEST(test_navigation_motor_loop_delayed_gps_and_wind);
   RUN_TEST(test_navigation_motor_loop_brakes_in_wind);
   RUN_TEST(test_navigation_motor_loop_guided_hold_stops_smoothly);
+  RUN_TEST(test_navigation_motor_loop_poshold);
   RUN_TEST(test_navigation_motor_loop_goto_flies_smoothly);
   RUN_TEST(test_navigation_motor_loop_climb_holds_position);
   RUN_TEST(test_navigation_motor_loop_wrong_hover);
