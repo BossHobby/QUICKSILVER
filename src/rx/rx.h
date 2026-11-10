@@ -127,6 +127,9 @@ typedef enum {
 #ifndef VEHICLE_ROVER
   AUX_MISSION,
 #endif
+#if !defined(VEHICLE_ROVER) && !defined(VEHICLE_WING)
+  AUX_POSHOLD,
+#endif
 
   AUX_PINIO_1,
   AUX_PINIO_2,

@@ -230,7 +230,7 @@ struct flight_t {
   plant_t truth;
   fix_t history[HISTORY_SIZE] = {};
   unsigned tick = 0, next_gps = 0, gps_count = 0;
-  bool arm = false, rth = false, mission_switch = false, rc_available = true, gps_available = true, baro_available = true;
+  bool arm = false, rth = false, mission_switch = false, poshold = false, rc_available = true, gps_available = true, baro_available = true;
   float roll = 0, pitch = 0, yaw = 0, throttle = 0;
   double gps_velocity_bias[2] = {}; // north, east m/s; reported velocity disagrees with position
   double gps_offset[2] = {};        // north, east meters; reported position glitches by this much
@@ -264,6 +264,7 @@ struct flight_t {
     profile.receiver.aux[AUX_ARMING] = {static_cast<rx_channel_t>(4), AUX_VALUE_MID, AUX_VALUE_MAX};
     profile.receiver.aux[AUX_RETURN_TO_HOME] = {static_cast<rx_channel_t>(5), AUX_VALUE_MID, AUX_VALUE_MAX};
     profile.receiver.aux[AUX_MISSION] = {static_cast<rx_channel_t>(6), AUX_VALUE_MID, AUX_VALUE_MAX};
+    profile.receiver.aux[AUX_POSHOLD] = {static_cast<rx_channel_t>(7), AUX_VALUE_MID, AUX_VALUE_MAX};
     profile.receiver.aux[AUX_PREARM] = {RX_CHANNEL_ON, 0, 0};
     profile.receiver.aux[AUX_LEVELMODE] = {RX_CHANNEL_ON, 0, 0};
     profile.receiver.aux[AUX_IDLE_UP] = {RX_CHANNEL_ON, 0, 0};
@@ -359,6 +360,7 @@ struct flight_t {
       channels[4] = arm ? AUX_VALUE_MAX : 0;
       channels[5] = rth ? AUX_VALUE_MAX : 0;
       channels[6] = mission_switch ? AUX_VALUE_MAX : 0;
+      channels[7] = poshold ? AUX_VALUE_MAX : 0;
       flags.rx_ready = 1; // Native transport has no RF detection handshake.
       rx_lqi_got_packet();
       simulator_rx_test_frame(channels);
@@ -571,6 +573,68 @@ void test_navigation_motor_loop_guided_hold_stops_smoothly() {
   flight.check(travel < speed * speed / (2 * 2.0) + speed * 1.5, "HOLD stopping distance");
   flight.check(travel - rest < 3, "HOLD keeps the point where it stopped");
   flight.check(hypot(flight.truth.velocity[0], flight.truth.velocity[1]) < 0.5, "HOLD settles");
+}
+
+void test_navigation_motor_loop_poshold() {
+  // Wind across the hold; the pilot leaves the throttle stick where it was.
+  flight_t flight({"poshold", 100, true, 2.0, -1.5});
+  flight.depart();
+  const double height = -flight.truth.position[2];
+  flight.poshold = true;
+  flight.run(100);
+  flight.check(state.nav_state == NAV_STATE_POSHOLD, "position hold engaged");
+
+  // Brakes from the departure speed, then holds where it stopped.
+  const auto settle_and_hold = [&](const char *what) {
+    flight.run(15000);
+    const double point[2] = {flight.truth.position[0], flight.truth.position[1]};
+    double drift = 0, altitude_error = 0;
+    for (unsigned i = 0; i < 15000; i++) {
+      flight.step();
+      flight.check(state.nav_state == NAV_STATE_POSHOLD, "position hold stays engaged");
+      drift = fmax(drift, hypot(flight.truth.position[0] - point[0], flight.truth.position[1] - point[1]));
+      altitude_error = fmax(altitude_error, fabs(-flight.truth.position[2] - height));
+    }
+    printf("%s: %s drift=%.2fm altitude error=%.2fm\n", flight.scenario.name, what, drift, altitude_error);
+    flight.check(drift < 2, "holds the point where it stopped");
+    flight.check(altitude_error < 1, "holds the engagement altitude");
+  };
+  settle_and_hold("first hold");
+
+  // The throttle stick does nothing.
+  const float pilot_throttle = flight.throttle;
+  flight.throttle = 1;
+  flight.run(5000);
+  flight.check(fabs(-flight.truth.position[2] - height) < 1, "throttle stick ignored");
+  flight.throttle = pilot_throttle;
+
+  // Yaw turns in place at the pilot's rates.
+  const double nose = atan2(flight.truth.rotation[1][0], flight.truth.rotation[0][0]);
+  const double point[2] = {flight.truth.position[0], flight.truth.position[1]};
+  flight.yaw = 0.3f;
+  flight.run(1500);
+  flight.yaw = 0;
+  flight.run(3000);
+  const double turned = remainder(atan2(flight.truth.rotation[1][0], flight.truth.rotation[0][0]) - nose, 2 * M_PI) * 180 / M_PI;
+  flight.check(turned > 30, "yaw stick turns");
+  flight.check(hypot(flight.truth.position[0] - point[0], flight.truth.position[1] - point[1]) < 3, "turns in place");
+
+  // Pitch flies along the nose; released, it holds the new point.
+  const double heading = atan2(flight.truth.rotation[1][0], flight.truth.rotation[0][0]);
+  flight.pitch = 0.6f;
+  flight.run(6000);
+  flight.pitch = 0;
+  const double moved[2] = {flight.truth.position[0] - point[0], flight.truth.position[1] - point[1]};
+  const double distance = hypot(moved[0], moved[1]);
+  const double direction = remainder(atan2(moved[1], moved[0]) - heading, 2 * M_PI) * 180 / M_PI;
+  printf("%s: repositioned %.1fm at %.1f degrees off the nose\n", flight.scenario.name, distance, direction);
+  flight.check(distance > 10 && fabs(direction) < 20, "pitch stick flies forward over the ground");
+  settle_and_hold("after reposition");
+
+  // The switch off hands back.
+  flight.poshold = false;
+  flight.run(100);
+  flight.check(state.nav_state < NAV_STATE_CLIMB && !flags.controls_override, "switch off hands back");
 }
 
 void test_navigation_motor_loop_goto_flies_smoothly() {

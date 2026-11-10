@@ -571,6 +571,9 @@ const profile_t default_profile = {
 #ifndef VEHICLE_ROVER
             {RX_CHANNEL_OFF, 0, 0}, // AUX_MISSION
 #endif
+#if !defined(VEHICLE_ROVER) && !defined(VEHICLE_WING)
+            {RX_CHANNEL_OFF, 0, 0}, // AUX_POSHOLD
+#endif
             {RX_CHANNEL_OFF, 0, 0}, // AUX_PINIO_1
             {RX_CHANNEL_OFF, 0, 0}, // AUX_PINIO_2
             {RX_CHANNEL_OFF, 0, 0}, // AUX_PINIO_3

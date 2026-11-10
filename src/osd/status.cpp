@@ -388,6 +388,13 @@ static const char *osd_rth_message() {
     return "HEADING FAILED";
   case NAV_STATE_NAV_FAILED:
     return "NAV FAILED";
+  case NAV_STATE_POSHOLD:
+    // Holding shows only in the flight mode; degraded, the sticks fly level.
+    if (!flags.gps_valid)
+      return "POSHOLD: NO GPS";
+    if (state.heading_confidence < NAV_MIN_HEADING_CONFIDENCE)
+      return "POSHOLD: NO HEADING";
+    return NULL;
   default:
     break;
   }
@@ -405,6 +412,17 @@ static const char *osd_rth_message() {
       return "NO HOME";
     if (!flags.arm_state && !flags.gps_valid)
       return "NO GPS FIX";
+  }
+
+  // Position hold engages once it can, clear of the ground.
+  if (rx_aux_on(AUX_POSHOLD)) {
+    if (!flags.arm_state)
+      return "POSHOLD: ARM FIRST";
+    if (!flags.gps_valid)
+      return "POSHOLD: NO GPS FIX";
+    if (!flags.altitude_valid)
+      return "POSHOLD: NO BARO";
+    return "POSHOLD: TAKE OFF";
   }
 
   if (rx_aux_on(AUX_MISSION)) {

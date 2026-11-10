@@ -174,6 +174,10 @@ static constexpr float LAND_REPOSITION_SPEED = 2.0f; // m/s at full stick
 // Possibly on the ground, the wind trim decays at this rate.
 static constexpr float SOFTEN_DECAY_RATE = 2.0f; // per second
 
+// Position hold: roll and pitch beyond this fly over the ground, up to the
+// travel speed at full stick.
+static constexpr float POSHOLD_STICK_DEADBAND = 0.1f;
+
 // Sensor and input history survives RTH stop/start. Published outputs live in state.
 static struct {
   bool mission_switch;      // position in the previous update; turning it on starts a mission
@@ -857,6 +861,15 @@ static void nav_update_soften(float dt) {
   nav_hold_yaw();
 }
 
+// The pilot's roll and pitch turned onto the ground by the heading, north and
+// east. Positive pitch tilts toward the nose, positive roll toward its right.
+static vec2_t nav_sticks_earth() {
+  const float cos_heading = fastcos(state.heading * DEGTORAD);
+  const float sin_heading = fastsin(state.heading * DEGTORAD);
+  return vec2_t{{state.rx.pitch * cos_heading - state.rx.roll * sin_heading,
+                 state.rx.pitch * sin_heading + state.rx.roll * cos_heading}};
+}
+
 // The pilot's roll and pitch as an earth-frame velocity request, while the
 // link is trusted and the heading can turn the sticks onto the ground.
 static bool nav_land_reposition(vec2_t *request) {
@@ -865,12 +878,7 @@ static bool nav_land_reposition(vec2_t *request) {
     return false;
   if (fabsf(state.rx.roll) < LAND_REPOSITION_DEADBAND && fabsf(state.rx.pitch) < LAND_REPOSITION_DEADBAND)
     return false;
-  // Positive pitch tilts toward the nose, positive roll toward its right.
-  const float cos_heading = fastcos(state.heading * DEGTORAD);
-  const float sin_heading = fastsin(state.heading * DEGTORAD);
-  *request = vec2_t{{state.rx.pitch * cos_heading - state.rx.roll * sin_heading,
-                     state.rx.pitch * sin_heading + state.rx.roll * cos_heading}} *
-             LAND_REPOSITION_SPEED;
+  *request = nav_sticks_earth() * LAND_REPOSITION_SPEED;
   return true;
 }
 
@@ -985,6 +993,52 @@ static void nav_update_land(float dt, uint32_t now_ms) {
     nav_route.complete = true;
     control_request_disarm();
   }
+}
+
+// The pilot's roll and pitch beyond the deadband as a velocity over the
+// ground, up to the travel speed at full stick.
+static bool nav_poshold_reposition(vec2_t *request) {
+  const float deflection = sqrtf(state.rx.roll * state.rx.roll + state.rx.pitch * state.rx.pitch);
+  if (deflection < POSHOLD_STICK_DEADBAND)
+    return false;
+  const float share = (MIN(deflection, 1.0f) - POSHOLD_STICK_DEADBAND) / (1.0f - POSHOLD_STICK_DEADBAND);
+  *request = nav_sticks_earth() * (nav_cruise_speed(0) * share / deflection);
+  return true;
+}
+
+// Hold the altitude latched on engagement and the point the brake comes to
+// rest at. Roll and pitch fly over the ground, and the hold point follows
+// where they let go; yaw turns at the pilot's rates; throttle does nothing.
+// Without GPS or a trusted heading the sticks fly level as in angle mode
+// while the altitude holds; a heading that diverges is relearned that way,
+// from the accelerations, instead of by a heading run. Without altitude the
+// pilot takes over.
+static void nav_update_poshold(float dt, uint32_t now_ms) {
+  if (!flags.altitude_valid) {
+    nav_abort();
+    return;
+  }
+  // A lost link holds stale sticks: hold until failsafe takes over.
+  const bool sticks = !flags.failsafe_signal_lost;
+  vec2_t request;
+  if (!flags.gps_valid || state.heading_confidence < NAV_MIN_HEADING_CONFIDENCE) {
+    nav_reset_horizontal();
+    // Steering starts from the stick tilt once it can.
+    nav_velocity.roll_command = state.rx_override.roll = sticks ? state.rx.roll : 0.0f;
+    nav_velocity.pitch_command = state.rx_override.pitch = sticks ? state.rx.pitch : 0.0f;
+  } else if (sticks && nav_poshold_reposition(&request)) {
+    guide.horizontal.phase = NAV_HORIZONTAL_STEERING;
+    nav_fly_velocity(request, false, dt);
+  } else {
+    nav_update_position_hold(dt);
+  }
+  if (guide.horizontal.phase != NAV_HORIZONTAL_IDLE && nav_update_divergence(now_ms)) {
+    imu_reject_heading();
+    nav_reset_horizontal();
+  }
+  state.nav_yaw_rate = 0.0f;
+  state.rx_override.yaw = sticks ? state.rx.yaw : 0.0f;
+  nav_update_altitude_control(guide.target_altitude, dt);
 }
 
 // Run the active phase. Returns false once it gave up.
@@ -1132,6 +1186,12 @@ static bool nav_update_phase(float dt, uint32_t now_ms) {
 static void nav_update_control(float dt) {
   const uint32_t now_ms = time_millis();
 
+  if (state.nav_state == NAV_STATE_POSHOLD) {
+    // The pilot flies it: no target, progress supervision or heading run.
+    nav_update_poshold(dt, now_ms);
+    return;
+  }
+
   if (nav_takeoff_on_ground() && (!flags.altitude_valid || !flags.gps_valid)) {
     // Not airborne yet: end the takeoff instead of holding an altitude.
     nav_abort();
@@ -1258,9 +1318,11 @@ static void nav_rth_start() {
   nav_route.returning = false;
   // Already guided: retarget home without a second takeover. A return is not
   // a takeoff command: the pilot must have flown since arming, or a switch
-  // left on would lift off once GPS and home become valid.
+  // left on would lift off once GPS and home become valid. Position hold
+  // needs no home; without one it keeps holding.
   if (state.nav_target == NAV_TARGET_HOME) {
-    if (state.nav_state >= NAV_STATE_CLIMB || !flags.in_air || !nav_can_start())
+    const bool returning = state.nav_state >= NAV_STATE_CLIMB && state.nav_state != NAV_STATE_POSHOLD;
+    if (returning || !flags.in_air || !nav_can_start())
       return;
     nav_take_control();
   }
@@ -1268,13 +1330,28 @@ static void nav_rth_start() {
 }
 
 static void nav_mission_start() {
-  // A mission is not a takeoff command: start only clear of the ground.
+  // A mission is not a takeoff command: start only clear of the ground. It
+  // takes over position hold.
   const uint8_t index = nav_route_resume();
-  if (state.nav_state >= NAV_STATE_CLIMB || mission.count == 0 || !nav_airborne() || !nav_can_start() ||
+  const bool navigating = state.nav_state >= NAV_STATE_CLIMB && state.nav_state != NAV_STATE_POSHOLD;
+  if (navigating || mission.count == 0 || !nav_airborne() || !nav_can_start() ||
       !nav_within(mission.waypoints[index].coord, MISSION_START_MAX_DISTANCE))
     return;
   nav_take_control();
   nav_mission_fly(index, time_millis());
+}
+
+// Position hold engages in flight, clear of the ground, while nothing else
+// navigates. It needs no home.
+static bool nav_poshold_can_start() {
+  return state.nav_state == NAV_STATE_INACTIVE && !flags.failsafe && nav_airborne() && flags.gps_valid &&
+         flags.altitude_valid && profile.navigation.throttle_min < profile.navigation.throttle_max;
+}
+
+static void nav_poshold_start() {
+  nav_take_control();
+  guide.target_altitude = state.altitude;
+  nav_set_phase(NAV_STATE_POSHOLD, time_millis());
 }
 
 // Armed on the ground at the TAKEOFF waypoint and never throttled up since:
@@ -1327,11 +1404,12 @@ static void nav_update_request() {
   // Failsafe stays set until the pilot has taken over.
   const bool failsafe_rth = profile.navigation.rth_on_failsafe && flags.failsafe &&
                             (flags.failsafe_hold || state.failsafe_owner == FAILSAFE_OWNER_RTH);
+  const bool poshold = state.nav_state == NAV_STATE_POSHOLD;
   if (rth_switch || failsafe_rth) {
-    // RTH takes over a mission, its return and a ground station target.
-    if (state.nav_state < NAV_STATE_CLIMB || state.nav_target != NAV_TARGET_HOME || nav_route.returning)
+    // RTH takes over a mission, its return, a ground station target and position hold.
+    if (state.nav_state < NAV_STATE_CLIMB || poshold || state.nav_target != NAV_TARGET_HOME || nav_route.returning)
       nav_rth_start();
-  } else if (!link_lost && state.nav_state >= NAV_STATE_CLIMB && state.nav_target == NAV_TARGET_HOME &&
+  } else if (!link_lost && state.nav_state >= NAV_STATE_CLIMB && !poshold && state.nav_target == NAV_TARGET_HOME &&
              !nav_route.returning) {
     nav_stop();
   }
@@ -1352,11 +1430,21 @@ static void nav_update_request() {
     nav.mission_switch = mission_switch;
   }
 
-  // A mission or ground station target rides out the hold-last window. Unless
-  // the mission continues through the loss, it never continues away from a
-  // pilot once failsafe engages: failsafe RTH returned above, otherwise the
-  // failsafe hold takes over.
-  if (state.nav_target != NAV_TARGET_HOME && flags.failsafe) {
+  // Position hold flies while its switch is on and nothing else navigates:
+  // RTH and a mission take it over, and it resumes once they end.
+  const bool poshold_switch = rx_aux_on(AUX_POSHOLD);
+  if (!link_lost) {
+    if (!poshold_switch && state.nav_state == NAV_STATE_POSHOLD)
+      nav_stop();
+    else if (poshold_switch && nav_poshold_can_start())
+      nav_poshold_start();
+  }
+
+  // A mission, ground station target or position hold rides out the
+  // hold-last window. Unless the mission continues through the loss, it
+  // never continues away from a pilot once failsafe engages: failsafe RTH
+  // returned above, otherwise the failsafe hold takes over.
+  if ((state.nav_target != NAV_TARGET_HOME || state.nav_state == NAV_STATE_POSHOLD) && flags.failsafe) {
     // A takeoff that has not lifted off ends; it never holds an altitude on the ground.
     if (nav_takeoff_on_ground())
       nav_abort();
@@ -1367,8 +1455,9 @@ static void nav_update_request() {
   }
 
   // A rescue that gave up is not retried while an RTH request lasts. The
-  // mission switch acts only on its edges, so a position left on does not
-  // hold the abort, which would keep RTH and failsafe RTH from starting.
+  // mission and position hold switches do not hold the abort, which would
+  // keep RTH and failsafe RTH from starting; position hold restarts only once
+  // its sensors are back.
   if (state.nav_state == NAV_STATE_ABORTED && !rth_switch && !flags.failsafe)
     nav_stop();
 }
