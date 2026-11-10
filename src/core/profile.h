@@ -30,6 +30,7 @@
 //        navigation: add mission_on_failsafe.
 //        navigation: name the multirotor speed and throttle limits travel_speed and throttle_*
 //            (were rth_cruise_speed and rth_throttle_*); they apply to every target.
+//        navigation: add the multirotor position hold switch after the mission switch.
 // 0.3.0 (1e5b55c3): feat: add full 16-bit aux channel resolution with range-based function mapping.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
