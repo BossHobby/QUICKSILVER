@@ -403,6 +403,10 @@ static void txn_finish(spi_ports_t port) {
 static void handle_dma_rx_isr(spi_ports_t port) {
   const spi_port_def_t *def = &spi_port_defs[port];
   const dma_stream_def_t *dma = &dma_stream_defs[target.dma[def->dma_rx].dma];
+  // A bus error means the stream cannot reach its buffer; the flag would
+  // otherwise stay pending and re-enter this handler forever.
+  if (dma_is_flag_active(dma, DMA_FLAG_TE))
+    failloop(FAILLOOP_SPI);
   if (!dma_is_flag_active(dma, DMA_FLAG_TC))
     return;
 
@@ -419,6 +423,10 @@ static void handle_dma_rx_isr(spi_ports_t port) {
 static void handle_dma_tx_isr(spi_ports_t port) {
   const spi_port_def_t *def = &spi_port_defs[port];
   const dma_stream_def_t *dma = &dma_stream_defs[target.dma[def->dma_tx].dma];
+  // A bus error means the stream cannot reach its buffer; the flag would
+  // otherwise stay pending and re-enter this handler forever.
+  if (dma_is_flag_active(dma, DMA_FLAG_TE))
+    failloop(FAILLOOP_SPI);
   if (!dma_is_flag_active(dma, DMA_FLAG_TC))
     return;
 

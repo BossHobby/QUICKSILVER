@@ -300,6 +300,10 @@ static void handle_dma_rx_isr(spi_ports_t port) {
   const dma_stream_def_t *dma_tx = &dma_stream_defs[target.dma[spi_port_defs[port].dma_tx].dma];
   const dma_stream_def_t *dma_rx = &dma_stream_defs[target.dma[spi_port_defs[port].dma_rx].dma];
 
+  // A bus error means the stream cannot reach its buffer; the flag would
+  // otherwise stay pending and re-enter this handler forever.
+  if (dma_is_flag_active(dma_rx, DMA_DTERR_FLAG))
+    failloop(FAILLOOP_SPI);
   if (!dma_is_flag_active(dma_rx, DMA_FDT_FLAG)) {
     return;
   }
