@@ -174,6 +174,7 @@ typedef struct {
   uint8_t home_valid : 1;     // home latched from a valid GPS position on arming, or at the first one after it before leaving the ground; clear while disarmed
   uint8_t guided_ready : 1;    // the pilot grants guided flight: ground station commands are accepted
   uint8_t mission_engaged : 1; // navigation flies the mission, its end action or a return the mission switch ends
+  uint8_t wind_valid : 1;      // state.wind_speed is estimated: a wing has turned enough in flight to show it; owned by wing control
 
   // Separate bytes prevent IO flag writes from overwriting Flight's bitfields.
   uint8_t failsafe_signal_lost; // RX reports loss; Flight also enforces timeout.
@@ -342,7 +343,8 @@ typedef struct {
   wing_launch_state_t wing_launch_state;
   wing_autotrim_state_t wing_autotrim_state;
   wing_nav_state_t wing_nav_state; // owned by wing navigation
-  float wing_speed_scale;      // cruise / estimated airspeed, 0.6..1.25, from throttle and climb; 1 on the ground. Owned by wing control.
+  float airspeed;              // m/s true airspeed: GPS velocity less the wind while flags.wind_valid, else modelled from throttle and climb; zero on the ground, the cruise speed through autolaunch. Owned by wing control.
+  vec2_t wind_speed;           // m/s north and east the air moves over the ground; the latest estimate, current while flags.wind_valid. Owned by wing control.
 } control_state_t;
 
 #define STATE_MEMBERS                                  \
@@ -441,7 +443,8 @@ typedef struct {
   MEMBER(wing_launch_state, uint8_t)                   \
   MEMBER(wing_autotrim_state, uint8_t)                 \
   MEMBER(wing_nav_state, uint8_t)                      \
-  MEMBER(wing_speed_scale, float)                      \
+  MEMBER(airspeed, float)                              \
+  MEMBER(wind_speed, vec2_t)                           \
   END_STRUCT()
 
 typedef struct {

@@ -94,6 +94,7 @@ typedef enum {
   OSD_GPS_HOME,
   OSD_VARIO,
   OSD_WING_AIRSPEED,
+  OSD_WIND,
 
   OSD_ELEMENT_MAX
 } osd_elements_t;

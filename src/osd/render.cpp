@@ -870,13 +870,27 @@ static void osd_display_regular() {
 
     case OSD_WING_AIRSPEED: {
 #ifdef VEHICLE_WING
-      // Throttle-model estimate; meaningless on the ground, so it shows zero.
-      const float airspeed = flags.in_air ? profile.navigation.cruise_speed / state.wing_speed_scale : 0.0f;
       // Betaflight marks pitot airspeed as its speed glyph followed by A.
       osd_start_el(el);
       osd_write_char(ICON_GAUGE);
       osd_write_char('A');
-      osd_write_int((uint32_t)(airspeed * 3.6f), 3);
+      osd_write_int((uint32_t)(state.airspeed * 3.6f), 3);
+      osd_write_char(ICON_KPH);
+#endif
+      break;
+    }
+
+    case OSD_WIND: {
+#ifdef VEHICLE_WING
+      // The arrow points where the wind blows to, seen from the nose.
+      osd_start_el(el);
+      if (!flags.wind_valid) {
+        osd_write_str("  --");
+        osd_write_char(ICON_KPH);
+        break;
+      }
+      print_heading(atan2approx_rad(state.wind_speed.east, state.wind_speed.north) * RADTODEG - state.heading);
+      osd_write_int((uint32_t)(vec2_magnitude(state.wind_speed) * 3.6f), 3);
       osd_write_char(ICON_KPH);
 #endif
       break;

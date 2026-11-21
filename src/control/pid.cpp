@@ -6,6 +6,7 @@
 #include <stdbool.h>
 
 #include "control/control.h"
+#include "control/wing/navigation.h"
 #include "core/profile.h"
 #include "util/filter.h"
 #include "util/util.h"
@@ -215,8 +216,12 @@ HOT_CODE void pid_calc() {
   const vec3_t gyro_delta = state.gyro - lastrate;
 #ifdef VEHICLE_WING
   // Surface moment follows dynamic pressure (V^2); the body rate a steady
-  // deflection holds follows V. Gains are tuned at cruise.
-  const float speed_scale = state.wing_speed_scale;
+  // deflection holds follows V. Gains are tuned at the cruise speed, and
+  // apply as tuned on the ground and while either speed is unset.
+  const float cruise_speed = profile.navigation.cruise_speed;
+  const float speed_scale = state.airspeed > 0.0f && cruise_speed > 0.0f
+                                ? constrain(cruise_speed / state.airspeed, WING_SPEED_SCALE_MIN, WING_SPEED_SCALE_MAX)
+                                : 1.0f;
   const float pid_speed_compensation = speed_scale * speed_scale;
   const vec3_t current_kff = scaled_rates.kff * speed_scale;
 #else

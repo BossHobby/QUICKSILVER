@@ -195,14 +195,13 @@ uint32_t crsf_tlm_frame_baro_altitude(uint8_t *buf) {
 }
 
 #if defined(VEHICLE_WING)
-// Estimated airspeed without a sensor, as on the OSD; zero on the ground.
+// The airspeed estimate, as on the OSD; zero on the ground.
 uint32_t crsf_tlm_frame_airspeed(uint8_t *buf) {
   crsf_airspeed_frame_t *frame = (crsf_airspeed_frame_t *)buf;
   frame->header.type = CRSF_FRAMETYPE_AIRSPEED;
 
-  const float airspeed = flags.in_air ? profile.navigation.cruise_speed / state.wing_speed_scale : 0.0f;
   // 0.1 km/h from m/s.
-  frame->payload.speed = __builtin_bswap16((uint16_t)constrain(airspeed * 36.0f, 0.0f, 65535.0f));
+  frame->payload.speed = __builtin_bswap16((uint16_t)constrain(state.airspeed * 36.0f, 0.0f, 65535.0f));
   return crsf_tlm_frame_finalize(buf, CRSF_FRAME_AIRSPEED_PAYLOAD_SIZE);
 }
 #endif
