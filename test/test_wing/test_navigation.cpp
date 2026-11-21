@@ -284,7 +284,7 @@ static float turn_gravity_error_deg(float bank, vec3_t gyro, vec3_t accel_raw) {
   imu_test_attitude_init();
   flags.arm_state = 1;
   flags.in_air = 1;
-  state.wing_speed_scale = 1.0f;
+  state.airspeed = profile.navigation.cruise_speed;
   imu_calc();
 
   state.accel_raw = accel_raw;
@@ -418,6 +418,43 @@ static void test_loiter_integral_trims_steady_sink() {
   step(1000);
   // The learned nose-up trim remains once the sink has stopped.
   TEST_ASSERT_TRUE(wing_nav_command.pitch < -1.0f * DEGTORAD);
+}
+
+// Circle for a minute at 15 m/s, sinking below the loiter altitude whatever
+// navigation commands, with the gyro turning as the circle does so the wind
+// estimate gives the airspeed. Returns the climb angle wing control applies, degrees.
+static float starved_climb_angle_deg(float cruise_speed) {
+  profile.navigation.cruise_speed = cruise_speed;
+  state.looptime = 0.01f;
+  fly(1U << AUX_LOITER);
+  scripted_altitude = 50.0f;
+  step(100);
+  scripted_climb = -1.5f;
+  fly_loiter_circle(profile.navigation.loiter_radius);
+  state.gyro.yaw = 15.0f / profile.navigation.loiter_radius;
+  step(60000);
+  TEST_ASSERT_EQUAL(WING_NAV_LOITER, state.wing_nav_state);
+  TEST_ASSERT_TRUE(flags.wind_valid);
+  TEST_ASSERT_FLOAT_WITHIN(0.5f, 15.0f, state.airspeed);
+  // Navigation asks for the whole climb either way, and the throttle for it.
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, 20.0f, -wing_nav_command.pitch * RADTODEG);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, profile.navigation.cruise_throttle + 0.3f, state.throttle);
+  // The pitch of the attitude target, positive nose-down.
+  return -asinf(state.stick_vector.pitch) * RADTODEG;
+}
+
+static void test_climb_pitches_up_at_cruise_speed() {
+  // At cruise speed the altitude loop pitches up to its limit.
+  TEST_ASSERT_FLOAT_WITHIN(0.5f, 20.0f, starved_climb_angle_deg(15.0f));
+}
+
+static void test_climb_holds_level_at_six_tenths_of_cruise_speed() {
+  TEST_ASSERT_FLOAT_WITHIN(0.5f, 0.0f, starved_climb_angle_deg(25.0f));
+}
+
+static void test_climb_pitches_part_way_between_the_speed_limits() {
+  // 15 m/s is 0.7 of cruise speed, half way between level and the whole climb.
+  TEST_ASSERT_FLOAT_WITHIN(1.0f, 10.0f, starved_climb_angle_deg(15.0f / 0.7f));
 }
 
 static void test_loiter_levels_pitch_when_baro_goes_stale() {
@@ -1691,6 +1728,9 @@ void run_wing_navigation_tests() {
   RUN_TEST(test_loiter_waits_for_autolaunch);
   RUN_TEST(test_loiter_holds_entry_altitude);
   RUN_TEST(test_loiter_integral_trims_steady_sink);
+  RUN_TEST(test_climb_pitches_up_at_cruise_speed);
+  RUN_TEST(test_climb_holds_level_at_six_tenths_of_cruise_speed);
+  RUN_TEST(test_climb_pitches_part_way_between_the_speed_limits);
   RUN_TEST(test_loiter_levels_pitch_when_baro_goes_stale);
   RUN_TEST(test_failsafe_drops_without_failsafe_rth);
   RUN_TEST(test_failsafe_before_throw_disarms_without_rth);

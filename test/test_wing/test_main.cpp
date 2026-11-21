@@ -108,16 +108,16 @@ static void test_level_tilt_moves_disarmed_surfaces_without_integral() {
 static float roll_feedforward() {
   return state.pidoutput.roll - state.pid_p_term.roll - state.pid_i_term.roll - state.pid_d_term.roll;
 }
-static void test_pid_gains_follow_speed_scale() {
+static void test_pid_gains_follow_airspeed() {
   state.setpoint.roll = 0.1f;
   state.error.roll = 0.1f;
-  state.wing_speed_scale = 1.0f;
+  state.airspeed = profile.navigation.cruise_speed;
   pid_calc();
   const float cruise_p = state.pid_p_term.roll;
   const float cruise_ff = roll_feedforward();
 
   // At 1 / 1.25 of cruise airspeed the surfaces have 1 / 1.5625 of the authority.
-  state.wing_speed_scale = 1.25f;
+  state.airspeed = profile.navigation.cruise_speed / 1.25f;
   pid_calc();
   TEST_ASSERT_FLOAT_WITHIN(0.001f * cruise_p, 1.5625f * cruise_p, state.pid_p_term.roll);
   TEST_ASSERT_FLOAT_WITHIN(0.001f * cruise_ff, 1.25f * cruise_ff, roll_feedforward());
@@ -149,36 +149,37 @@ static void fly_throttle(float throttle, float seconds) {
   for (int i = 0; i < (int)(seconds / state.looptime); i++)
     control();
 }
-static void test_speed_scale_estimates_airspeed_from_throttle_and_climb() {
+static void test_throttle_model_estimates_airspeed_from_throttle_and_climb() {
   const float cruise = profile.navigation.cruise_throttle;
+  const float cruise_speed = profile.navigation.cruise_speed;
   arm();
   state.looptime = 0.01f;
-  TEST_ASSERT_EQUAL_FLOAT(1.0f, state.wing_speed_scale);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.airspeed);
   fly_throttle(cruise, 1.0f);
   TEST_ASSERT_TRUE(flags.in_air);
-  TEST_ASSERT_FLOAT_WITHIN(0.001f, 1.0f, state.wing_speed_scale);
+  TEST_ASSERT_FLOAT_WITHIN(0.02f, cruise_speed, state.airspeed);
 
   // Three quarters of the level throttle is about sqrt(3 / 4) of cruise
   // airspeed, after the airspeed has had time to settle.
   fly_throttle(cruise * 0.75f, 0.1f);
-  TEST_ASSERT_FLOAT_WITHIN(0.05f, 1.0f, state.wing_speed_scale);
+  TEST_ASSERT_FLOAT_WITHIN(0.75f, cruise_speed, state.airspeed);
   fly_throttle(cruise * 0.75f, 20.0f);
-  TEST_ASSERT_FLOAT_WITHIN(0.01f, sqrtf(4.0f / 3.0f), state.wing_speed_scale);
+  TEST_ASSERT_FLOAT_WITHIN(0.15f, cruise_speed * sqrtf(0.75f), state.airspeed);
 
   // Climb throttle holds cruise airspeed; attitude pitch is positive nose-down.
   state.attitude.pitch = -10.0f * DEGTORAD;
   fly_throttle(cruise + 0.15f, 20.0f);
-  TEST_ASSERT_FLOAT_WITHIN(0.01f, 1.0f, state.wing_speed_scale);
+  TEST_ASSERT_FLOAT_WITHIN(0.15f, cruise_speed, state.airspeed);
 
-  // An idle glide is bounded by the scale limit.
+  // An idle glide is bounded by the model's slow limit.
   state.attitude.pitch = 0.0f;
   fly_throttle(0.0f, 20.0f);
-  TEST_ASSERT_FLOAT_WITHIN(0.01f, 1.25f, state.wing_speed_scale);
+  TEST_ASSERT_FLOAT_WITHIN(0.15f, cruise_speed / 1.25f, state.airspeed);
 
   state.aux_active &= ~(1U << AUX_ARMING);
   control();
   TEST_ASSERT_FALSE(flags.arm_state);
-  TEST_ASSERT_EQUAL_FLOAT(1.0f, state.wing_speed_scale);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.airspeed);
 }
 static uint16_t crsf_airspeed_reading() {
   uint8_t frame[CRSF_FRAME_SIZE_MAX] = {};
@@ -189,10 +190,8 @@ static uint16_t crsf_airspeed_reading() {
 static void test_crsf_airspeed_reports_the_estimate_in_flight() {
   TEST_ASSERT_EQUAL_UINT16(0, crsf_airspeed_reading());
 
-  // 0.1 km/h of cruise speed over the speed scale, as on the OSD.
-  flags.in_air = 1;
-  profile.navigation.cruise_speed = 15.0f;
-  state.wing_speed_scale = 1.25f;
+  // 0.1 km/h of the airspeed estimate, as on the OSD.
+  state.airspeed = 12.0f;
   TEST_ASSERT_EQUAL_UINT16(432, crsf_airspeed_reading());
 }
 static vec3_t turn_setpoint_change(float roll) {
@@ -279,84 +278,125 @@ static void fly_gps(float bank, float airspeed, float wind_north, float wind_eas
   }
   start_heading = fmodf(start_heading + turn_rate * loops * state.looptime, 2.0f * M_PI_F);
 }
-static void test_cruise_speed_learned_from_turns_in_wind_and_saved_on_disarm() {
+static void test_airspeed_follows_gps_and_wind_once_turns_show_the_wind() {
   state.looptime = 0.002f;
   arm();
-  TEST_ASSERT_EQUAL_FLOAT(15.0f, profile.navigation.cruise_speed);
+  // Straight flight cannot tell wind from airspeed: the throttle model stands.
+  fly_gps(0.0f, 11.0f, 6.0f, -4.0f, 30.0f);
+  TEST_ASSERT_FALSE(flags.wind_valid);
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, 15.0f, state.airspeed);
 
-  // Straight flight in wind shows ground speed only and teaches nothing.
-  fly_gps(0.0f, 20.0f, 6.0f, -4.0f, 30.0f);
-  TEST_ASSERT_TRUE(flags.in_air);
-  TEST_ASSERT_EQUAL_FLOAT(15.0f, profile.navigation.cruise_speed);
+  // Turning shows the wind: the wing flies slower than the throttle model
+  // can show. Sinking, so this flight does not teach the cruise speed.
+  state.velocity.up = -2.0f;
+  fly_gps(30.0f * DEGTORAD, 11.0f, 6.0f, -4.0f, 30.0f);
+  TEST_ASSERT_TRUE(flags.wind_valid);
+  TEST_ASSERT_FLOAT_WITHIN(0.3f, 11.0f, state.airspeed);
+  TEST_ASSERT_FLOAT_WITHIN(0.3f, 6.0f, state.wind_speed.north);
+  TEST_ASSERT_FLOAT_WITHIN(0.3f, -4.0f, state.wind_speed.east);
 
-  // Turns measure airspeed; the wind cancels across each heading change.
-  fly_gps(30.0f * DEGTORAD, 20.0f, 6.0f, -4.0f, 120.0f);
-  TEST_ASSERT_FLOAT_WITHIN(0.3f, 20.0f, profile.navigation.cruise_speed);
+  // Straight again, the wind is known: a gust shows as airspeed.
+  fly_gps(0.0f, 14.0f, 6.0f, -4.0f, 5.0f);
+  TEST_ASSERT_TRUE(flags.wind_valid);
+  TEST_ASSERT_FLOAT_WITHIN(0.5f, 14.0f, state.airspeed);
 
-  profile_t saved;
-  fmc_read_buf(PROFILE_STORAGE_OFFSET + FMC_MAGIC_SIZE, (uint8_t *)&saved, sizeof(saved));
-  TEST_ASSERT_NOT_EQUAL_FLOAT(profile.navigation.cruise_speed, saved.navigation.cruise_speed);
-
-  // Landed and disarmed: the learned speed is stored once the wing stops.
+  // Without GPS velocity the throttle model takes over again.
+  state.gps_health.lock = false;
+  control();
+  TEST_ASSERT_FALSE(flags.wind_valid);
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, 15.0f, state.airspeed);
+}
+// Land and disarm; the wing stops, so pending saves go through.
+static void land() {
   state.gps_speed = 0.0f;
+  state.gps_velocity = {};
+  state.rx_filtered.throttle = 0.0f;
   state.aux_active &= ~(1U << AUX_ARMING);
   control();
   control();
+  TEST_ASSERT_FALSE(flags.in_air);
+}
+static void test_cruise_speed_holds_through_a_flight_and_moves_half_way_once_landed() {
+  state.looptime = 0.002f;
+  arm();
+  // Straight flight in wind shows ground speed only and teaches nothing.
+  fly_gps(0.0f, 20.0f, 6.0f, -4.0f, 30.0f);
+  TEST_ASSERT_TRUE(flags.in_air);
+  // Turns show the wind and with it the airspeed; the cruise speed keeps
+  // through the flight, as the reference of gains and the climb limit.
+  fly_gps(30.0f * DEGTORAD, 20.0f, 6.0f, -4.0f, 120.0f);
+  TEST_ASSERT_FLOAT_WITHIN(0.3f, 20.0f, state.airspeed);
+  TEST_ASSERT_EQUAL_FLOAT(15.0f, profile.navigation.cruise_speed);
+
+  // Landed and disarmed, it moves half way to the flight's average and is
+  // stored once the wing stops.
+  land();
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, 17.5f, profile.navigation.cruise_speed);
+  profile_t saved;
   fmc_read_buf(PROFILE_STORAGE_OFFSET + FMC_MAGIC_SIZE, (uint8_t *)&saved, sizeof(saved));
   TEST_ASSERT_EQUAL_FLOAT(profile.navigation.cruise_speed, saved.navigation.cruise_speed);
 }
 static constexpr float KPH = 1.0f / 3.6f;
-static void test_cruise_speed_learns_fast_wing_within_two_minutes() {
+static void test_cruise_speed_converges_over_flights() {
   state.looptime = 0.002f;
-  arm();
   // 126 km/h from the 54 km/h default, in gentle 15 degree turns.
-  fly_gps(15.0f * DEGTORAD, 126.0f * KPH, 4.0f, 2.0f, 120.0f);
-  TEST_ASSERT_FLOAT_WITHIN(2.0f * KPH, 126.0f * KPH, profile.navigation.cruise_speed);
+  for (int flight = 0; flight < 5; flight++) {
+    arm();
+    fly_gps(15.0f * DEGTORAD, 126.0f * KPH, 4.0f, 2.0f, 120.0f);
+    land();
+  }
+  TEST_ASSERT_FLOAT_WITHIN(3.0f * KPH, 126.0f * KPH, profile.navigation.cruise_speed);
 }
-static void test_cruise_speed_learns_slow_wing_within_half_a_minute() {
-  state.looptime = 0.002f;
-  arm();
-  fly_gps(30.0f * DEGTORAD, 30.0f * KPH, 1.0f, -1.0f, 30.0f);
-  TEST_ASSERT_FLOAT_WITHIN(1.0f * KPH, 30.0f * KPH, profile.navigation.cruise_speed);
-}
-static void test_cruise_speed_learns_only_near_cruise() {
+static void test_cruise_speed_learns_only_level_near_cruise() {
   state.looptime = 0.002f;
   arm();
   // Climbing steeply at cruise throttle, the throttle model pins its speed
   // estimate at the slow limit and cannot convert airspeed to cruise speed.
   state.attitude.pitch = -30.0f * DEGTORAD;
   fly_gps(30.0f * DEGTORAD, 20.0f, 3.0f, 0.0f, 60.0f);
-  TEST_ASSERT_FLOAT_WITHIN(0.01f, 1.25f, state.wing_speed_scale);
-  TEST_ASSERT_EQUAL_FLOAT(15.0f, profile.navigation.cruise_speed);
-
+  TEST_ASSERT_TRUE(flags.wind_valid);
+  // Level in pitch but climbing, its climb share is no better.
   state.attitude.pitch = 0.0f;
+  state.velocity.up = 2.0f;
   fly_gps(30.0f * DEGTORAD, 20.0f, 3.0f, 0.0f, 60.0f);
-  TEST_ASSERT_FLOAT_WITHIN(0.1f, 20.0f, profile.navigation.cruise_speed);
+  land();
+  TEST_ASSERT_EQUAL_FLOAT(15.0f, profile.navigation.cruise_speed);
+}
+static void test_cruise_speed_needs_ten_seconds_of_measurements() {
+  state.looptime = 0.002f;
+  arm();
+  // The wind shows after a quarter turn; too little of the flight is left.
+  fly_gps(30.0f * DEGTORAD, 20.0f, 3.0f, 0.0f, 12.0f);
+  TEST_ASSERT_TRUE(flags.wind_valid);
+  land();
+  TEST_ASSERT_EQUAL_FLOAT(15.0f, profile.navigation.cruise_speed);
 }
 static void test_cruise_speed_stays_accurate_through_long_loiter() {
   state.looptime = 0.002f;
   arm();
   // Ten minutes of circling turns the plane through about a hundred circles.
   fly_gps(30.0f * DEGTORAD, 20.0f, 3.0f, 1.0f, 600.0f);
-  TEST_ASSERT_FLOAT_WITHIN(0.05f, 20.0f, profile.navigation.cruise_speed);
+  land();
+  TEST_ASSERT_FLOAT_WITHIN(0.05f, 17.5f, profile.navigation.cruise_speed);
 }
 static void test_cruise_speed_ignores_gps_glitch_and_stays_in_range() {
   state.looptime = 0.002f;
   arm();
-  fly_gps(30.0f * DEGTORAD, 20.0f, 3.0f, 0.0f, 60.0f);
-  TEST_ASSERT_FLOAT_WITHIN(0.1f, 20.0f, profile.navigation.cruise_speed);
-
-  // One corrupted fix spoils at most the two turns that share it; the median
-  // of five keeps both away from the learned value.
+  // Corrupted fixes are rejected across the nose and slewed along it.
   for (int i = 0; i < 20; i++) {
     gps_glitch_north = 15.0f;
     fly_gps(30.0f * DEGTORAD, 20.0f, 3.0f, 0.0f, 0.5f);
     fly_gps(30.0f * DEGTORAD, 20.0f, 3.0f, 0.0f, 10.0f);
-    TEST_ASSERT_FLOAT_WITHIN(0.1f, 20.0f, profile.navigation.cruise_speed);
   }
+  land();
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, 17.5f, profile.navigation.cruise_speed);
 
   // The learned value stays within the range a user can set, 180 km/h.
-  fly_gps(30.0f * DEGTORAD, 70.0f, 0.0f, 0.0f, 60.0f);
+  for (int flight = 0; flight < 3; flight++) {
+    arm();
+    fly_gps(30.0f * DEGTORAD, 70.0f, 0.0f, 0.0f, 60.0f);
+    land();
+  }
   TEST_ASSERT_EQUAL_FLOAT(50.0f, profile.navigation.cruise_speed);
 }
 static void test_gliding_retains_airborne_state_and_motor_cutoff() {
@@ -717,16 +757,17 @@ int main() {
   RUN_TEST(test_pwm_throttle_range_and_limit);
   RUN_TEST(test_pwm_motor_stops_but_disarmed_surfaces_work);
   RUN_TEST(test_level_tilt_moves_disarmed_surfaces_without_integral);
-  RUN_TEST(test_pid_gains_follow_speed_scale);
-  RUN_TEST(test_speed_scale_estimates_airspeed_from_throttle_and_climb);
+  RUN_TEST(test_pid_gains_follow_airspeed);
+  RUN_TEST(test_throttle_model_estimates_airspeed_from_throttle_and_climb);
   RUN_TEST(test_crsf_airspeed_reports_the_estimate_in_flight);
   RUN_TEST(test_level_turn_coordination_adds_turn_rates);
   RUN_TEST(test_turn_coordination_waits_for_flight);
   RUN_TEST(test_navigation_always_coordinates_turns);
-  RUN_TEST(test_cruise_speed_learned_from_turns_in_wind_and_saved_on_disarm);
-  RUN_TEST(test_cruise_speed_learns_fast_wing_within_two_minutes);
-  RUN_TEST(test_cruise_speed_learns_slow_wing_within_half_a_minute);
-  RUN_TEST(test_cruise_speed_learns_only_near_cruise);
+  RUN_TEST(test_airspeed_follows_gps_and_wind_once_turns_show_the_wind);
+  RUN_TEST(test_cruise_speed_holds_through_a_flight_and_moves_half_way_once_landed);
+  RUN_TEST(test_cruise_speed_converges_over_flights);
+  RUN_TEST(test_cruise_speed_needs_ten_seconds_of_measurements);
+  RUN_TEST(test_cruise_speed_learns_only_level_near_cruise);
   RUN_TEST(test_cruise_speed_stays_accurate_through_long_loiter);
   RUN_TEST(test_cruise_speed_ignores_gps_glitch_and_stays_in_range);
   RUN_TEST(test_pwm_shared_rate_validation);

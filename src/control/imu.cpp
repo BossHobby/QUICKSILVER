@@ -333,8 +333,7 @@ static vec3_t imu_gravity_reference(vec3_t accel) {
   // Legacy body axes are {left, back, up}; rates are positive right yaw and
   // nose-down pitch. Turning right adds a rightward acceleration, and pulling
   // the nose up adds load along body up.
-  const float speed = profile.navigation.cruise_speed / state.wing_speed_scale;
-  const float scale = speed * (ACC_1G / GRAVITY);
+  const float scale = state.airspeed * (ACC_1G / GRAVITY);
   accel.roll += scale * state.gyro.yaw;
   accel.yaw += scale * state.gyro.pitch;
   return accel;

@@ -32,7 +32,6 @@ static constexpr float ALT_MAX_CLIMB_RATE = 3.0f;     // m/s
 static constexpr float ALT_MAX_SINK_RATE = 2.0f;      // m/s
 static constexpr float ALT_RATE_KP = 3.0f * DEGTORAD; // climb angle per m/s of climb-rate error
 static constexpr float ALT_RATE_KI = 1.0f * DEGTORAD; // climb angle per m of accumulated climb-rate error
-static constexpr float ALT_MAX_CLIMB_ANGLE = 20.0f * DEGTORAD;
 static constexpr float ALT_MAX_DIVE_ANGLE = 15.0f * DEGTORAD;
 
 // Cruise.
@@ -407,11 +406,11 @@ static float altitude_climb_angle(nav_request_t request, float entry_target, flo
   const float integral = altitude.integral + ALT_RATE_KI * rate_error * dt;
   const float angle = proportional + integral;
   // Stop integrating into a saturated climb or dive.
-  if ((angle < ALT_MAX_CLIMB_ANGLE || rate_error < 0.0f) && (angle > -ALT_MAX_DIVE_ANGLE || rate_error > 0.0f))
-    altitude.integral = constrain(integral, -ALT_MAX_DIVE_ANGLE, ALT_MAX_CLIMB_ANGLE);
+  if ((angle < WING_MAX_CLIMB_ANGLE || rate_error < 0.0f) && (angle > -ALT_MAX_DIVE_ANGLE || rate_error > 0.0f))
+    altitude.integral = constrain(integral, -ALT_MAX_DIVE_ANGLE, WING_MAX_CLIMB_ANGLE);
 
   blackbox_set_debug(BBOX_DEBUG_NAVIGATION, 6, (int16_t)constrain((altitude.target - state.altitude) * 10.0f, -32768.0f, 32767.0f)); // dm
-  return constrain(proportional + altitude.integral, -ALT_MAX_DIVE_ANGLE, ALT_MAX_CLIMB_ANGLE);
+  return constrain(proportional + altitude.integral, -ALT_MAX_DIVE_ANGLE, WING_MAX_CLIMB_ANGLE);
 }
 
 // Pitch stick commands a climb rate and releasing it holds the altitude
@@ -433,7 +432,7 @@ static float cruise_climb_angle(float dt) {
   const float hold = altitude_climb_angle(NAV_REQUEST_CRUISE, state.altitude, 0.0f, dt);
   if (altitude.target_valid)
     return hold;
-  return stick * (stick > 0.0f ? ALT_MAX_CLIMB_ANGLE : ALT_MAX_DIVE_ANGLE);
+  return stick * (stick > 0.0f ? WING_MAX_CLIMB_ANGLE : ALT_MAX_DIVE_ANGLE);
 }
 
 // At rest on the ground: before takeoff, or landed and still armed. in_air
@@ -769,7 +768,9 @@ void nav_update_wing(float dt) {
   const float roll = constrain(nav_roll(next), -max_bank, max_bank);
   const float climb_angle = nav_climb_angle(request, next, dt);
   wing_nav_command.roll = slew(wing_nav_command.roll, roll, BANK_SLEW_RATE * dt);
-  // Attitude pitch targets are positive nose-down.
+  // Attitude pitch targets are positive nose-down. Wing control holds the
+  // nose down at low airspeed; the throttle still follows the climb the
+  // altitude asks for.
   wing_nav_command.pitch = slew(wing_nav_command.pitch, -climb_angle, PITCH_SLEW_RATE * dt);
   const float throttle = constrain(profile.navigation.cruise_throttle + WING_THROTTLE_PER_CLIMB_DEG * climb_angle * RADTODEG, 0.0f, 1.0f);
   wing_nav_command.throttle = next == WING_NAV_DESCEND ? 0.0f : slew(wing_nav_command.throttle, throttle, THROTTLE_SLEW_RATE * dt);

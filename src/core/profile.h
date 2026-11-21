@@ -15,6 +15,7 @@
 // PROFILE version changelog (schema compatibility):
 // 0.3.0 (1e5b55c3): feat: add full 16-bit aux channel resolution with range-based function mapping.
 //        osd: add CRSF TX power, vario and wing estimated airspeed.
+//        osd: add the wing wind estimate.
 //        gps: add persisted constellation selection.
 //        navigation: expose return height, speed, failsafe and throttle limits only.
 //        pid: add per-axis wing rate feedforward to each PID profile.
