@@ -734,7 +734,9 @@ static void test_failsafe_without_gps_descends_in_circle() {
   TEST_ASSERT_TRUE(flags.arm_state); // Servos retain navigation control throughout the glide.
 }
 
-static void test_failsafe_glide_keeps_motor_off_after_gps_recovery() {
+// A failsafe return that lost GPS for longer than a brief dip, gliding with
+// the motor stopped.
+static void glide_after_gps_loss() {
   fly_north_of_home(200.0f);
   lose_link();
   step(2000);
@@ -746,21 +748,103 @@ static void test_failsafe_glide_keeps_motor_off_after_gps_recovery() {
   TEST_ASSERT_EQUAL_FLOAT(0.0f, wing_nav_command.throttle);
   step(2000);
   TEST_ASSERT_EQUAL_FLOAT(MOTOR_OFF, state.output[0]);
+}
+
+static void test_failsafe_glide_keeps_motor_off_when_gps_recovers_at_rest() {
+  glide_after_gps_loss();
+
+  // The glide ended on the ground: the recovered fix does not move.
+  set_gps(200.0f, 0.0f, 0.0f, 0.0f);
+  scripted_altitude = 0.0f;
+  for (uint32_t i = 0; i < 600; i++) {
+    step();
+    TEST_ASSERT_EQUAL_FLOAT(MOTOR_OFF, state.output[0]);
+  }
+  // At rest the link loss ends in the failsafe disarm.
+  TEST_ASSERT_FALSE(flags.wing_nav_failsafe);
+  TEST_ASSERT_FALSE(flags.arm_state);
+}
+
+static void test_failsafe_glide_resumes_return_when_gps_recovers_in_flight() {
+  glide_after_gps_loss();
 
   set_gps(200.0f, 0.0f, -15.0f, 0.0f);
-  step(2000);
-  TEST_ASSERT_EQUAL(WING_NAV_DESCEND, state.wing_nav_state);
-  TEST_ASSERT_EQUAL_FLOAT(MOTOR_OFF, state.output[0]);
-
-  // Pilot recovery can select a powered return again.
-  flags.failsafe_signal_lost = 0;
-  state.aux_active |= 1U << AUX_RETURN_TO_HOME;
   step();
   TEST_ASSERT_EQUAL(WING_NAV_RTH_RETURN, state.wing_nav_state);
+  TEST_ASSERT_TRUE(flags.wing_nav_failsafe);
+  // The motor ramps back up from the glide.
   TEST_ASSERT_TRUE(wing_nav_command.throttle > 0.0f);
   TEST_ASSERT_TRUE(wing_nav_command.throttle < 0.01f);
   step(2000);
   TEST_ASSERT_FLOAT_WITHIN(0.001f, profile.navigation.cruise_throttle, state.throttle);
+}
+
+static void test_failsafe_after_landing_disarms_without_motor() {
+  fly_north_of_home(200.0f);
+  // Landed and still armed: in_air stays latched.
+  state.rx_filtered.throttle = 0.0f;
+  set_gps(200.0f, 0.0f, 0.0f, 0.0f);
+  scripted_altitude = 0.0f;
+  step(4000);
+  TEST_ASSERT_TRUE(flags.arm_state);
+  TEST_ASSERT_TRUE(flags.in_air);
+
+  lose_link();
+  for (uint32_t i = 0; i < 300; i++) {
+    step();
+    TEST_ASSERT_FALSE(flags.wing_nav_failsafe);
+    TEST_ASSERT_EQUAL_FLOAT(MOTOR_OFF, state.output[0]);
+  }
+  TEST_ASSERT_EQUAL(WING_NAV_INACTIVE, state.wing_nav_state);
+  TEST_ASSERT_FALSE(flags.arm_state);
+}
+
+static void test_navigation_waits_for_flight_after_a_run_up() {
+  nav_init();
+  profile.serial.gps = SERIAL_PORT1;
+  set_gps(0.0f, 0.0f, 0.0f, 0.0f);
+  scripted_altitude = 0.0f;
+  state.aux_active = (1U << AUX_ARMING) | (1U << AUX_PREARM);
+  step(4000);
+  TEST_ASSERT_TRUE(flags.arm_state);
+  // A run-up on the ground latches in_air.
+  state.rx_filtered.throttle = 0.5f;
+  step();
+  TEST_ASSERT_TRUE(flags.in_air);
+  state.rx_filtered.throttle = 0.0f;
+  state.aux_active |= 1U << AUX_RETURN_TO_HOME;
+  step(1000);
+  TEST_ASSERT_EQUAL(WING_NAV_INACTIVE, state.wing_nav_state);
+  TEST_ASSERT_EQUAL_FLOAT(MOTOR_OFF, state.output[0]);
+
+  // Thrown: ground speed shows flight once the receiver reports it.
+  set_gps(0.0f, 0.0f, 15.0f, 0.0f);
+  step(200);
+  TEST_ASSERT_NOT_EQUAL(WING_NAV_INACTIVE, state.wing_nav_state);
+}
+
+static void test_navigation_continues_slowly_into_a_headwind() {
+  fly(1U << AUX_LOITER);
+  scripted_altitude = 50.0f;
+  step(100);
+  // Wind near the airspeed leaves almost no ground speed; the height shows flight.
+  set_gps(0.0f, 0.0f, 0.0f, 1.0f);
+  step(6000);
+  TEST_ASSERT_EQUAL(WING_NAV_LOITER, state.wing_nav_state);
+  TEST_ASSERT_TRUE(state.throttle > 0.0f);
+}
+
+static void test_failsafe_return_continues_slowly_into_a_headwind_without_altitude() {
+  fly_north_of_home(200.0f);
+  lose_link();
+  step(2000);
+  TEST_ASSERT_TRUE(flags.wing_nav_failsafe);
+  // No barometer: a ground speed the wind holds down does not show a landing.
+  set_gps(200.0f, 0.0f, 0.0f, 1.0f);
+  step(6000);
+  TEST_ASSERT_TRUE(flags.wing_nav_failsafe);
+  TEST_ASSERT_TRUE(flags.arm_state);
+  TEST_ASSERT_TRUE(state.throttle > 0.0f);
 }
 
 static void test_failsafe_brief_gps_dip_resumes_return() {
@@ -1624,7 +1708,12 @@ void run_wing_navigation_tests() {
   RUN_TEST(test_failsafe_rth_keeps_outputs_and_returns_control);
   RUN_TEST(test_failsafe_rth_continues_on_switch_after_recovery);
   RUN_TEST(test_failsafe_without_gps_descends_in_circle);
-  RUN_TEST(test_failsafe_glide_keeps_motor_off_after_gps_recovery);
+  RUN_TEST(test_failsafe_glide_keeps_motor_off_when_gps_recovers_at_rest);
+  RUN_TEST(test_failsafe_glide_resumes_return_when_gps_recovers_in_flight);
+  RUN_TEST(test_failsafe_after_landing_disarms_without_motor);
+  RUN_TEST(test_navigation_waits_for_flight_after_a_run_up);
+  RUN_TEST(test_navigation_continues_slowly_into_a_headwind);
+  RUN_TEST(test_failsafe_return_continues_slowly_into_a_headwind_without_altitude);
   RUN_TEST(test_failsafe_brief_gps_dip_resumes_return);
   RUN_TEST(test_cruise_locks_course_after_centered_sticks);
   RUN_TEST(test_cruise_steers_back_onto_track);

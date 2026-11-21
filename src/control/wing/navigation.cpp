@@ -33,6 +33,10 @@ static constexpr float ALT_MAX_DIVE_ANGLE = 15.0f * DEGTORAD;
 static constexpr uint32_t RTH_HEADING_TIMEOUT_MS = 10000;      // IMU-heading return after GPS loss
 static constexpr float DESCEND_GLIDE_ANGLE = 5.0f * DEGTORAD;  // nose-down during an unpowered failsafe glide
 static constexpr uint32_t DESCEND_LATCH_MS = 2000;             // GPS recovery before this resumes the return
+// Wind can hold the ground speed or the height above launch below what shows
+// flight for a while, but not both: with a GPS lock and an aided altitude
+// neither for LANDED_TIME_MS, the wing rests on the ground.
+static constexpr uint32_t LANDED_TIME_MS = 3000;
 static constexpr uint32_t CRUISE_LOCK_DELAY_MS = 500;          // centered roll and yaw before the course locks, as in ArduPlane
 static constexpr float CRUISE_STICK_CENTER = 0.05f;            // filtered stick magnitude treated as centered
 static constexpr float CRUISE_LOOKAHEAD = 1000.0f;             // meters along the locked track, as in ArduPlane
@@ -60,6 +64,7 @@ static struct {
   nav_request_t request; // previous update's request; a new one latches its own altitude target
   uint32_t gps_lost_ms; // start of the IMU-heading return
   uint32_t descend_ms;  // start of the failsafe glide
+  uint32_t flying_ms;   // latest update that showed flight, or had no GPS lock to show a landing
   float speed;          // horizontal speed of the estimated velocity, m/s, updated while GPS is valid
   bool mission_held;    // mission switch on since before navigation was available
   bool mission_requested; // the switches requested the mission in the latest update
@@ -185,19 +190,36 @@ static void route_begin_leg(bool guided, bool underway) {
   circle_place_ahead();
 }
 
+// At rest on the ground: before takeoff, or landed and still armed. in_air
+// latches on the throttle and holds until disarm, so it cannot tell. Without
+// a GPS lock nothing shows a landing; a return then needs a fix anyway, and a
+// failsafe without one glides with the motor stopped. Without an aided
+// altitude a headwind alone would read as a landing, so nothing shows one
+// either.
+static bool nav_landed(uint32_t now_ms) {
+  const bool flying = !state.gps_health.lock || state.gps_speed >= WING_FLYING_MIN_SPEED ||
+                      !flags.altitude_valid || fabsf(state.altitude) > WING_FLYING_MIN_ALTITUDE;
+  if (flying)
+    nav.flying_ms = now_ms;
+  return now_ms - nav.flying_ms >= LANDED_TIME_MS;
+}
+
 // What the switches and failsafe request, in priority order. A mission
 // request maps onto what the aircraft flies: the route, a return after
 // MISSION_END_RTH or without GPS, or a loiter in place until the route can
 // be flown.
-static nav_request_t nav_request() {
+static nav_request_t nav_request(uint32_t now_ms) {
   // Launch owns attitude and throttle until it finishes; navigation never
-  // starts on the ground. Failsafe ignores the switches, which hold stale values.
+  // starts or keeps the motor running on the ground, where a link loss takes
+  // the failsafe procedure to a disarm. Failsafe ignores the switches, which
+  // hold stale values.
+  const bool landed = nav_landed(now_ms);
   const bool launching = flags.wing_launch_available && state.wing_launch_state < WING_LAUNCH_DONE;
   // As on a multirotor, a mission needs a switch edge in flight: a switch left
   // on through arming and launch does not fly an old route.
   const bool mission_switch = rx_aux_on(AUX_MISSION);
   nav_request_t request = NAV_REQUEST_NONE;
-  if (!flags.arm_state || !flags.in_air || launching) {
+  if (!flags.arm_state || !flags.in_air || launching || landed) {
     nav.mission_held = mission_switch;
   } else {
     nav.mission_held = nav.mission_held && mission_switch;
@@ -320,9 +342,11 @@ static wing_nav_state_t nav_next_state(nav_request_t request, uint32_t now_ms) {
     return cruise_next_state(now_ms);
   const wing_nav_state_t previous = state.wing_nav_state;
   // A brief GPS quality dip cannot have landed the aircraft, so recovery
-  // resumes the return. After a longer glide, GPS recovery alone cannot tell
-  // whether it has landed; keep the motor off until the pilot recovers control.
-  if (request == NAV_REQUEST_FAILSAFE && previous == WING_NAV_DESCEND && now_ms - nav.descend_ms >= DESCEND_LATCH_MS)
+  // resumes the return. After a longer glide the recovered GPS has to show
+  // ground speed: the glide may have ended on ground far from launch level,
+  // where the motor stays off until the pilot recovers control.
+  const bool gps_flying = flags.gps_valid && state.gps_speed >= WING_FLYING_MIN_SPEED;
+  if (request == NAV_REQUEST_FAILSAFE && previous == WING_NAV_DESCEND && now_ms - nav.descend_ms >= DESCEND_LATCH_MS && !gps_flying)
     return WING_NAV_DESCEND;
   const bool returning = nav_returning(request);
   if (flags.gps_valid) {
@@ -683,7 +707,7 @@ static float nav_climb_angle(nav_request_t request, wing_nav_state_t next, float
 
 void nav_update_wing(float dt) {
   const uint32_t now_ms = time_millis();
-  const nav_request_t request = nav_request();
+  const nav_request_t request = nav_request(now_ms);
   flags.guided_ready = nav_guided_ready();
   if (request != NAV_REQUEST_MISSION)
     state.nav_target = NAV_TARGET_HOME;
