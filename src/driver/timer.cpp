@@ -1,6 +1,7 @@
 #include "driver/timer.h"
 
 #include "core/profile.h"
+#include "driver/gpio.h"
 
 #define TIMER_ASSIGMENT_MAX 32
 
@@ -15,12 +16,29 @@ static void timer_alloc_dma(timer_use_t use, const target_dma_t *entry) {
 }
 
 void timer_alloc_init() {
-  for (uint32_t i = DMA_DEVICE_DSHOT_CH1; i <= DMA_DEVICE_DSHOT_CH3; i++) {
-    const uint32_t output = i - DMA_DEVICE_DSHOT_CH1;
-    if (!profile_output_slot_uses_protocol(output, OUTPUT_PROTOCOL_DSHOT)) {
+  // motor_dshot_init() gives each GPIO port with a DShot output the next
+  // DSHOT_CHn stream, whichever output slots the port serves.
+  const gpio_port_t *dshot_ports[DMA_DEVICE_DSHOT_CH3 - DMA_DEVICE_DSHOT_CH1 + 1] = {};
+  uint32_t dshot_port_count = 0;
+  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    const gpio_pins_t pin = target.outputs[i].pin;
+    if (pin == PIN_NONE || (target.outputs[i].caps & OUTPUT_CAP_DSHOT) == 0 ||
+        !profile_output_slot_uses_protocol(i, OUTPUT_PROTOCOL_DSHOT)) {
       continue;
     }
-    timer_alloc_dma(TIMER_USE_MOTOR_DSHOT, &target.dma[i]);
+
+    const gpio_port_t *port = gpio_pin_defs[pin].port;
+    uint32_t j = 0;
+    while (j < dshot_port_count && dshot_ports[j] != port) {
+      j++;
+    }
+    if (j == dshot_port_count && dshot_port_count < DMA_DEVICE_DSHOT_CH3 - DMA_DEVICE_DSHOT_CH1 + 1) {
+      dshot_ports[dshot_port_count++] = port;
+    }
+  }
+
+  for (uint32_t i = 0; i < dshot_port_count; i++) {
+    timer_alloc_dma(TIMER_USE_MOTOR_DSHOT, &target.dma[DMA_DEVICE_DSHOT_CH1 + i]);
   }
 
   timer_alloc_dma(TIMER_USE_RGB_LED, &target.dma[DMA_DEVICE_RGB]);
