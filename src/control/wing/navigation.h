@@ -1,5 +1,9 @@
 #pragma once
 
+// GPS ground speed or height above launch that shows a wing in flight.
+static constexpr float WING_FLYING_MIN_SPEED = 3.5f;    // m/s
+static constexpr float WING_FLYING_MIN_ALTITUDE = 5.0f; // meters
+
 // Throttle per degree of climb that holds cruise airspeed without a sensor.
 // Navigation feeds it forward; wing control uses it to estimate airspeed.
 static constexpr float WING_THROTTLE_PER_CLIMB_DEG = 0.015f;
