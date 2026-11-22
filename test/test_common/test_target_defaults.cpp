@@ -160,6 +160,23 @@ void test_target_defaults_apply() {
   TEST_ASSERT_EQUAL(RX_PROTOCOL_SERIAL_AUTO, resolved.receiver.protocol);
   TEST_ASSERT_EQUAL(VTX_PROTOCOL_INVALID, resolved.vtx.protocol);
 
+  // A digital VTX port brings MSP VTX with it, unless the target names an
+  // analog protocol.
+  target.defaults.serial.digital_vtx = SERIAL_PORT3;
+  memset(&resolved, 0, sizeof(profile_t));
+  profile_set_defaults(&resolved);
+  target_defaults_apply(&resolved);
+
+  TEST_ASSERT_EQUAL(SERIAL_PORT3, resolved.serial.digital_vtx);
+  TEST_ASSERT_EQUAL(VTX_PROTOCOL_MSP_VTX, resolved.vtx.protocol);
+
+  target.defaults.vtx.protocol = VTX_PROTOCOL_TRAMP;
+  memset(&resolved, 0, sizeof(profile_t));
+  profile_set_defaults(&resolved);
+  target_defaults_apply(&resolved);
+
+  TEST_ASSERT_EQUAL(VTX_PROTOCOL_TRAMP, resolved.vtx.protocol);
+
   target = backup;
 }
 
