@@ -296,6 +296,69 @@ static void gps_test_feed_mon_rf(uint8_t jamming, uint8_t antenna) {
   gps_task();
 }
 
+static void gps_test_queue_text(const char *text) {
+  ring_buffer_write_multi(serial_gps.rx_buffer, (const uint8_t *)text, strlen(text));
+}
+
+void test_gps_detects_baud_by_listening() {
+  gps_test_reset(0);
+  gps_status.state = GPS_DETECT_BAUD;
+
+  // A silent rate is left without transmitting anything.
+  gps_task();
+  time_test_advance_us(1300000);
+  gps_task();
+  const uint32_t silent_rate = serial_gps.config.baudrate;
+  time_test_advance_us(1000000);
+  gps_task();
+  TEST_ASSERT_EQUAL_UINT32(silent_rate, serial_gps.config.baudrate);
+
+  // Bytes at a wrong rate arrive as garbage and do not confirm it.
+  gps_test_queue_text("\xf8\x1c$GNTXT,01,01,01,More than 100 frame errors*05\r\n\x80$G\xe0");
+  gps_task();
+  time_test_advance_us(300000);
+  gps_task();
+  const uint32_t rate = serial_gps.config.baudrate;
+  TEST_ASSERT_NOT_EQUAL(silent_rate, rate);
+  TEST_ASSERT_EQUAL_UINT32(0, ring_buffer_available(serial_gps.tx_buffer));
+
+  // A valid sentence confirms the rate; only then is the version polled.
+  gps_test_queue_text("$GNTXT,01,01,01,More than 100 frame errors, UART1 RX disabled*04\r\n");
+  gps_task();
+  uint8_t packet[128];
+  TEST_ASSERT_EQUAL_UINT32(8, gps_test_read_packet(packet));
+  TEST_ASSERT_EQUAL_HEX8(0x0a, packet[2]);
+  TEST_ASSERT_EQUAL_HEX8(0x04, packet[3]);
+  serial_gps.tx_done = true;
+  time_test_advance_us(2000000);
+  gps_task();
+  TEST_ASSERT_EQUAL_UINT32(rate, serial_gps.config.baudrate);
+  ring_buffer_clear(serial_gps.tx_buffer);
+  serial_gps.tx_done = true;
+
+  // The version answer arrives behind a saturating NMEA stream and is read in
+  // the same pass. The switch is sent from the detected rate.
+  for (int i = 0; i < 5; i++)
+    gps_test_queue_text("$GNGSA,A,3,02,08,14,22,30,,,,,,,,6.77,5.65,3.73,1*0A\r\n");
+  uint8_t version[160] = {};
+  memcpy(version, "ROM SPG 5.10 (7b202e)", 21);
+  memcpy(version + 30, "000A0000", 8);
+  gps_test_queue_packet(0x0a, 0x04, version, sizeof(version));
+  gps_task();
+  TEST_ASSERT_EQUAL_HEX32(0x000A0000U, gps_status.version);
+  ring_buffer_clear(serial_gps.tx_buffer);
+  gps_task();
+  TEST_ASSERT_EQUAL(GPS_CHANGE_BAUD, gps_status.state);
+  TEST_ASSERT_EQUAL_UINT32(rate, serial_gps.config.baudrate);
+  const char pubx[] = "$PUBX,41,1,0003,0001,115200,0*1E\r\n";
+  char sent[sizeof(pubx)] = {};
+  TEST_ASSERT_EQUAL_UINT32(sizeof(pubx) - 1, ring_buffer_read_multi(serial_gps.tx_buffer, (uint8_t *)sent, sizeof(pubx) - 1));
+  TEST_ASSERT_EQUAL_STRING(pubx, sent);
+
+  profile.serial.gps = SERIAL_PORT_INVALID;
+  gps_init();
+}
+
 void test_gps_interference_reports() {
   gps_test_reset(0x00190000U);
   gps_status.state = GPS_WAITING_FOR_LOCK;

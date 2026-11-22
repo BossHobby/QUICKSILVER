@@ -83,6 +83,11 @@ static constexpr int32_t GPS_EPOCH_MAX_DELAY_MS = 1000;
 static constexpr uint32_t GPS_INTERFERENCE_STALE_MS = 3000;
 // Navigation rate on M8 and before the receiver generation is known.
 static constexpr uint8_t GPS_DEFAULT_RATE_HZ = 10;
+// Silence at a rate for this long moves detection to the next one. Receivers
+// stream NMEA at 1 Hz by default, so the window spans an output epoch.
+static constexpr uint32_t GPS_DETECT_LISTEN_MS = 1200;
+// NMEA 0183 caps a sentence at 82 characters, "$" and "\r\n" included.
+static constexpr uint8_t GPS_NMEA_MAX_LENGTH = 82;
 
 typedef struct {
   uint32_t baud;
@@ -302,6 +307,15 @@ serial_port_t serial_gps = {
 };
 
 static gps_ubx_parser_state_t ubx_parser_state = UBX_SYNC1;
+// NMEA sentence being checked; NMEA only identifies the receiver's baud rate.
+static struct {
+  uint8_t length;   // characters since '$', 0 outside a sentence
+  uint8_t star;     // length at '*', 0 before it
+  uint8_t checksum; // XOR of the characters between '$' and '*'
+  uint8_t received; // checksum digits after '*'
+} nmea = {};
+// A valid frame arrived at the current detection rate.
+static bool baud_detected = false;
 
 static bool is_init = false;
 static bool had_ack = false;
@@ -879,6 +893,8 @@ void gps_init() {
 
   is_init = true;
   ubx_parser_state = UBX_SYNC1;
+  nmea = {};
+  baud_detected = false;
   current_baudrate = next_baudrate;
   configured_dynamic_model = requested_dynamic_model = 0xff;
   epoch_offset_valid = false;
@@ -895,6 +911,57 @@ static bool gps_read_ublox() {
   }
 
   return false;
+}
+
+// Recognises a complete NMEA sentence with a valid checksum.
+static bool gps_parse_nmea(uint8_t data) {
+  if (data == '$') {
+    nmea = {.length = 1};
+    return false;
+  }
+  if (nmea.length == 0)
+    return false;
+  if (++nmea.length > GPS_NMEA_MAX_LENGTH || data < ' ' || data > '~') {
+    nmea.length = 0;
+    return false;
+  }
+  if (nmea.star == 0) {
+    if (data == '*')
+      nmea.star = nmea.length;
+    else
+      nmea.checksum ^= data;
+    return false;
+  }
+
+  uint8_t value = 0;
+  if (data >= '0' && data <= '9') {
+    value = data - '0';
+  } else if (data >= 'A' && data <= 'F') {
+    value = data - 'A' + 10;
+  } else {
+    nmea.length = 0;
+    return false;
+  }
+  nmea.received = (nmea.received << 4) | value;
+  if (nmea.length - nmea.star < 2)
+    return false;
+
+  nmea.length = 0;
+  return nmea.received == nmea.checksum;
+}
+
+// Reports whether a valid UBX or NMEA frame arrived; UBX replies such as the
+// version are handled as usual. A receiver at its defaults can saturate the
+// line with NMEA, so drain the whole buffer: a smaller read lets the RX ring
+// overrun on every sync, and no frame longer than one read arrives intact.
+static bool gps_read_detect() {
+  bool detected = false;
+  uint8_t byte = 0;
+  for (uint32_t count = 0; count < serial_gps.rx_buffer->size && serial_read_byte(&serial_gps, &byte); count++) {
+    detected |= gps_parse_ubx(byte);
+    detected |= gps_parse_nmea(byte);
+  }
+  return detected;
 }
 
 TickType_t gps_task() {
@@ -928,22 +995,26 @@ TickType_t gps_task() {
       break;
     }
 
-    gps_read_ublox();
+    // Bytes sent at a wrong rate reach the receiver as framing errors, and
+    // after 100 a u-blox disables its RX until power-cycled. Receivers stream
+    // NMEA by default, so listen at each rate and poll the version only at
+    // one that delivered a valid frame.
+    if (gps_read_detect())
+      baud_detected = true;
 
-    if (serial_gps.tx_done) {
-      static uint32_t last_version_check = 0;
-      if ((time_millis() - last_baud_rate_change) > 500) {
+    if (!baud_detected) {
+      if ((time_millis() - last_baud_rate_change) > GPS_DETECT_LISTEN_MS) {
         next_baudrate = (next_baudrate + 1) % (sizeof(baudrates) / sizeof(baudrates[0]));
         gps_init();
         last_baud_rate_change = time_millis();
-        last_version_check = time_millis();
-        break;
       }
-      if ((time_millis() - last_version_check) > 50) {
-        gps_send_message(UBX_MON_VER, NULL, 0);
-        last_version_check = time_millis();
-        break;
-      }
+      break;
+    }
+
+    static uint32_t last_version_check = 0;
+    if (serial_gps.tx_done && (time_millis() - last_version_check) > 50) {
+      gps_send_message(UBX_MON_VER, NULL, 0);
+      last_version_check = time_millis();
     }
     break;
   }
