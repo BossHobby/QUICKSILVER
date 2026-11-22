@@ -497,6 +497,15 @@ static bool wing_launch_abort_allowed(uint32_t now_ms) {
   return now_ms - launch.detected_ms >= profile.wing.autolaunch.min_time_ms && wing_launch_sticks_moved();
 }
 
+// Before the throw, roll or pitch with the throttle below launch idle drops
+// the launch for a manual takeoff; a held throttle keeps the plane in hand
+// from bumping the sticks.
+static bool wing_launch_ground_abort() {
+  const bool throttle_low = state.rx_filtered.throttle < THROTTLE_SAFETY ||
+                            state.throttle < profile.wing.autolaunch.idle_throttle;
+  return throttle_low && wing_launch_sticks_moved();
+}
+
 static bool wing_launch_is_flying() {
   if (launch.flying_detected || state.wing_launch_state == WING_LAUNCH_DONE) {
     return true;
@@ -609,6 +618,10 @@ static float wing_autolaunch_throttle() {
   const uint32_t now_ms = time_millis();
   const uint32_t elapsed_ms = now_ms - launch.state_start_ms;
   wing_launch_update_flying_detected(now_ms);
+  if (state.wing_launch_state < WING_LAUNCH_DETECTED && wing_launch_ground_abort()) {
+    wing_launch_set_state(WING_LAUNCH_ABORTED);
+    return state.throttle;
+  }
   switch (state.wing_launch_state) {
   case WING_LAUNCH_IDLE:
     if (state.rx_filtered.throttle < THROTTLE_SAFETY) {
