@@ -181,7 +181,7 @@ static uint8_t displayport_map_attr(uint8_t attr) {
 
 void displayport_init() {
   serial_port_config_t config = {};
-  config.port = profile.serial.hdzero;
+  config.port = profile.serial.digital_vtx;
   config.baudrate = 115200;
   config.direction = SERIAL_DIR_TX_RX;
   config.stop_bits = SERIAL_STOP_BITS_1;

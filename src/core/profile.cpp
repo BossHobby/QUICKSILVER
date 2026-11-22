@@ -301,9 +301,9 @@ const profile_t default_profile = {
         .smart_audio = SERIAL_PORT_INVALID,
 #endif
 #ifdef DISPLAYPORT_USART
-        .hdzero = DISPLAYPORT_USART,
+        .digital_vtx = DISPLAYPORT_USART,
 #else
-        .hdzero = SERIAL_PORT_INVALID,
+        .digital_vtx = SERIAL_PORT_INVALID,
 #endif
 #ifdef GPS_USART
         .gps = GPS_USART,

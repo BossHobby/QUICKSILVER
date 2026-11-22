@@ -33,6 +33,7 @@
 //        navigation: name the multirotor speed and throttle limits travel_speed and throttle_*
 //            (were rth_cruise_speed and rth_throttle_*); they apply to every target.
 //        navigation: add the multirotor position hold switch after the mission switch.
+//        serial: rename hdzero to digital_vtx.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
 // 0.2.5 (c9dec9f1): add osd profiles.
@@ -460,7 +461,7 @@ typedef struct {
 typedef struct {
   serial_ports_t rx;
   serial_ports_t smart_audio;
-  serial_ports_t hdzero;
+  serial_ports_t digital_vtx;
   serial_ports_t gps;
 } profile_serial_t;
 
@@ -468,7 +469,7 @@ typedef struct {
   START_STRUCT(profile_serial_t) \
   MEMBER(rx, uint8_t)            \
   MEMBER(smart_audio, uint8_t)   \
-  MEMBER(hdzero, uint8_t)        \
+  MEMBER(digital_vtx, uint8_t)   \
   MEMBER(gps, uint8_t)           \
   END_STRUCT()
 

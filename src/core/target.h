@@ -333,7 +333,7 @@ typedef struct {
 typedef struct {
   serial_ports_t rx;
   serial_ports_t smart_audio;
-  serial_ports_t hdzero;
+  serial_ports_t digital_vtx;
   serial_ports_t gps;
 } target_defaults_serial_t;
 
@@ -341,7 +341,7 @@ typedef struct {
   START_STRUCT(target_defaults_serial_t) \
   MEMBER(rx, uint8_t)                    \
   MEMBER(smart_audio, uint8_t)           \
-  MEMBER(hdzero, uint8_t)                \
+  MEMBER(digital_vtx, uint8_t)           \
   MEMBER(gps, uint8_t)                   \
   END_STRUCT()
 

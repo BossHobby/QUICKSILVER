@@ -27,7 +27,7 @@ static bool blink_phase = false;
 
 void osd_device_init() {
 #ifdef USE_DIGITAL_VTX
-  if (profile.serial.hdzero != SERIAL_PORT_INVALID) {
+  if (profile.serial.digital_vtx != SERIAL_PORT_INVALID) {
     target_set_feature(FEATURE_OSD);
     osd_device = OSD_DEVICE_DISPLAYPORT;
     cols = DISPLAYPORT_COLS;
