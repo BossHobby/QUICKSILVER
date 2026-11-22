@@ -16,7 +16,7 @@
 
 void test_target_defaults_cbor_decode() {
   // defaults:
-  //   serial: {rx: 3, smart_audio: 2, hdzero: 4, gps: 101}
+  //   serial: {rx: 3, smart_audio: 2, digital_vtx: 4, gps: 101}
   //   receiver: {protocol: crsf}
   //   vtx: {protocol: smart_audio}
   uint8_t populated[] = {
@@ -24,7 +24,7 @@ void test_target_defaults_cbor_decode() {
       0x66, 's', 'e', 'r', 'i', 'a', 'l', 0xa4,
       0x62, 'r', 'x', 0x03,
       0x6b, 's', 'm', 'a', 'r', 't', '_', 'a', 'u', 'd', 'i', 'o', 0x02,
-      0x66, 'h', 'd', 'z', 'e', 'r', 'o', 0x04,
+      0x6b, 'd', 'i', 'g', 'i', 't', 'a', 'l', '_', 'v', 't', 'x', 0x04,
       0x63, 'g', 'p', 's', 0x18, 0x65,
       0x68, 'r', 'e', 'c', 'e', 'i', 'v', 'e', 'r', 0xa1,
       0x68, 'p', 'r', 'o', 't', 'o', 'c', 'o', 'l', 0x64, 'c', 'r', 's', 'f',
@@ -38,7 +38,7 @@ void test_target_defaults_cbor_decode() {
 
   TEST_ASSERT_EQUAL(SERIAL_PORT3, decoded.defaults.serial.rx);
   TEST_ASSERT_EQUAL(SERIAL_PORT2, decoded.defaults.serial.smart_audio);
-  TEST_ASSERT_EQUAL(SERIAL_PORT4, decoded.defaults.serial.hdzero);
+  TEST_ASSERT_EQUAL(SERIAL_PORT4, decoded.defaults.serial.digital_vtx);
   TEST_ASSERT_EQUAL(SERIAL_SOFT_PORT1, decoded.defaults.serial.gps);
   TEST_ASSERT_EQUAL(RX_PROTOCOL_CRSF, decoded.defaults.receiver.protocol);
   TEST_ASSERT_EQUAL(VTX_PROTOCOL_SMART_AUDIO, decoded.defaults.vtx.protocol);
@@ -120,7 +120,7 @@ void test_target_defaults_apply() {
 
   target.defaults.serial.rx = SERIAL_PORT3;
   target.defaults.serial.smart_audio = SERIAL_PORT2;
-  target.defaults.serial.hdzero = SERIAL_PORT5; // not defined by the target
+  target.defaults.serial.digital_vtx = SERIAL_PORT5; // not defined by the target
   target.defaults.serial.gps = SERIAL_SOFT_PORT1;
   target.defaults.vtx.protocol = VTX_PROTOCOL_SMART_AUDIO;
 
@@ -135,7 +135,7 @@ void test_target_defaults_apply() {
   TEST_ASSERT_EQUAL(SERIAL_PORT3, resolved.serial.rx);
   TEST_ASSERT_EQUAL(SERIAL_PORT2, resolved.serial.smart_audio);
   // UART5 is not a target port: the assignment is skipped.
-  TEST_ASSERT_EQUAL(SERIAL_PORT_INVALID, resolved.serial.hdzero);
+  TEST_ASSERT_EQUAL(SERIAL_PORT_INVALID, resolved.serial.digital_vtx);
   TEST_ASSERT_EQUAL(SERIAL_SOFT_PORT1, resolved.serial.gps);
 
   TEST_ASSERT_EQUAL(RX_PROTOCOL_CRSF, resolved.receiver.protocol);
@@ -216,7 +216,7 @@ void test_target_defaults_storage_capacity() {
 
   full.defaults.serial.rx = (serial_ports_t)(SERIAL_PORT_MAX - 1);
   full.defaults.serial.smart_audio = SERIAL_SOFT_PORT1;
-  full.defaults.serial.hdzero = SERIAL_SOFT_PORT3;
+  full.defaults.serial.digital_vtx = SERIAL_SOFT_PORT3;
   full.defaults.serial.gps = SERIAL_SOFT_PORT2;
   full.defaults.receiver.protocol = RX_PROTOCOL_CRSF;
   full.defaults.vtx.protocol = VTX_PROTOCOL_SMART_AUDIO;

@@ -105,8 +105,8 @@ void target_defaults_apply(profile_t *profile) {
   if (defaults->serial.smart_audio != SERIAL_PORT_INVALID && target_defaults_port_defined(defaults->serial.smart_audio)) {
     profile->serial.smart_audio = defaults->serial.smart_audio;
   }
-  if (defaults->serial.hdzero != SERIAL_PORT_INVALID && target_defaults_port_defined(defaults->serial.hdzero)) {
-    profile->serial.hdzero = defaults->serial.hdzero;
+  if (defaults->serial.digital_vtx != SERIAL_PORT_INVALID && target_defaults_port_defined(defaults->serial.digital_vtx)) {
+    profile->serial.digital_vtx = defaults->serial.digital_vtx;
   }
   if (defaults->serial.gps != SERIAL_PORT_INVALID && target_defaults_port_defined(defaults->serial.gps)) {
     profile->serial.gps = defaults->serial.gps;
