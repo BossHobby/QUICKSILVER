@@ -465,6 +465,8 @@ typedef struct {
 
   uint8_t gyro_id;
   uint8_t vehicle_type;
+
+  uint8_t uid[8]; // get_chip_uid64(), big-endian
 } target_info_t;
 
 #define TARGET_INFO_MEMBERS                            \
@@ -477,6 +479,7 @@ typedef struct {
   ARRAY_MEMBER(rx_protocols, RX_PROTOCOL_MAX, uint8_t) \
   MEMBER(gyro_id, uint8_t)                             \
   MEMBER(vehicle_type, uint8_t)                        \
+  BSTR_MEMBER(uid, 8)                                  \
   END_STRUCT()
 
 extern target_t target;
@@ -496,6 +499,8 @@ bool target_sdcard_sdio_valid();
 bool target_sdio_port_valid(const target_sdio_port_t *port);
 bool target_spi_port_valid(const target_spi_port_t *port);
 bool target_i2c_port_valid(const target_i2c_port_t *port);
+// Fills the runtime fields of target_info; runs before USB can report it.
+void target_info_init();
 void target_init();
 
 cbor_result_t cbor_encode_gpio_pins_t(cbor_value_t *enc, const gpio_pins_t *t);

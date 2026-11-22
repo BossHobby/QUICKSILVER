@@ -7,6 +7,7 @@
 #include "driver/gpio.h"
 #include "io/quic.h"
 #include "util/cbor_helper.h"
+#include "util/util.h"
 
 FAST_RAM target_t target = {
     .name = "unknown",
@@ -59,6 +60,7 @@ target_info_t target_info = {
 #define ARRAY_MEMBER CBOR_ENCODE_ARRAY_MEMBER
 #define INDEX_ARRAY_MEMBER CBOR_ENCODE_INDEX_ARRAY_MEMBER
 #define STR_ARRAY_MEMBER CBOR_ENCODE_STR_ARRAY_MEMBER
+#define BSTR_MEMBER CBOR_ENCODE_BSTR_MEMBER
 
 TARGET_DMA_MEMBERS
 TARGET_LED_MEMBERS
@@ -89,6 +91,7 @@ TARGET_INFO_MEMBERS
 #undef ARRAY_MEMBER
 #undef INDEX_ARRAY_MEMBER
 #undef STR_ARRAY_MEMBER
+#undef BSTR_MEMBER
 
 #define START_STRUCT CBOR_START_STRUCT_DECODER
 #define END_STRUCT CBOR_END_STRUCT_DECODER
@@ -542,6 +545,13 @@ bool target_spi_port_valid(const target_spi_port_t *port) {
 
 bool target_i2c_port_valid(const target_i2c_port_t *port) {
   return port->index != 0 && port->sda != PIN_NONE && port->scl != PIN_NONE;
+}
+
+void target_info_init() {
+  const uint64_t uid = get_chip_uid64();
+  for (uint32_t i = 0; i < sizeof(target_info.uid); i++) {
+    target_info.uid[i] = uid >> (8 * (sizeof(target_info.uid) - 1 - i));
+  }
 }
 
 void target_init() {
