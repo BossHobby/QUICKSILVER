@@ -10,7 +10,7 @@ constexpr float EARTH_RADIUS = 6371000.0f; // meters
 constexpr float METERS_PER_DEGREE_LAT = EARTH_RADIUS * M_PI_F / 180.0f;
 constexpr uint32_t NAV_GPS_STALE_MS = 500;
 constexpr uint8_t NAV_COMMAND_MISSION_RESUME = 0xFF; // nav_command_t.index: resume where the mission left off
-constexpr uint8_t NAV_COMMAND_ITEMS_MAX = 4;         // waypoints per MISSION_ITEMS, as many as fit a CRSF frame
+constexpr uint8_t NAV_COMMAND_ITEMS_MAX = 3;         // waypoints per MISSION_ITEMS, as many as fit a CRSF frame
 
 // Ground station commands, delivered by the QUIC_RT link. Guided commands need
 // the pilot to grant guided flight with the mission switch; mission edits only
@@ -55,6 +55,16 @@ typedef struct {
   bool complete;          // the last waypoint was reached; the mission starts over from the first
   bool returning;         // returning home for the mission switch, after MISSION_END_RTH or a ground station RTH; turning it off ends the return
   gps_coord_t leg_origin; // where the leg to the current target started; its line runs from here
+  // A leg flown on from the previous waypoint to one with an arc follows a
+  // circle instead of the line. Any other leg is straight: arc_radius is zero.
+  vec2_t arc_center; // meters from leg_origin
+  float arc_radius;  // meters
+  float arc_sweep;   // radians round the center from leg_origin to the target, positive clockwise
+  // Radians the vehicle has flown round the center from leg_origin, followed
+  // from pass to pass: its bearing from the center alone cannot tell before
+  // the origin from past the target on the part of the circle the arc leaves out.
+  float arc_flown;
+  float arc_altitude_flown; // arc_flown where the altitude change toward the target started
   gps_coord_t altitude_origin; // where the altitude change toward the target started
   float leg_altitude;          // meters above launch at altitude_origin
   mission_waypoint_t guided; // ground station target flown as NAV_TARGET_GUIDED
@@ -71,13 +81,40 @@ bool nav_within(gps_coord_t target, float radius);
 // target: origin_altitude at its start, changing evenly to target_altitude.
 // rate receives the target's change in m/s at the ground velocity.
 float nav_leg_altitude(gps_coord_t origin, float origin_altitude, gps_coord_t target, float target_altitude, float *rate);
+// Where the vehicle is on the leg to the current target: the line from
+// leg_origin, or its arc.
+typedef struct {
+  vec2_t tangent;  // unit direction of the leg at its point closest to the vehicle; zero for a leg without length
+  vec2_t cross;    // meters from the vehicle to that point
+  float left;      // meters of the leg from that point to the target, negative past it
+  float curvature; // 1/m the leg turns at, positive clockwise; zero on a line
+} nav_leg_position_t;
+
+// Follows nav_route.arc_flown on to the current position.
+nav_leg_position_t nav_leg_position();
+
+// The turn at the active mission waypoint onto the leg to the one after it.
+typedef struct {
+  vec2_t in;    // unit direction the leg arrives on; zero for a leg shorter than a meter
+  vec2_t out;   // unit direction the next leg leaves on; zero likewise
+  float length; // meters of the next leg, round its arc
+  float radius; // meters of the next leg's arc; zero for a line
+} nav_corner_t;
+
+// Only with a waypoint after the active one.
+nav_corner_t nav_route_corner();
+// nav_leg_altitude() for the leg to the current target, along its arc if it
+// has one.
+float nav_route_altitude(float target_altitude, float *rate);
 // The waypoint a mission (re)start flies to.
 uint8_t nav_route_resume();
-// Start the leg to the current target here.
+// Start the leg to the current target here, as a straight line.
 void nav_route_start_leg();
 // Change altitude evenly from here over the rest of the leg, keeping its line.
 void nav_route_restart_altitude();
-// Fly on to the next waypoint; the leg's altitude changes from the one reached.
+// Fly on to the next waypoint, along its arc if it has one; the leg's altitude
+// changes from the one reached. A TAKEOFF climbed where the craft lifted off:
+// its leg runs straight from the current position.
 void nav_route_next();
 // The guided target, the active mission waypoint, or home.
 gps_coord_t nav_target_coord();

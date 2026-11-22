@@ -192,6 +192,7 @@ extern void test_quic_compresses_reply_only_when_requested(void);
 extern void test_mission_full_route_roundtrip(void);
 extern void test_mission_rejects_oversized_and_out_of_range_routes(void);
 extern void test_mission_waypoint_types(void);
+extern void test_mission_arcs(void);
 extern void test_mission_upload_persists_and_rejects_invalid_routes(void);
 extern void test_mission_crc_covers_the_sent_route(void);
 extern void test_mission_link_replaces_the_route_and_saves_it_on_the_ground(void);
@@ -492,6 +493,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_mission_full_route_roundtrip);
   RUN_TEST(test_mission_rejects_oversized_and_out_of_range_routes);
   RUN_TEST(test_mission_waypoint_types);
+  RUN_TEST(test_mission_arcs);
   RUN_TEST(test_mission_upload_persists_and_rejects_invalid_routes);
   RUN_TEST(test_mission_crc_covers_the_sent_route);
   RUN_TEST(test_mission_link_replaces_the_route_and_saves_it_on_the_ground);

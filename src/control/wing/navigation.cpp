@@ -184,10 +184,10 @@ static void circle_place_at(gps_coord_t center) {
 }
 
 // L1 loiter guidance on the GPS ground track, as in ArduPlane's
-// AP_L1_Control::update_loiter(). Returns lateral acceleration in m/s^2,
-// positive to the right.
-static float circle_lateral_accel() {
-  const vec2_t position = nav_position_delta(circle.origin, state.position) - circle.center;
+// AP_L1_Control::update_loiter(), round a circle of radius meters with the
+// aircraft at position from its center; direction is 1 clockwise, -1 counter.
+// Returns lateral acceleration in m/s^2, positive to the right.
+static float orbit_lateral_accel(vec2_t position, float radius, float direction) {
   const float distance = vec2_magnitude(position);
 
   const vec2_t vel = vec3_horizontal(state.velocity);
@@ -201,8 +201,6 @@ static float circle_lateral_accel() {
     radial = vel * (1.0f / speed);
   }
 
-  const float direction = loiter_direction();
-  const float radius = MAX(profile.navigation.loiter_radius, 1.0f);
   const float omega = 2.0f * M_PI_F / L1_PERIOD;
 
   // Capture: steer the velocity vector toward the center from outside.
@@ -230,6 +228,11 @@ static float circle_lateral_accel() {
   if (radial_error > 0.0f && direction * capture < direction * circle_accel)
     return capture;
   return circle_accel;
+}
+
+static float circle_lateral_accel() {
+  const vec2_t position = nav_position_delta(circle.origin, state.position) - circle.center;
+  return orbit_lateral_accel(position, MAX(profile.navigation.loiter_radius, 1.0f), loiter_direction());
 }
 
 static void cruise_lock() {
@@ -299,9 +302,14 @@ static void route_begin_leg(bool guided, bool underway) {
 
 // Track the leg from its origin to the target, as ArduPlane does between
 // waypoints, so crosswind does not curve the path away from the planned line.
+// An arc is circled like a loiter, at its own radius and direction.
 static float mission_lateral_accel() {
   const gps_coord_t target = route_waypoint().coord;
   gps_coord_t origin = nav_route.leg_origin;
+  if (nav_route.arc_radius > 0.0f) {
+    const vec2_t position = nav_position_delta(origin, state.position) - nav_route.arc_center;
+    return orbit_lateral_accel(position, nav_route.arc_radius, copysignf(1.0f, nav_route.arc_sweep));
+  }
   vec2_t leg = nav_position_delta(origin, target);
   float length = vec2_magnitude(leg);
   if (length < 1.0f) {
@@ -313,15 +321,6 @@ static float mission_lateral_accel() {
   return track_lateral_accel(origin, leg * (1.0f / length), length, l1_distance(nav.speed));
 }
 
-// Beyond the line through the waypoint square to the leg. Turning toward a
-// point inside the turn circle, or with wind stretching it, can otherwise
-// orbit just outside the arrival radius.
-static bool nav_mission_passed() {
-  const gps_coord_t waypoint = route_waypoint().coord;
-  const vec2_t leg = nav_position_delta(nav_route.leg_origin, waypoint);
-  return vec2_dot(leg, nav_position_delta(waypoint, state.position)) > 0.0f;
-}
-
 // tan(turn / 2) for the turn onto the next leg: a turn of that radius started
 // this fraction of it before the waypoint rolls out on the next leg, as in
 // ArduPlane's turn_distance(). Turns of 90 degrees or more, and the last
@@ -329,20 +328,28 @@ static bool nav_mission_passed() {
 static float nav_mission_turn_scale() {
   if (route_guided() || nav_route.index + 1 >= mission.count)
     return 1.0f;
-  const gps_coord_t waypoint = mission.waypoints[nav_route.index].coord;
-  const vec2_t in = nav_position_delta(nav_route.leg_origin, waypoint);
-  const vec2_t out = nav_position_delta(waypoint, mission.waypoints[nav_route.index + 1].coord);
-  const float dot = vec2_dot(in, out);
+  // The turn is between where this leg arrives and where the next leaves,
+  // which an arc on either changes.
+  const nav_corner_t corner = nav_route_corner();
+  const float dot = vec2_dot(corner.in, corner.out);
   if (dot <= 0.0f)
     return 1.0f;
-  return MIN(fabsf(vec2_cross(in, out)) / (vec2_magnitude(in) * vec2_magnitude(out) + dot), 1.0f);
+  return MIN(fabsf(vec2_cross(corner.in, corner.out)) / (1.0f + dot), 1.0f);
 }
 
 static bool nav_mission_arrived(float max_bank) {
   const float bank = MAX(max_bank, MISSION_ARRIVAL_MIN_BANK);
   const float turn_radius = MIN(nav.speed * nav.speed * fastcos(bank) / (GRAVITY * fastsin(bank)), MISSION_ARRIVAL_MAX_RADIUS);
   const float radius = MAX(turn_radius * nav_mission_turn_scale(), MISSION_ARRIVAL_MIN_RADIUS);
-  return state.nav_target_distance <= radius || nav_mission_passed();
+  const nav_leg_position_t leg = nav_leg_position();
+  // The arc left to fly, not the distance: an arc of more than a half circle
+  // starts closer to its waypoint than it gets on the way round.
+  if (leg.curvature != 0.0f)
+    return leg.left <= radius;
+  // Or beyond the line through the waypoint square to the leg. Turning toward
+  // a point inside the turn circle, or with wind stretching it, can otherwise
+  // orbit just outside the arrival radius.
+  return state.nav_target_distance <= radius || leg.left < 0.0f;
 }
 
 static void nav_mission_advance(float max_bank, uint32_t now_ms) {
@@ -628,7 +635,7 @@ static float nav_climb_angle(nav_request_t request, wing_nav_state_t next, float
     const mission_waypoint_t &target = route_waypoint();
     float leg_rate = 0.0f;
     const float target_altitude = next == WING_NAV_MISSION
-                                      ? nav_leg_altitude(nav_route.altitude_origin, nav_route.leg_altitude, target.coord, target.altitude, &leg_rate)
+                                      ? nav_route_altitude(target.altitude, &leg_rate)
                                       : target.altitude;
     if (altitude.target_valid && !(altitude.hold_exact && route == ROUTE_GUIDED_ARRIVED))
       altitude.target = target_altitude;

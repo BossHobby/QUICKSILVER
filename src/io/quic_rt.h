@@ -71,6 +71,7 @@ typedef struct {
   uint8_t speed;    // 0.1 m/s horizontal; zero uses navigation.travel_speed
   uint8_t type;     // mission_waypoint_type_t
   uint8_t hold;     // seconds on a STOP waypoint
+  int16_t arc;      // degrees the leg from the previous waypoint turns through, positive clockwise
 } __attribute__((__packed__)) quic_rt_mission_item_t;
 
 typedef struct {

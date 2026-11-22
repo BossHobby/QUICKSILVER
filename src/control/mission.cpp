@@ -30,6 +30,12 @@ static constexpr uint8_t MISSION_WAYPOINT_TYPES = MISSION_WAYPOINT_TYPE_MAX;
 // A wing flies through every waypoint and takes off and lands by hand.
 static constexpr uint8_t MISSION_WAYPOINT_TYPES = MISSION_WAYPOINT_PASS;
 #endif
+// Degrees a leg may turn through. A rover flies no missions.
+#ifdef VEHICLE_ROVER
+static constexpr int16_t MISSION_ARC_MAX = 0;
+#else
+static constexpr int16_t MISSION_ARC_MAX = MISSION_ARC_LIMIT;
+#endif
 // The speed field's range, reported to the planner.
 static constexpr float MISSION_SPEED_MAX = UINT8_MAX * MISSION_SPEED_SCALE; // m/s
 static constexpr float MISSION_SAVE_MAX_SPEED = 3.5f; // m/s; faster, a disarmed vehicle may still be flying
@@ -40,8 +46,8 @@ mission_t mission;
 // holds profile_mutex, which keeps disarmed Flight from committing meanwhile.
 static std::atomic<bool> save_pending{false};
 
-// Waypoints are flat on the wire: {lat, lon, alt, speed, type, hold} in their
-// stored units.
+// Waypoints are flat on the wire: {lat, lon, alt, speed, type, hold, arc} in
+// their stored units.
 static cbor_result_t cbor_encode_mission_waypoint_t(cbor_value_t *enc, const mission_waypoint_t *wp) {
   cbor_result_t res = CBOR_OK;
   CBOR_CHECK_ERROR(res = cbor_encode_map_indefinite(enc));
@@ -57,6 +63,8 @@ static cbor_result_t cbor_encode_mission_waypoint_t(cbor_value_t *enc, const mis
   CBOR_CHECK_ERROR(res = cbor_encode_uint8_t(enc, &wp->type));
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "hold"));
   CBOR_CHECK_ERROR(res = cbor_encode_uint8_t(enc, &wp->hold));
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "arc"));
+  CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &wp->arc));
   return cbor_encode_end_indefinite(enc);
 }
 
@@ -80,6 +88,8 @@ static cbor_result_t cbor_decode_mission_waypoint_t(cbor_value_t *dec, mission_w
       CBOR_CHECK_ERROR(res = cbor_decode_uint8_t(dec, &wp->type));
     } else if (buf_equal_string(name, name_len, "hold")) {
       CBOR_CHECK_ERROR(res = cbor_decode_uint8_t(dec, &wp->hold));
+    } else if (buf_equal_string(name, name_len, "arc")) {
+      CBOR_CHECK_ERROR(res = cbor_decode_int16_t(dec, &wp->arc));
     } else {
       CBOR_CHECK_ERROR(res = cbor_decode_skip(dec));
     }
@@ -99,6 +109,8 @@ bool mission_waypoint_valid(const mission_waypoint_t *wp) {
     return false;
   if (wp->hold && wp->type != MISSION_WAYPOINT_STOP)
     return false;
+  if (wp->arc < -MISSION_ARC_MAX || wp->arc > MISSION_ARC_MAX)
+    return false;
   if (wp->speed && wp->speed * MISSION_SPEED_SCALE < MISSION_SPEED_MIN - 0.001f)
     return false;
   const int16_t altitude_min = wp->type == MISSION_WAYPOINT_LAND ? MISSION_GROUND_ALTITUDE_MIN : MISSION_ALTITUDE_MIN;
@@ -116,6 +128,9 @@ bool mission_valid(const mission_t *m) {
     if ((wp->type == MISSION_WAYPOINT_TAKEOFF && i != 0) ||
         (wp->type == MISSION_WAYPOINT_LAND && i + 1 != m->count))
       return false;
+    // An arc curves the leg from the previous waypoint.
+    if (wp->arc && i == 0)
+      return false;
   }
   return true;
 }
@@ -125,13 +140,14 @@ uint16_t mission_crc(const mission_t *m) {
   uint16_t crc = crc16_ccitt_data(0xFFFF, header, sizeof(header));
   for (uint32_t i = 0; i < m->count && i < MISSION_WAYPOINT_MAX; i++) {
     const mission_waypoint_t *wp = &m->waypoints[i];
-    uint8_t item[13];
+    uint8_t item[15];
     memcpy(item, &wp->coord.lat, 4);
     memcpy(item + 4, &wp->coord.lon, 4);
     memcpy(item + 8, &wp->altitude, 2);
     item[10] = wp->speed;
     item[11] = wp->type;
     item[12] = wp->hold;
+    memcpy(item + 13, &wp->arc, 2);
     crc = crc16_ccitt_data(crc, item, sizeof(item));
   }
   return crc;
@@ -175,6 +191,10 @@ COLD_CODE cbor_result_t cbor_encode_mission_t(cbor_value_t *enc, const mission_t
   CBOR_CHECK_ERROR(res = cbor_encode_float(enc, &MISSION_SPEED_MAX));
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "min_ground_alt"));
   CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &MISSION_GROUND_ALTITUDE_MIN));
+  // Degrees a leg may turn through either way; zero on a vehicle that flies
+  // no arcs.
+  CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "max_arc"));
+  CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &MISSION_ARC_MAX));
   // The vehicle accepts the waypoint types below this.
   CBOR_CHECK_ERROR(res = cbor_encode_str(enc, "waypoint_types"));
   CBOR_CHECK_ERROR(res = cbor_encode_uint8_t(enc, &MISSION_WAYPOINT_TYPES));

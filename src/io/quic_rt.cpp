@@ -113,6 +113,7 @@ static bool quic_rt_decode_command(const uint8_t *body, uint8_t size, nav_comman
           .speed = msg.speed,
           .type = msg.type,
           .hold = msg.hold,
+          .arc = msg.arc,
       };
     }
     return true;

@@ -35,7 +35,8 @@ typedef struct {
   uint8_t speed;    // 0.1 m/s horizontal; zero uses navigation.travel_speed. A wing flies at navigation.cruise_throttle instead.
   uint8_t type;     // mission_waypoint_type_t; guided targets are STOP
   uint8_t hold;     // seconds to stay on a STOP waypoint before flying on; zero on other types
-  uint8_t reserved[3]; // zero, so equal waypoints compare equal byte for byte
+  uint8_t reserved; // zero, so equal waypoints compare equal byte for byte
+  int16_t arc;      // degrees the leg from the previous waypoint turns through on a circle, positive clockwise; zero flies the straight line
 } mission_waypoint_t;
 static_assert(sizeof(mission_waypoint_t) == 16, "waypoints pack without padding");
 
@@ -43,6 +44,10 @@ static constexpr float MISSION_SPEED_SCALE = 0.1f; // m/s per mission_waypoint_t
 // Slowest set waypoint speed. Multirotor navigation fails a leg that gains
 // less than 5 m in 15 s, so slower legs would fail even in still air.
 static constexpr float MISSION_SPEED_MIN = 1.0f; // m/s
+
+// The widest arc a leg may turn through. A full circle has no chord to place
+// it by, and close to one the radius grows without bound.
+static constexpr int16_t MISSION_ARC_LIMIT = 330; // degrees
 
 // Uploaded by USB while disarmed, or replaced by a QUIC_RT commit applied in
 // Flight at any time; saved in its own flash block and read by Flight
@@ -63,14 +68,16 @@ cbor_result_t cbor_decode_mission_t(cbor_value_t *dec, mission_t *m);
 
 // Set, in coordinate range, of a type the vehicle flies, at a speed of at
 // least MISSION_SPEED_MIN when set, and within its altitude limits above
-// launch; a LAND ground height has its own. Only a STOP waypoint holds.
+// launch; a LAND ground height has its own. Only a STOP waypoint holds, and
+// an arc is one the vehicle flies.
 bool mission_waypoint_valid(const mission_waypoint_t *wp);
-// Every waypoint is valid, TAKEOFF only comes first, LAND only last, and the
-// end action is known. A mission ending in LAND ignores its end action.
+// Every waypoint is valid, TAKEOFF only comes first, LAND only last, the
+// first waypoint has no leg to curve, and the end action is known. A mission
+// ending in LAND ignores its end action.
 bool mission_valid(const mission_t *m);
 // CRC-16/CCITT-FALSE over count, end_action and each waypoint as QUIC_RT sends
-// it: lat, lon (int32), altitude (int16), speed, type and hold (uint8),
-// little-endian.
+// it: lat, lon (int32), altitude (int16), speed, type and hold (uint8), arc
+// (int16), little-endian.
 uint16_t mission_crc(const mission_t *m);
 
 // Flight: the mission was replaced over QUIC_RT and is not in flash yet.

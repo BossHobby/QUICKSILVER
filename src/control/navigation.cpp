@@ -403,25 +403,156 @@ float nav_leg_altitude(gps_coord_t origin, float origin_altitude, gps_coord_t ta
   return origin_altitude + constrain(progress, 0.0f, 1.0f) * change;
 }
 
+// Where the vehicle is on the leg's arc.
+typedef struct {
+  vec2_t radial;  // unit vector from the arc's center to the vehicle
+  float distance; // meters from the center
+  float flown;    // nav_route.arc_flown
+} nav_arc_position_t;
+
+// Only while nav_route.arc_radius is set.
+static nav_arc_position_t nav_arc_position() {
+  // The leg origin lies on the circle, opposite the center offset.
+  const vec2_t start = nav_route.arc_center * (-1.0f / nav_route.arc_radius);
+  const vec2_t offset = nav_position_delta(nav_route.leg_origin, state.position) - nav_route.arc_center;
+  nav_arc_position_t position = {.radial = start, .distance = vec2_magnitude(offset)};
+  if (position.distance > 0.1f)
+    position.radial = offset * (1.0f / position.distance);
+
+  const float direction = copysignf(1.0f, nav_route.arc_sweep);
+  const float angle = atan2approx_rad(direction * vec2_cross(start, position.radial), vec2_dot(start, position.radial));
+  // The turn closest to where the vehicle was.
+  nav_route.arc_flown = angle + 2.0f * M_PI_F * roundf((nav_route.arc_flown - angle) / (2.0f * M_PI_F));
+  position.flown = nav_route.arc_flown;
+  return position;
+}
+
+nav_leg_position_t nav_leg_position() {
+  if (nav_route.arc_radius > 0.0f) {
+    const nav_arc_position_t arc = nav_arc_position();
+    const float direction = copysignf(1.0f, nav_route.arc_sweep);
+    return {
+        .tangent = vec2_t{{-arc.radial.east, arc.radial.north}} * direction,
+        .cross = arc.radial * (nav_route.arc_radius - arc.distance),
+        .left = (fabsf(nav_route.arc_sweep) - arc.flown) * nav_route.arc_radius,
+        .curvature = direction / nav_route.arc_radius,
+    };
+  }
+  const gps_coord_t target = nav_target_coord();
+  const vec2_t leg = nav_position_delta(nav_route.leg_origin, target);
+  const float length = vec2_magnitude(leg);
+  nav_leg_position_t position = {};
+  if (length < 0.01f)
+    return position;
+  const vec2_t delta = nav_position_delta(state.position, target);
+  position.tangent = leg * (1.0f / length);
+  position.left = vec2_dot(delta, position.tangent);
+  position.cross = delta - position.tangent * position.left;
+  return position;
+}
+
+// Radius in meters of the circle an arc of sweep radians on a chord follows.
+static float nav_arc_radius(float chord, float sweep) {
+  return 0.5f * chord / fastsin(0.5f * fabsf(sweep));
+}
+
+// Unit direction of the leg from start to end where it leaves start, or
+// where it reaches end; sweep is its arc in radians, zero for the line.
+// Zero for a leg shorter than a meter.
+static vec2_t nav_leg_direction(gps_coord_t start, gps_coord_t end, float sweep, bool at_end) {
+  const vec2_t chord = nav_position_delta(start, end);
+  const float length = vec2_magnitude(chord);
+  if (length < 1.0f)
+    return {};
+  // A clockwise arc leaves left of its chord by half its sweep and arrives
+  // right of it by as much.
+  const vec2_t dir = chord * (1.0f / length);
+  if (sweep == 0.0f)
+    return dir;
+  const float turn = at_end ? 0.5f * sweep : -0.5f * sweep;
+  const float sin_turn = fastsin(turn);
+  const float cos_turn = fastcos(turn);
+  return {{dir.north * cos_turn - dir.east * sin_turn, dir.north * sin_turn + dir.east * cos_turn}};
+}
+
+nav_corner_t nav_route_corner() {
+  const gps_coord_t waypoint = mission.waypoints[nav_route.index].coord;
+  const mission_waypoint_t &next = mission.waypoints[nav_route.index + 1];
+  const float sweep = nav_route.arc_radius > 0.0f ? nav_route.arc_sweep : 0.0f;
+  const float next_sweep = next.arc * DEGTORAD;
+  nav_corner_t corner = {
+      .in = nav_leg_direction(nav_route.leg_origin, waypoint, sweep, true),
+      .out = nav_leg_direction(waypoint, next.coord, next_sweep, false),
+      .length = vec2_magnitude(nav_position_delta(waypoint, next.coord)),
+  };
+  // Repeated waypoints leave an arc without a chord to place it by.
+  if (next.arc && corner.length >= 1.0f) {
+    corner.radius = nav_arc_radius(corner.length, next_sweep);
+    corner.length = fabsf(next_sweep) * corner.radius;
+  }
+  return corner;
+}
+
+float nav_route_altitude(float target_altitude, float *rate) {
+  if (nav_route.arc_radius <= 0.0f)
+    return nav_leg_altitude(nav_route.altitude_origin, nav_route.leg_altitude, nav_target_coord(), target_altitude, rate);
+
+  *rate = 0.0f;
+  // Progress round the arc: wandering off its radius does not change the target.
+  const float start = nav_route.arc_altitude_flown;
+  const float span = fabsf(nav_route.arc_sweep) - start;
+  if (span * nav_route.arc_radius < 1.0f)
+    return target_altitude;
+  const nav_arc_position_t position = nav_arc_position();
+  const float progress = (position.flown - start) / span;
+  const float change = target_altitude - nav_route.leg_altitude;
+  if (progress > 0.0f && progress < 1.0f) {
+    const float tangent_speed = copysignf(1.0f, nav_route.arc_sweep) * vec2_cross(position.radial, vec3_horizontal(state.velocity));
+    *rate = change * tangent_speed / (MAX(position.distance, 0.5f * nav_route.arc_radius) * span);
+  }
+  return nav_route.leg_altitude + constrain(progress, 0.0f, 1.0f) * change;
+}
+
 uint8_t nav_route_resume() {
   return nav_route.complete ? 0 : nav_route.index;
 }
 
 void nav_route_start_leg() {
   nav_route.leg_origin = state.position;
+  nav_route.arc_radius = 0.0f;
   nav_route_restart_altitude();
 }
 
 void nav_route_restart_altitude() {
   nav_route.altitude_origin = state.position;
   nav_route.leg_altitude = state.altitude;
+  if (nav_route.arc_radius > 0.0f)
+    nav_route.arc_altitude_flown = nav_arc_position().flown;
 }
 
 void nav_route_next() {
   const mission_waypoint_t &reached = mission.waypoints[nav_route.index];
-  nav_route.leg_origin = nav_route.altitude_origin = reached.coord;
+  const bool takeoff = reached.type == MISSION_WAYPOINT_TAKEOFF;
+  nav_route.leg_origin = nav_route.altitude_origin = takeoff ? state.position : reached.coord;
   nav_route.leg_altitude = reached.altitude;
   nav_route.index++;
+
+  const mission_waypoint_t &target = mission.waypoints[nav_route.index];
+  const vec2_t chord = nav_position_delta(reached.coord, target.coord);
+  const float length = vec2_magnitude(chord);
+  nav_route.arc_radius = 0.0f;
+  // Repeated waypoints leave an arc without a chord to place it by.
+  if (takeoff || target.arc == 0 || length < 1.0f)
+    return;
+  const float sweep = target.arc * DEGTORAD;
+  const float half = 0.5f * fabsf(sweep);
+  nav_route.arc_sweep = sweep;
+  // The vehicle is at the waypoint it reached, or near it.
+  nav_route.arc_flown = nav_route.arc_altitude_flown = 0.0f;
+  nav_route.arc_radius = nav_arc_radius(length, sweep);
+  // On the turn side of the chord for less than a half circle, across it for more.
+  const vec2_t right = {{-chord.east, chord.north}};
+  nav_route.arc_center = chord * 0.5f + right * (copysignf(0.5f, sweep) * fastcos(half) / fastsin(half));
 }
 
 gps_coord_t nav_target_coord() {

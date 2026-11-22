@@ -1160,6 +1160,139 @@ static void test_mission_turns_late_onto_a_shallow_leg() {
   TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
 }
 
+// The turn radius a mission arrives within at the scripted 15 m/s.
+static float mission_turn_radius() {
+  return 15.0f * 15.0f / (9.80665f * tanf(profile.navigation.max_bank_angle * DEGTORAD));
+}
+
+static void test_mission_flies_an_arc_between_waypoints() {
+  mission_route(MISSION_END_HOLD);
+  // A half circle of 150 m radius about 300 m north, 150 m east, round its north.
+  mission.waypoints[1].arc = 180;
+  fly_mission();
+  fly_track(0.0f, 0.0f, 300.0f, 0.0f);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+
+  // Half way round and following the arc: bank only for its turn, where the
+  // straight leg 150 m to the south would ask for all of it.
+  set_gps(450.0f, 150.0f, 0.0f, 15.0f);
+  fly_circle(300.0f, 150.0f);
+  step(3000);
+  const float turn_bank = atanf(15.0f * 15.0f / (150.0f * 9.80665f)) * RADTODEG;
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+  TEST_ASSERT_FLOAT_WITHIN(1.5f, turn_bank, roll_command_deg());
+
+  // Outside the arc: turn in harder. Inside it: fly out to it. The bank
+  // slews there from the turn that repositioned the aircraft.
+  set_gps(480.0f, 150.0f, 0.0f, 15.0f);
+  step(2500);
+  TEST_ASSERT_TRUE(roll_command_deg() > turn_bank + 3.0f);
+  set_gps(420.0f, 150.0f, 0.0f, 15.0f);
+  step(2500);
+  TEST_ASSERT_TRUE(roll_command_deg() < turn_bank - 3.0f);
+
+  // The arc ends on the waypoint.
+  set_gps(450.0f, 150.0f, 0.0f, 15.0f);
+  fly_circle(300.0f, 150.0f);
+  step(10000);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+  step(6000);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION_HOLD, state.wing_nav_state);
+  TEST_ASSERT_TRUE(scripted_distance_to(300.0f, 300.0f) < mission_turn_radius() + 5.0f);
+}
+
+static void test_mission_flies_a_long_arc_round() {
+  const float lon_scale = METERS_PER_DEGREE_LAT * cosf(ORIGIN.lat * 1e-7f * DEGTORAD);
+  mission_route(MISSION_END_HOLD);
+  // 20 m east of the first waypoint, reached round 300 degrees of a circle of
+  // 20 m radius to their north.
+  mission.waypoints[1].coord.lon = ORIGIN.lon + (int32_t)lrintf(20.0f / lon_scale * 1e7f);
+  mission.waypoints[1].arc = 300;
+  fly_mission();
+  fly_track(0.0f, 0.0f, 300.0f, 0.0f);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  // The waypoint is within the turn radius from the start of the arc, which
+  // is still to be flown.
+  TEST_ASSERT_TRUE(mission_turn_radius() > 20.0f);
+  step(100);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+
+  const float center_north = 300.0f + 20.0f * cosf(30.0f * DEGTORAD);
+  set_gps(center_north + 20.0f, 10.0f, 0.0f, 15.0f);
+  step(100);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+  set_gps(300.0f, 20.0f, -15.0f, 0.0f);
+  step(100);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION_HOLD, state.wing_nav_state);
+}
+
+static void test_mission_starts_a_wide_arc_from_anywhere_near_its_waypoint() {
+  const float lon_scale = METERS_PER_DEGREE_LAT * cosf(ORIGIN.lat * 1e-7f * DEGTORAD);
+  mission_route(MISSION_END_HOLD);
+  // 330 degrees round a circle of 150 m radius, which leaves only 30 degrees
+  // of it out between the two waypoints.
+  const float chord = 2.0f * 150.0f * sinf(165.0f * DEGTORAD);
+  mission.waypoints[1].coord.lon = ORIGIN.lon + (int32_t)lrintf(chord / lon_scale * 1e7f);
+  mission.waypoints[1].arc = 330;
+  // Circling the first waypoint for its hold leaves the aircraft anywhere
+  // round it, also on the part left out, nearer the second waypoint.
+  mission.waypoints[0].hold = 10;
+  fly_mission();
+  fly_track(0.0f, 0.0f, 300.0f, 0.0f);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION_HOLD, state.wing_nav_state);
+  // 8 degrees round the circle short of the second waypoint, coming from the first.
+  const float center_north = 300.0f + 150.0f * cosf(15.0f * DEGTORAD);
+  const float bearing = 172.0f * DEGTORAD;
+  set_gps(center_north + 150.0f * cosf(bearing), 0.5f * chord + 150.0f * sinf(bearing), 15.0f, 0.0f);
+  TEST_ASSERT_TRUE(scripted_distance_to(300.0f, chord) < mission_turn_radius());
+  step(8000);
+  // The hold is over and the arc still to be flown.
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+}
+
+static void test_mission_turns_early_onto_an_arc() {
+  mission_route(MISSION_END_HOLD);
+  // Straight on from the northbound leg, but round a half circle that leaves
+  // the first waypoint westward: a 90 degree turn the chord does not show.
+  mission.waypoints[1].coord = {
+      .lon = ORIGIN.lon,
+      .lat = ORIGIN.lat + (int32_t)lrintf(600.0f / METERS_PER_DEGREE_LAT * 1e7f),
+  };
+  mission.waypoints[1].arc = 180;
+  fly_mission();
+  TEST_ASSERT_TRUE(mission_turn_radius() > 20.0f);
+  fly_track(0.0f, 0.0f, 260.0f, 0.0f);
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+  fly_track(260.0f, 0.0f, 280.0f, 0.0f);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+}
+
+static void test_mission_changes_altitude_round_an_arc() {
+  mission_route(MISSION_END_HOLD);
+  mission.waypoints[1].arc = 180;
+  mission.waypoints[1].altitude = 110;
+  fly_mission();
+  fly_track(0.0f, 0.0f, 300.0f, 0.0f);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+
+  // The 60 m are climbed evenly round the 471 m of arc, which starts at the
+  // circle's west, at the rate the ground speed covers it.
+  set_gps(450.0f, 150.0f, 0.0f, 15.0f);
+  fly_circle(300.0f, 150.0f);
+  step(3000);
+  const float flown = 0.5f * M_PI_F + atan2f(scripted.position.east - 150.0f, scripted.position.north - 300.0f);
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, 0.5f * M_PI_F + 3.0f * 15.0f / 150.0f, flown);
+  float rate = 0.0f;
+  TEST_ASSERT_FLOAT_WITHIN(2.0f, 50.0f + 60.0f * flown / M_PI_F, nav_route_altitude(110.0f, &rate));
+  TEST_ASSERT_FLOAT_WITHIN(0.2f, 60.0f * 15.0f / (150.0f * M_PI_F), rate);
+
+  // Off the arc's radius at the same angle round it, the target is the same.
+  const vec2_t outside = vec2_t{{300.0f, 150.0f}} + (scripted.position - vec2_t{{300.0f, 150.0f}}) * 1.3f;
+  set_gps(outside.north, outside.east, scripted.velocity.north, scripted.velocity.east);
+  TEST_ASSERT_FLOAT_WITHIN(2.0f, 50.0f + 60.0f * flown / M_PI_F, nav_route_altitude(110.0f, &rate));
+}
+
 static void test_mission_changes_altitude_over_the_leg() {
   mission_route(MISSION_END_HOLD);
   fly_mission();
@@ -1589,6 +1722,7 @@ static void send_mission(const mission_t &route) {
           .speed = wp.speed,
           .type = wp.type,
           .hold = wp.hold,
+          .arc = wp.arc,
       };
       memcpy(args + 1 + i * sizeof(item), &item, sizeof(item));
     }
@@ -1767,6 +1901,11 @@ void run_wing_navigation_tests() {
   RUN_TEST(test_mission_advances_past_a_missed_waypoint);
   RUN_TEST(test_mission_holds_the_leg_line);
   RUN_TEST(test_mission_turns_late_onto_a_shallow_leg);
+  RUN_TEST(test_mission_flies_an_arc_between_waypoints);
+  RUN_TEST(test_mission_flies_a_long_arc_round);
+  RUN_TEST(test_mission_starts_a_wide_arc_from_anywhere_near_its_waypoint);
+  RUN_TEST(test_mission_turns_early_onto_an_arc);
+  RUN_TEST(test_mission_changes_altitude_round_an_arc);
   RUN_TEST(test_mission_changes_altitude_over_the_leg);
   RUN_TEST(test_mission_climbs_in_place_before_the_first_leg);
   RUN_TEST(test_mission_circles_a_waypoint_for_its_hold_time);

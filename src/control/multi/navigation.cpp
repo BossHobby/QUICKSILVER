@@ -86,6 +86,12 @@ static constexpr float CARROT_LEAD_MIN = 6.0f;  // meters
 static constexpr float CARROT_LEAD_TIME = 1.5f; // seconds at the desired speed
 static constexpr float CARROT_LEAD_MAX = 30.0f; // meters
 
+// An arc is flown no faster than turns at this acceleration, within what the
+// velocity shaping follows, nor faster than the nose comes round with it at
+// this share of the yaw-rate limit; but no slower than a waypoint may set.
+static constexpr float ARC_ACCEL = 0.75f * VEL_ACCEL_LIMIT; // m/s^2
+static constexpr float ARC_YAW_RATE = 0.75f * YAW_MAX_RATE; // degrees/s
+
 // A PASS corner sheds the same velocity change, 2*v*sin(turn/2), at any angle.
 static constexpr float PASS_CORNER_DELTA_V = 4.0f;   // m/s
 static constexpr float PASS_CORNER_SPEED_MIN = 2.0f; // m/s
@@ -229,8 +235,7 @@ static struct {
   } horizontal;
   // How the leg to the current target is flown.
   struct {
-    bool line;           // follow the line from nav_route.leg_origin rather than aim at the target
-    vec2_t dir;          // unit vector along the line
+    bool line;           // follow the line or arc from nav_route.leg_origin rather than aim at the target
     float end_speed;     // m/s at the arrival radius; zero stops on the target
     float arrive_radius; // meters
     bool passing;        // entered through a PASS corner: no realign until the nose follows the line
@@ -243,8 +248,10 @@ static struct {
   // Updated once per pass toward the current target.
   struct {
     vec2_t delta;        // meters to the target
+    vec2_t path;         // what steering closes: delta, or along dir the meters of arc left to fly
     vec2_t dir;          // unit direction steering flies, toward the carrot or the target
     float course;        // degrees of that direction; the nose follows it
+    float turn_rate;     // radians/s the course turns at round an arc, positive clockwise
     float heading_error; // degrees from the heading to course, -180..180
   } steer;
   struct {
@@ -284,6 +291,20 @@ static float nav_cruise_speed(uint8_t waypoint_speed) {
   return MAX(waypoint_speed ? waypoint_speed * MISSION_SPEED_SCALE : profile.navigation.travel_speed, MISSION_SPEED_MIN);
 }
 
+// The fastest an arc of radius meters is flown.
+static float nav_arc_speed(float radius) {
+  return MAX(MIN(sqrtf(ARC_ACCEL * radius), ARC_YAW_RATE * DEGTORAD * radius), MISSION_SPEED_MIN);
+}
+
+// Meters still to fly to the target. An arc can start closer to its waypoint
+// than it gets on the way round, so it counts what is left of it; a line has
+// no more left than the distance.
+static float nav_distance_to_go() {
+  if (nav_route.arc_radius <= 0.0f)
+    return state.nav_target_distance;
+  return MAX(nav_leg_position().left, state.nav_target_distance);
+}
+
 // The fastest approach that still stops within distance, reserving response
 // time as well as braking distance: d = v*t + v^2/(2*a), with one smooth
 // slope from distance / t near the end. A leg ending at end_speed eases onto
@@ -303,13 +324,15 @@ static void nav_latch_corner() {
   if (waypoint.type != MISSION_WAYPOINT_PASS || index + 1 >= mission.count || !guide.leg.line)
     return;
   const mission_waypoint_t &next = mission.waypoints[index + 1];
-  const vec2_t next_leg = nav_position_delta(waypoint.coord, next.coord);
-  const float length = vec2_magnitude(next_leg);
+  const nav_corner_t corner = nav_route_corner();
+  const float length = corner.length;
   if (length < 1.0f)
     return;
-  const float cos_turn = vec2_dot(guide.leg.dir, next_leg) / length;
+  const float cos_turn = vec2_dot(corner.in, corner.out);
   const float shed = sqrtf(MAX(2.0f - 2.0f * cos_turn, 0.0f)); // 2 sin(turn / 2)
   float speed = MIN(nav_cruise_speed(waypoint.speed), nav_cruise_speed(next.speed));
+  if (corner.radius > 0.0f)
+    speed = MIN(speed, nav_arc_speed(corner.radius));
   if (shed > 0.05f)
     speed = constrain(PASS_CORNER_DELTA_V / shed, MIN(PASS_CORNER_SPEED_MIN, speed), speed);
   // The next leg stops on its waypoint unless it passes through it too.
@@ -320,18 +343,15 @@ static void nav_latch_corner() {
   guide.leg.arrive_radius = MAX(ARRIVAL_RADIUS, MIN(0.5f * speed * turn_time, MIN(PASS_SWITCH_RADIUS_MAX, 0.5f * length)));
 }
 
-// Latch how the leg to the current target is flown: along its line from
-// nav_route.leg_origin, and how it ends. Home, and a target closer than a
-// carrot lead, is aimed at directly.
+// Latch how the leg to the current target is flown: along its line or arc
+// from nav_route.leg_origin, and how it ends. Home, and a target closer than
+// a carrot lead, is aimed at directly.
 static void nav_latch_leg() {
   guide.leg = {.arrive_radius = ARRIVAL_RADIUS};
   if (state.nav_target == NAV_TARGET_HOME)
     return;
-  const vec2_t leg = nav_position_delta(nav_route.leg_origin, nav_target_coord());
-  const float length = vec2_magnitude(leg);
-  guide.leg.line = length > CARROT_LEAD_MIN;
-  if (guide.leg.line)
-    guide.leg.dir = leg * (1.0f / length);
+  const float length = vec2_magnitude(nav_position_delta(nav_route.leg_origin, nav_target_coord()));
+  guide.leg.line = nav_route.arc_radius > 0.0f || length > CARROT_LEAD_MIN;
   if (state.nav_target == NAV_TARGET_MISSION)
     nav_latch_corner();
 }
@@ -343,21 +363,28 @@ static void nav_start_leg() {
 }
 
 // Steer along the leg line toward a carrot one lead ahead of the closest
-// point on it, or straight at the target within a lead of it.
+// point on it, or straight at the target within a lead of it. An arc is
+// followed the same way, along its tangent at the closest point.
 static void nav_update_course() {
   const vec2_t delta = nav_position_delta(state.position, state.nav_target_position);
   guide.steer.delta = delta;
+  guide.steer.path = delta;
+  guide.steer.turn_rate = 0.0f;
 
   vec2_t aim = delta;
   bool carrot = false;
   if (guide.leg.line) {
-    const float along = vec2_dot(delta, guide.leg.dir);
-    const vec2_t cross = delta - guide.leg.dir * along;
+    const nav_leg_position_t leg = nav_leg_position();
     const float speed = vec2_magnitude(nav_velocity.desired_velocity);
-    const float lead = MAX(constrain(speed * CARROT_LEAD_TIME, CARROT_LEAD_MIN, CARROT_LEAD_MAX), vec2_magnitude(cross));
-    carrot = along > lead;
+    const float lead = MAX(constrain(speed * CARROT_LEAD_TIME, CARROT_LEAD_MIN, CARROT_LEAD_MAX), vec2_magnitude(leg.cross));
+    carrot = leg.left > lead;
     if (carrot)
-      aim = cross + guide.leg.dir * lead;
+      aim = leg.cross + leg.tangent * lead;
+    if (carrot && leg.curvature != 0.0f) {
+      // Round the arc the target can lie behind; steering closes what is left of it.
+      guide.steer.path = aim * (leg.left / vec2_magnitude(aim));
+      guide.steer.turn_rate = leg.curvature * speed;
+    }
   }
   const float aim_length = vec2_magnitude(aim);
   guide.steer.dir = aim_length > 0.01f ? aim * (1.0f / aim_length) : vec2_t{};
@@ -394,7 +421,8 @@ static void nav_update_yaw(float distance, float dt) {
     heading_error = 0.0f;
   // Yaw must work while stationary; GPS ground speed does not limit yaw authority.
   const float max_yaw_rate = YAW_MAX_RATE * DEGTORAD;
-  const float yaw_rate = constrain(heading_error * DEGTORAD * YAW_KP, -max_yaw_rate, max_yaw_rate);
+  // Round an arc the nose turns with the course rather than trailing it.
+  const float yaw_rate = constrain(heading_error * DEGTORAD * YAW_KP + guide.steer.turn_rate, -max_yaw_rate, max_yaw_rate);
   state.nav_yaw_rate += dt / (YAW_TIME_CONSTANT + dt) * (yaw_rate - state.nav_yaw_rate);
 }
 
@@ -416,7 +444,9 @@ static void nav_steer(vec2_t delta, vec2_t dir, float end_speed, float end_radiu
     waypoint_speed = nav_route.guided.speed;
   else if (state.nav_target == NAV_TARGET_MISSION)
     waypoint_speed = mission.waypoints[nav_route.index].speed;
-  const float cruise_speed = nav_cruise_speed(waypoint_speed);
+  float cruise_speed = nav_cruise_speed(waypoint_speed);
+  if (nav_route.arc_radius > 0.0f)
+    cruise_speed = MIN(cruise_speed, nav_arc_speed(nav_route.arc_radius));
   // Slow toward a stop continuously, without a minimum approach speed.
   const float approach_speed = nav_approach_speed(end_speed > 0.0f ? MAX(distance - end_radius, 0.0f) : distance, end_speed);
 
@@ -446,9 +476,9 @@ static void nav_steer_to(gps_coord_t target, float dt) {
 
 // Fly the leg toward the navigation target, along its line where it has one.
 static void nav_update_horizontal_control(float dt) {
-  nav_steer(guide.steer.delta, guide.steer.dir, guide.leg.end_speed, nav_arrive_radius(), dt);
+  nav_steer(guide.steer.path, guide.steer.dir, guide.leg.end_speed, nav_arrive_radius(), dt);
   guide.horizontal.phase = NAV_HORIZONTAL_STEERING;
-  nav_update_yaw(state.nav_target_distance, dt);
+  nav_update_yaw(nav_distance_to_go(), dt);
 }
 
 static void nav_reset_horizontal() {
@@ -537,7 +567,7 @@ static float nav_progress_error() {
     return fabsf(guide.target_altitude - state.altitude);
   if (state.nav_state == NAV_STATE_LAND)
     return state.altitude - guide.land.ground;
-  return state.nav_target_distance;
+  return nav_distance_to_go();
 }
 
 // Enter a phase toward the current target and supervise its progress from here.
@@ -565,9 +595,11 @@ static void nav_begin_failure(nav_state_t failure, uint32_t now_ms) {
   nav_set_phase(failure, now_ms);
 }
 
-// Leave the mission or guided target. nav_route keeps where the mission left off.
+// Leave the mission or guided target. nav_route keeps where the mission left
+// off, but not the arc it was on: home is flown straight.
 static void nav_clear_target() {
   state.nav_target = NAV_TARGET_HOME;
+  nav_route.arc_radius = 0.0f;
   nav_route.returning = false;
   guide.waypoint_hold = {};
 }
@@ -629,8 +661,6 @@ static void nav_arrive(uint32_t now_ms) {
     // The next leg runs from this waypoint and its altitude, also while still
     // catching up with it; a takeoff climbed where it lifted off.
     nav_route_next();
-    if (reached.type == MISSION_WAYPOINT_TAKEOFF)
-      nav_route.leg_origin = nav_route.altitude_origin = state.position;
     guide.target_altitude = nav_mission_altitude(nav_route.index, guide.target_altitude);
     nav_latch_leg();
     if (reached.type == MISSION_WAYPOINT_PASS) {
@@ -710,15 +740,17 @@ static void nav_mission_fly(uint8_t index, uint32_t now_ms) {
 }
 
 // Inside the arrival radius, or for a PASS corner flown fast, past the
-// waypoint along the line and close to it.
+// waypoint along the line and close to it. An arc that starts this close to
+// its waypoint is flown round first.
 static bool nav_leg_arrived() {
+  const nav_leg_position_t leg = nav_leg_position();
+  if (leg.left > PASS_ARRIVAL_CROSS * nav_arrive_radius())
+    return false;
   if (state.nav_target_distance < nav_arrive_radius())
     return true;
   if (guide.leg.end_speed <= 0.0f || !guide.leg.line)
     return false;
-  const float along = vec2_dot(guide.steer.delta, guide.leg.dir);
-  const float cross = vec2_magnitude(guide.steer.delta - guide.leg.dir * along);
-  return along < 0.0f && cross < PASS_ARRIVAL_CROSS * nav_arrive_radius();
+  return leg.left < 0.0f && vec2_magnitude(leg.cross) < PASS_ARRIVAL_CROSS * nav_arrive_radius();
 }
 
 // Progress toward the phase's goal within its timeout, measured by error.
@@ -1116,9 +1148,10 @@ static bool nav_update_phase(float dt, uint32_t now_ms) {
     }
     // Stop and hold position until the nose points at the target and the turn has slowed down.
     nav_update_position_hold(dt);
-    nav_update_yaw(state.nav_target_distance, dt);
+    const float distance = nav_distance_to_go();
+    nav_update_yaw(distance, dt);
     // Inside the yaw hold radius the nose stays put; steering is earth-frame.
-    const bool aligned = state.nav_target_distance <= YAW_HOLD_RADIUS ||
+    const bool aligned = distance <= YAW_HOLD_RADIUS ||
                          (fabsf(nav_heading_error()) < TURN_ERROR && fabsf(state.gyro.yaw) < TURN_RATE * DEGTORAD);
     if (nav_leg_arrived())
       nav_arrive(now_ms);
@@ -1137,10 +1170,11 @@ static bool nav_update_phase(float dt, uint32_t now_ms) {
     // to turn would throw the corner speed away.
     if (guide.leg.passing && fabsf(nav_heading_error()) < PASS_TURN_DONE)
       guide.leg.passing = false;
-    if (state.nav_target_distance >= ARRIVAL_RADIUS &&
-        !nav_update_progress(state.nav_target_distance, progress, PROGRESS_TIMEOUT_MS, now_ms)) {
+    const float distance = nav_distance_to_go();
+    if (distance >= ARRIVAL_RADIUS &&
+        !nav_update_progress(distance, progress, PROGRESS_TIMEOUT_MS, now_ms)) {
       nav_begin_failure(NAV_STATE_NAV_FAILED, now_ms);
-    } else if (!guide.leg.passing && state.nav_target_distance > REALIGN_RADIUS &&
+    } else if (!guide.leg.passing && distance > REALIGN_RADIUS &&
                fabsf(nav_heading_error()) > REALIGN_ERROR) {
       nav_set_phase(NAV_STATE_TURN, now_ms);
     } else {
@@ -1269,7 +1303,7 @@ static void nav_update_control(float dt) {
   case NAV_STATE_TURN:
   case NAV_STATE_NAVIGATE: {
     float rate;
-    const float target = nav_leg_altitude(nav_route.altitude_origin, nav_route.leg_altitude, nav_target_coord(), guide.target_altitude, &rate);
+    const float target = nav_route_altitude(guide.target_altitude, &rate);
     nav_update_altitude_control(target, dt, rate);
     break;
   }

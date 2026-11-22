@@ -1012,6 +1012,90 @@ void test_navigation_motor_loop_pass_mission() {
   flight.check(cross_track < 5, "later legs follow the line between waypoints");
 }
 
+void test_navigation_motor_loop_arc_mission() {
+  flight_t flight({"arc", 100, true, 1.0, 0.5});
+  flight.depart();
+  // North, then round a half circle of 30 m radius that carries on from that
+  // leg and comes back south, both flown through, and a stop.
+  const double origin[2] = {flight.truth.position[0], flight.truth.position[1]};
+  const double route[3][2] = {{origin[0] + 60, origin[1]}, {origin[0] + 60, origin[1] + 60}, {origin[0] + 20, origin[1] + 60}};
+  const double center[2] = {origin[0] + 60, origin[1] + 30};
+  const uint8_t types[3] = {MISSION_WAYPOINT_PASS, MISSION_WAYPOINT_PASS, MISSION_WAYPOINT_STOP};
+  mission = {.count = 3, .end_action = MISSION_END_HOLD};
+  for (unsigned i = 0; i < 3; i++)
+    mission.waypoints[i] = flight_waypoint(route[i][0], route[i][1], 10, types[i]);
+  mission.waypoints[1].arc = 180;
+  flight.mission_switch = true;
+  flight.run(100);
+  flight.check(state.nav_target == NAV_TARGET_MISSION && state.nav_state >= NAV_STATE_CLIMB, "mission accepted");
+
+  double radial_error = 0, top = 0, slowest = 1e9, heading_error = 0;
+  for (unsigned i = 0; i < 80000; i++) {
+    flight.step();
+    flight.check(state.nav_target == NAV_TARGET_MISSION && flags.arm_state, "mission remains armed and active");
+    const double north = flight.truth.position[0], east = flight.truth.position[1];
+    if (state.mission_index > 0)
+      flight.check(state.nav_state != NAV_STATE_TURN, "the arc is flown without stopping to turn");
+    if (state.mission_index == 1) {
+      const double speed = hypot(flight.truth.velocity[0], flight.truth.velocity[1]);
+      radial_error = fmax(radial_error, fabs(hypot(north - center[0], east - center[1]) - 30));
+      top = fmax(top, north - center[0]);
+      slowest = fmin(slowest, speed);
+      // The nose follows the arc round, east at its top.
+      if (fabs(east - center[1]) < 1)
+        heading_error = fmax(heading_error, fabs(remainder(state.heading - 90.0, 360.0)));
+    }
+    if (i >= 70000) {
+      flight.check(state.mission_index == 2 && state.nav_state == NAV_STATE_HOLD, "holds the last waypoint");
+      flight.check(hypot(north - route[2][0], east - route[2][1]) < 3, "stops on the last waypoint");
+    }
+  }
+  printf("%s: radial error=%.2fm top=%.2fm slowest=%.2fm/s heading error=%.1fdeg\n", flight.scenario.name,
+      radial_error, top, slowest, heading_error);
+  flight.check(top > 26, "flies round the arc rather than along its chord");
+  flight.check(radial_error < 2, "follows the arc");
+  flight.check(slowest > 3, "speed carried round the arc");
+  flight.check(heading_error < 20, "nose follows the arc");
+}
+
+void test_navigation_motor_loop_long_arc() {
+  flight_t flight({"long arc", 100, true, 1.0, 0.5});
+  flight.depart();
+  // Three quarters of a circle of 12 m radius between stops 17 m apart: the
+  // second is never farther away than the arc is long.
+  const double origin[2] = {flight.truth.position[0], flight.truth.position[1]};
+  const double route[2][2] = {{origin[0] + 30, origin[1]}, {origin[0] + 42, origin[1] + 12}};
+  const double center[2] = {origin[0] + 42, origin[1]};
+  mission = {.count = 2, .end_action = MISSION_END_HOLD};
+  for (unsigned i = 0; i < 2; i++)
+    mission.waypoints[i] = flight_waypoint(route[i][0], route[i][1], 10, MISSION_WAYPOINT_STOP);
+  mission.waypoints[1].arc = 270;
+  flight.mission_switch = true;
+  flight.run(100);
+
+  double radial_error = 0, farthest = 0, fastest = 0;
+  for (unsigned i = 0; i < 80000; i++) {
+    flight.step();
+    flight.check(state.nav_target == NAV_TARGET_MISSION && flags.arm_state, "mission remains armed and active");
+    flight.check(state.nav_state != NAV_STATE_NAV_FAILED, "the arc counts as progress");
+    const double north = flight.truth.position[0], east = flight.truth.position[1];
+    if (state.mission_index == 1 && !nav_route.complete && state.nav_state == NAV_STATE_NAVIGATE) {
+      radial_error = fmax(radial_error, fabs(hypot(north - center[0], east - center[1]) - 12));
+      farthest = fmax(farthest, hypot(north - route[1][0], east - route[1][1]));
+      fastest = fmax(fastest, hypot(flight.truth.velocity[0], flight.truth.velocity[1]));
+    }
+    if (i >= 70000) {
+      flight.check(state.mission_index == 1 && state.nav_state == NAV_STATE_HOLD, "holds the last waypoint");
+      flight.check(hypot(north - route[1][0], east - route[1][1]) < 3, "stops on the last waypoint");
+    }
+  }
+  printf("%s: radial error=%.2fm farthest=%.2fm fastest=%.2fm/s\n", flight.scenario.name, radial_error, farthest, fastest);
+  flight.check(farthest > 20, "flies round the far side of the circle");
+  flight.check(radial_error < 2, "follows the arc");
+  // Slower than the travel speed the wider arc is flown at.
+  flight.check(fastest < 4.7, "speed limited for the arc's radius");
+}
+
 // Ground start through a mission TAKEOFF to the first waypoint at cruise
 // meters, ending in a LAND.
 static void flight_takeoff_mission(flight_t &flight, int16_t cruise = 10) {

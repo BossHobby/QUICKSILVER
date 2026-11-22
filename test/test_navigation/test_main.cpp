@@ -2967,6 +2967,8 @@ extern void test_navigation_motor_loop_mission();
 extern void test_navigation_motor_loop_wrong_heading();
 extern void test_navigation_motor_loop_gusty_cruise();
 extern void test_navigation_motor_loop_pass_mission();
+extern void test_navigation_motor_loop_arc_mission();
+extern void test_navigation_motor_loop_long_arc();
 extern void test_navigation_motor_loop_takeoff_and_land();
 extern void test_navigation_motor_loop_land_with_disturbed_barometer();
 extern void test_navigation_motor_loop_takeoff_stick_abort();
@@ -3100,6 +3102,8 @@ int main() {
   RUN_TEST(test_navigation_motor_loop_wrong_heading);
   RUN_TEST(test_navigation_motor_loop_gusty_cruise);
   RUN_TEST(test_navigation_motor_loop_pass_mission);
+  RUN_TEST(test_navigation_motor_loop_arc_mission);
+  RUN_TEST(test_navigation_motor_loop_long_arc);
   RUN_TEST(test_navigation_motor_loop_takeoff_and_land);
   RUN_TEST(test_navigation_motor_loop_land_with_disturbed_barometer);
   RUN_TEST(test_navigation_motor_loop_takeoff_stick_abort);

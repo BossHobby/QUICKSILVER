@@ -203,6 +203,41 @@ void test_mission_waypoint_types(void) {
 #endif
 }
 
+void test_mission_arcs(void) {
+  mission_t route = mission_test_route(3);
+  route.waypoints[1].arc = -90;
+  route.waypoints[2].arc = MISSION_ARC_LIMIT;
+#ifndef VEHICLE_ROVER
+  TEST_ASSERT_TRUE(mission_valid(&route));
+
+  // The arc survives the codec with its direction.
+  uint8_t buffer[512] = {};
+  cbor_value_t codec;
+  cbor_encoder_init(&codec, buffer, sizeof(buffer));
+  TEST_ASSERT_TRUE(cbor_encode_mission_t(&codec, &route) >= CBOR_OK);
+  mission_t decoded = {};
+  cbor_decoder_init(&codec, buffer, cbor_encoder_len(&codec));
+  TEST_ASSERT_TRUE(cbor_decode_mission_t(&codec, &decoded) >= CBOR_OK);
+  TEST_ASSERT_EQUAL_INT16(-90, decoded.waypoints[1].arc);
+  TEST_ASSERT_EQUAL_INT16(MISSION_ARC_LIMIT, decoded.waypoints[2].arc);
+  TEST_ASSERT_EQUAL_MEMORY(&route.waypoints[1], &decoded.waypoints[1], sizeof(mission_waypoint_t));
+
+  // Close to a full circle the chord no longer places it.
+  mission_t invalid = route;
+  invalid.waypoints[2].arc = MISSION_ARC_LIMIT + 1;
+  TEST_ASSERT_FALSE(mission_valid(&invalid));
+  invalid.waypoints[2].arc = -MISSION_ARC_LIMIT - 1;
+  TEST_ASSERT_FALSE(mission_valid(&invalid));
+  // No leg leads to the first waypoint.
+  invalid = route;
+  invalid.waypoints[0].arc = 90;
+  TEST_ASSERT_FALSE(mission_valid(&invalid));
+#else
+  // A rover flies no arcs.
+  TEST_ASSERT_FALSE(mission_valid(&route));
+#endif
+}
+
 static quic_flag mission_test_reply;
 static mission_t mission_test_reply_mission;
 
@@ -282,13 +317,16 @@ void test_mission_upload_persists_and_rejects_invalid_routes(void) {
 // The ground station computes the same CRC from the values it sends.
 void test_mission_crc_covers_the_sent_route(void) {
   const mission_t route = mission_test_route(2);
-  TEST_ASSERT_EQUAL_HEX16(0x2BAA, mission_crc(&route));
+  TEST_ASSERT_EQUAL_HEX16(0xE1FF, mission_crc(&route));
   mission_t typed = route;
   typed.waypoints[0].type = MISSION_WAYPOINT_PASS;
-  TEST_ASSERT_EQUAL_HEX16(0x8556, mission_crc(&typed));
+  TEST_ASSERT_EQUAL_HEX16(0x3FE0, mission_crc(&typed));
   mission_t held = route;
   held.waypoints[0].hold = 30;
-  TEST_ASSERT_EQUAL_HEX16(0x0D51, mission_crc(&held));
+  TEST_ASSERT_EQUAL_HEX16(0xE28B, mission_crc(&held));
+  mission_t curved = route;
+  curved.waypoints[1].arc = -90;
+  TEST_ASSERT_EQUAL_HEX16(0x48D7, mission_crc(&curved));
   const mission_t empty = {};
   TEST_ASSERT_EQUAL_HEX16(0x1D0F, mission_crc(&empty));
 
@@ -325,6 +363,7 @@ static void mission_link_items(uint8_t index, const mission_waypoint_t *waypoint
         .speed = waypoints[i].speed,
         .type = waypoints[i].type,
         .hold = waypoints[i].hold,
+        .arc = waypoints[i].arc,
     };
     memcpy(args + 1 + i * sizeof(item), &item, sizeof(item));
   }
