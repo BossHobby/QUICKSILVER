@@ -321,6 +321,7 @@ extern void test_gps_satellite_and_fix_loss_remain_visible_armed(void);
 extern void test_gps_stamps_solutions_by_receiver_epoch(void);
 extern void test_gps_m10_constellations_select_rate_and_fall_back(void);
 extern void test_gps_interference_reports(void);
+extern void test_gps_detects_baud_by_listening(void);
 
 // Navigation tests
 extern void test_attitude_gps_reacquisition_does_not_snap_yaw(void);
@@ -644,6 +645,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_gps_stamps_solutions_by_receiver_epoch);
   RUN_TEST(test_gps_m10_constellations_select_rate_and_fall_back);
   RUN_TEST(test_gps_interference_reports);
+  RUN_TEST(test_gps_detects_baud_by_listening);
   RUN_TEST(test_datetime_epoch_conversion);
   RUN_TEST(test_gps_time_sets_free_running_clock);
   RUN_TEST(test_attitude_gps_reacquisition_does_not_snap_yaw);
