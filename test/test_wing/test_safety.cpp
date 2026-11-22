@@ -274,6 +274,27 @@ static void test_wing_launch_abort_returns_surfaces_to_manual() {
   TEST_ASSERT_FLOAT_WITHIN(0.001f, -0.2f, pwm_values[2]);
 }
 
+static void test_wing_launch_ground_abort_needs_low_throttle() {
+  prepare_launch();
+  // Sticks bumped while holding the throttle up for the throw keep the launch.
+  state.rx_filtered.roll = 0.2f;
+  tick();
+  TEST_ASSERT_EQUAL(WING_LAUNCH_WAIT, state.wing_launch_state);
+  state.rx_filtered.throttle = 0;
+  tick();
+  TEST_ASSERT_EQUAL(WING_LAUNCH_ABORTED, state.wing_launch_state);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.2f, pwm_values[1]);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, -0.2f, pwm_values[2]);
+
+  // The pilot then takes off manually; a throw no longer starts the launch.
+  state.rx_filtered.roll = 0;
+  state.rx_filtered.throttle = 0.5f;
+  state.accel_raw.pitch = FORWARD_THROW;
+  tick(profile.wing.autolaunch.detect_time_ms + 1);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_ABORTED, state.wing_launch_state);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, (0.5f - 0.05f) * 1.0526316f, state.throttle);
+}
+
 static void test_wing_launch_stage1_recovery_requires_disarm_before_relaunch() {
   launch_to_active();
   state.rx_frame_time_us = time_micros();
@@ -531,6 +552,7 @@ void run_wing_safety_tests() {
   RUN_TEST(test_wing_launch_keeps_cruise_gains_until_done);
   RUN_TEST(test_wing_launch_failsafe_stops_motor_and_disarms);
   RUN_TEST(test_wing_launch_abort_returns_surfaces_to_manual);
+  RUN_TEST(test_wing_launch_ground_abort_needs_low_throttle);
   RUN_TEST(test_wing_launch_stage1_recovery_requires_disarm_before_relaunch);
   RUN_TEST(test_wing_launch_switch_reenabled_in_flight_does_not_restart);
   RUN_TEST(test_wing_launch_always_on_leaves_disarmed_surfaces_on_sticks);
