@@ -354,7 +354,7 @@ COLD_CODE static void flight_init() {
   control_filter_update(false);
 
   time_delay_ms(50);
-  sixaxis_gyro_cal();
+  sixaxis_gyro_boot_cal();
 
   adc_init();
   vbat_init();
