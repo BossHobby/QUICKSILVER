@@ -16,7 +16,13 @@
 
 typedef struct {
   float accelcal[3];
+  // Gyro offset of the last commanded calibration in raw sensor counts, the
+  // reference a boot calibration falls back on. A block saved before this
+  // existed reads as not valid.
+  float gyrocal[3];
+  uint8_t gyrocal_valid;
 } flash_storage_t;
+static_assert(FMC_MAGIC_SIZE + sizeof(flash_storage_t) <= FLASH_STORAGE_SIZE, "flash_storage_t exceeds its block");
 
 extern flash_storage_t flash_storage;
 

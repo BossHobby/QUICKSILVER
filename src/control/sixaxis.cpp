@@ -29,6 +29,10 @@
 // Samples a gyro calibration takes before giving up, 15 seconds: a vehicle
 // that never rests must not hold up the boot.
 static constexpr uint32_t CAL_GYRO_TRIES = 15 * 1000000 / CAL_INTERVAL;
+// A resting window can still hold a steady turn about gravity, which no sensor
+// shows. The offset itself drifts far less than this between calibrations, so
+// a boot window further from the stored offset on any axis is not adopted.
+static constexpr float CAL_MAX_ZERO_CHANGE = 3.0f; // deg/s
 // LED blinks reporting that no window passed.
 static constexpr uint8_t CAL_FAILED_BLINKS = 10;
 
@@ -234,7 +238,9 @@ static bool sixaxis_wait_for_still(uint32_t timeout) {
   return loop_counter < 20;
 }
 
-void sixaxis_gyro_cal() {
+// Average one window the vehicle rested through into raw sensor counts. False
+// when none passes before the tries run out.
+static bool sixaxis_gyro_measure(vec3_t *zero) {
   for (uint8_t retry = 0; retry < 15; ++retry) {
     if (sixaxis_wait_for_still(CAL_INTERVAL)) {
       // break only if it's already still, otherwise, wait and try again
@@ -244,10 +250,6 @@ void sixaxis_gyro_cal() {
   }
   gyro_calibrate();
 
-  // Average one window the vehicle rested through. When none passes before the
-  // tries run out, the offset keeps its previous value, zero after boot, and
-  // the LED blinks: resting disarmed, the IMU still learns the roll and pitch
-  // bias, but nothing corrects yaw.
   gyro_cal_window_t window;
   gyro_cal_reset(&window);
   for (uint32_t tries = 0; tries < CAL_GYRO_TRIES; tries++) {
@@ -256,17 +258,62 @@ void sixaxis_gyro_cal() {
     led_pwm((float)window.samples / (float)GYRO_CAL_SAMPLES, CAL_INTERVAL);
 
     if (gyro_cal_push(&window, data.gyro * GYRO_RANGE, data.accel) == GYRO_CAL_PASSED) {
-      for (uint8_t i = 0; i < 3; i++) {
-        gyrocal[i] = window.zero.axis[i] / GYRO_RANGE;
-      }
-      imu_reset_gyro_bias();
-      return;
+      *zero = window.zero * (1.0f / GYRO_RANGE);
+      return true;
     }
 
     time_delay_us(CAL_INTERVAL);
   }
+  return false;
+}
+
+static bool sixaxis_gyro_contradicts_stored(vec3_t zero) {
+  for (uint8_t i = 0; i < 3; i++) {
+    if (fabsf(zero.axis[i] - flash_storage.gyrocal[i]) * GYRO_RANGE > CAL_MAX_ZERO_CHANGE)
+      return true;
+  }
+  return false;
+}
+
+void sixaxis_gyro_boot_cal() {
+  // Without a resting window the stored offset stands in, off by its drift
+  // since the commanded calibration; with none stored the offset stays zero.
+  // The LED blinks either way: resting disarmed, the IMU still learns the roll
+  // and pitch bias, but nothing corrects yaw.
+  const bool stored = flash_storage.gyrocal_valid;
+  if (stored) {
+    for (uint8_t i = 0; i < 3; i++) {
+      gyrocal[i] = flash_storage.gyrocal[i];
+    }
+  }
+
+  vec3_t zero;
+  const bool rested = sixaxis_gyro_measure(&zero);
+  if (rested && !(stored && sixaxis_gyro_contradicts_stored(zero))) {
+    for (uint8_t i = 0; i < 3; i++) {
+      gyrocal[i] = zero.axis[i];
+    }
+    return;
+  }
 
   led_blink(CAL_FAILED_BLINKS);
+}
+
+void sixaxis_gyro_cal() {
+  // When no window passes, the offset and the stored one keep their values and
+  // the LED blinks.
+  vec3_t zero;
+  if (!sixaxis_gyro_measure(&zero)) {
+    led_blink(CAL_FAILED_BLINKS);
+    return;
+  }
+
+  for (uint8_t i = 0; i < 3; i++) {
+    gyrocal[i] = zero.axis[i];
+    flash_storage.gyrocal[i] = zero.axis[i];
+  }
+  flash_storage.gyrocal_valid = 1;
+  imu_reset_gyro_bias();
 }
 
 void sixaxis_acc_cal() {
@@ -320,6 +367,9 @@ void sixaxis_filter_update(bool reset) {}
 void sixaxis_orientation_update() {}
 void sixaxis_read() {}
 
+void sixaxis_gyro_boot_cal() {
+  time_delay_ms(1500);
+}
 void sixaxis_gyro_cal() {
   time_delay_ms(1500);
 }
