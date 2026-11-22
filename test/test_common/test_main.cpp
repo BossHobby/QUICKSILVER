@@ -99,6 +99,9 @@ extern void test_attitude_imu_pipeline_roll_and_pitch(void);
 extern void test_attitude_imu_pipeline_yaw_while_tilted(void);
 extern void test_attitude_euler_pitch_saturates_at_vertical(void);
 extern void test_attitude_imu_pipeline_drag_deceleration_stays_level(void);
+extern void test_gyro_cal_resting_window_averages_offset(void);
+extern void test_gyro_cal_changing_rate_restarts_window(void);
+extern void test_gyro_cal_steady_roll_never_passes(void);
 extern void test_bmp280_raw_reference_sample_returns_pascals(void);
 extern void test_bmp280_discards_unused_sample_nibbles(void);
 extern void test_bmp388_raw_reference_sample_retains_cubic_correction(void);
@@ -651,6 +654,9 @@ int main(int argc, char **argv) {
   // Wings remove turn acceleration from body rates instead.
   RUN_TEST(test_attitude_imu_pipeline_drag_deceleration_stays_level);
 #endif
+  RUN_TEST(test_gyro_cal_resting_window_averages_offset);
+  RUN_TEST(test_gyro_cal_changing_rate_restarts_window);
+  RUN_TEST(test_gyro_cal_steady_roll_never_passes);
   RUN_TEST(test_bmp280_raw_reference_sample_returns_pascals);
   RUN_TEST(test_bmp280_discards_unused_sample_nibbles);
   RUN_TEST(test_bmp388_raw_reference_sample_retains_cubic_correction);

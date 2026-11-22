@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "control/control.h"
+#include "control/gyro_cal.h"
 #include "control/sixaxis.h"
 #include "core/debug.h"
 #include "core/flash.h"
@@ -23,6 +24,12 @@
 #define CAL_INTERVAL 2000           // time between measurements in us
 #define CAL_COUNT 500               // count of samples
 #define CAL_TRIES (CAL_COUNT * 100) // number of attempts
+
+// Samples a gyro calibration takes before giving up, 15 seconds: a vehicle
+// that never rests must not hold up the boot.
+static constexpr uint32_t CAL_GYRO_TRIES = 15 * 1000000 / CAL_INTERVAL;
+// LED blinks reporting that no window passed.
+static constexpr uint8_t CAL_FAILED_BLINKS = 10;
 
 #define GYRO_BIAS_LIMIT 800
 #define ACCEL_BIAS_LIMIT 800
@@ -236,25 +243,27 @@ void sixaxis_gyro_cal() {
   }
   gyro_calibrate();
 
-  gyro_data_t last_data = gyro_read();
-  for (uint32_t tries = 0, cal_counter = 0; tries < CAL_TRIES; tries++) {
+  // Average one window the vehicle rested through. When none passes before the
+  // tries run out, the offset keeps its previous value, zero after boot, and
+  // the LED blinks.
+  gyro_cal_window_t window;
+  gyro_cal_reset(&window);
+  for (uint32_t tries = 0; tries < CAL_GYRO_TRIES; tries++) {
     const gyro_data_t data = gyro_read();
 
-    led_pwm(((float)(cal_counter) / (float)(CAL_COUNT)), CAL_INTERVAL);
+    led_pwm((float)window.samples / (float)GYRO_CAL_SAMPLES, CAL_INTERVAL);
 
-    bool did_move = test_gyro_move(&last_data, &data);
-    if (!did_move) { // only cali gyro when it's still
+    if (gyro_cal_push(&window, data.gyro * GYRO_RANGE, data.accel) == GYRO_CAL_PASSED) {
       for (uint8_t i = 0; i < 3; i++) {
-        lpf(&gyrocal[i], data.gyro.axis[i], lpfcalc(CAL_INTERVAL, 0.5 * 1e6));
+        gyrocal[i] = window.zero.axis[i] / GYRO_RANGE;
       }
-      if (cal_counter++ == CAL_COUNT) {
-        break;
-      }
+      return;
     }
 
     time_delay_us(CAL_INTERVAL);
-    last_data = data;
   }
+
+  led_blink(CAL_FAILED_BLINKS);
 }
 
 void sixaxis_acc_cal() {
