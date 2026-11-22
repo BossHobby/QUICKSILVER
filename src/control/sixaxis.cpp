@@ -7,6 +7,7 @@
 
 #include "control/control.h"
 #include "control/gyro_cal.h"
+#include "control/imu.h"
 #include "control/sixaxis.h"
 #include "core/debug.h"
 #include "core/flash.h"
@@ -245,7 +246,8 @@ void sixaxis_gyro_cal() {
 
   // Average one window the vehicle rested through. When none passes before the
   // tries run out, the offset keeps its previous value, zero after boot, and
-  // the LED blinks.
+  // the LED blinks: resting disarmed, the IMU still learns the roll and pitch
+  // bias, but nothing corrects yaw.
   gyro_cal_window_t window;
   gyro_cal_reset(&window);
   for (uint32_t tries = 0; tries < CAL_GYRO_TRIES; tries++) {
@@ -257,6 +259,7 @@ void sixaxis_gyro_cal() {
       for (uint8_t i = 0; i < 3; i++) {
         gyrocal[i] = window.zero.axis[i] / GYRO_RANGE;
       }
+      imu_reset_gyro_bias();
       return;
     }
 

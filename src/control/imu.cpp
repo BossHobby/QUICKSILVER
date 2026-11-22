@@ -23,6 +23,25 @@
 #define ACC_MIN 0.7f
 #define ACC_MAX 1.3f
 
+// A biased gyro turns the predicted gravity away from the accelerometer's at a
+// steady rate, which the gravity filter only follows at a standing error.
+// Integrating that error learns the bias: critically damped against the flight
+// filter, it settles in about a minute in flight. Real rotation agrees with the
+// accelerometer and teaches nothing; rotation about gravity is unobservable.
+static constexpr float GYRO_BIAS_GAIN = 1.0f / (4.0f * GRAVITY_FLIGHT_FILTER_TIME * GRAVITY_FLIGHT_FILTER_TIME); // 1/s^2
+// Disarmed, the ground filter leaves a standing error 40 times smaller, which
+// the flight gain would take a quarter of an hour to learn from. This gain
+// learns it within GYRO_BIAS_GROUND_TIME, so a bad calibration is gone before
+// takeoff, while an acceleration from handling that reads as a tilt moves the
+// bias by no more than that tilt over this time, and only while it lasts.
+static constexpr float GYRO_BIAS_GROUND_TIME = 5.0f; // seconds
+static constexpr float GYRO_BIAS_GROUND_GAIN = 1.0f / (GYRO_BIAS_GROUND_TIME * GRAVITY_GROUND_FILTER_TIME); // 1/s^2
+static constexpr float GYRO_BIAS_MAX = 10.0f * DEGTORAD; // rad/s per axis
+// Fast rotation loads the accelerometer, and a coordinated turn reads as level
+// while the gyro turns about a tilted axis: either stops the learning.
+static constexpr float GYRO_BIAS_MAX_SPIN = 20.0f * DEGTORAD; // rad/s, any axis
+static constexpr float GYRO_BIAS_MAX_TURN = 8.0f * DEGTORAD;  // rad/s about gravity
+
 // mahony ahrs parameters
 #define MAHONY_KP 0.25f // accelerometer correction gain
 #define MAHONY_DISARMED_KP_MULTIPLIER 10.0f
@@ -63,6 +82,7 @@ typedef struct {
 
 static attitude_state_t attitude_state;
 static bool gps_enabled; // GPS heading correction is configured at IMU initialization.
+static vec3_t gyro_bias;  // rad/s in state.gyro axes, learned from the gravity reference
 // Two PT1 passes, not one PT2: the cutoff correction would differ.
 static filter_t<vec3_t> accel_filter[2];
 
@@ -241,7 +261,7 @@ static void imu_update_attitude(bool gravity_valid) {
   // The legacy IMU stores gravity as {right, forward, up} and integrates it with {-pitch, roll, yaw}.
   // In the quaternion body frame gravity evolves as -omega x gravity: swap its horizontal axes and negate gyro pitch.
   const vec3_t gravity = {{state.GEstG.pitch, state.GEstG.roll, state.GEstG.yaw}};
-  vec3_t gyro = {{state.gyro.roll, -state.gyro.pitch, state.gyro.yaw}};
+  vec3_t gyro = {{state.gyro.roll - gyro_bias.roll, gyro_bias.pitch - state.gyro.pitch, state.gyro.yaw - gyro_bias.yaw}};
   if (gravity_valid)
     gyro = mahony_correct(gyro, gravity);
   attitude_state.orientation = quat_integrate(&attitude_state.orientation, &gyro, state.looptime);
@@ -301,6 +321,10 @@ void imu_filter_update() {
   }
 }
 
+void imu_reset_gyro_bias() {
+  gyro_bias = {};
+}
+
 void imu_init() {
   // init the gravity vector with accel values
   for (int sample = 0; sample < 100; sample++) {
@@ -315,6 +339,7 @@ void imu_init() {
   for (auto &pass : accel_filter) {
     pass.init(FILTER_LP_PT1, ACCEL_FILTER_HZ, state.looptime_autodetect);
   }
+  imu_reset_gyro_bias();
   imu_reset_attitude();
 }
 
@@ -376,13 +401,28 @@ static vec3_t imu_gravity_reference(vec3_t accel) {
 }
 #endif
 
+// Learn the gyro bias from how far the predicted gravity leads the unit
+// reference.
+static void imu_update_gyro_bias(vec3_t reference) {
+  if (vec3_dot(state.gyro, state.gyro) > GYRO_BIAS_MAX_SPIN * GYRO_BIAS_MAX_SPIN)
+    return;
+  // Both in vec3_rotate()'s {-pitch, roll, yaw} axes: the corrected rate, then
+  // the rotation from the reference to the prediction.
+  const vec3_t rate = {{gyro_bias.pitch - state.gyro.pitch, state.gyro.roll - gyro_bias.roll, state.gyro.yaw - gyro_bias.yaw}};
+  if (fabsf(vec3_dot(rate, state.GEstG)) > GYRO_BIAS_MAX_TURN * ACC_1G)
+    return;
+  // Every vehicle is on the ground filter while disarmed.
+  const float gain = flags.arm_state ? GYRO_BIAS_GAIN : GYRO_BIAS_GROUND_GAIN;
+  const vec3_t error = vec3_cross(reference, state.GEstG) * (gain * state.looptime / (ACC_1G * ACC_1G));
+  gyro_bias.roll = constrain(gyro_bias.roll + error.axis[1], -GYRO_BIAS_MAX, GYRO_BIAS_MAX);
+  gyro_bias.pitch = constrain(gyro_bias.pitch - error.axis[0], -GYRO_BIAS_MAX, GYRO_BIAS_MAX);
+  gyro_bias.yaw = constrain(gyro_bias.yaw + error.axis[2], -GYRO_BIAS_MAX, GYRO_BIAS_MAX);
+}
+
 HOT_CODE void imu_calc() {
-  // Predict gravity from the gyro delta, then correct it with filtered acceleration.
-  const vec3_t rot = {{
-      -state.gyro_delta_angle.axis[1],
-      state.gyro_delta_angle.axis[0],
-      state.gyro_delta_angle.axis[2],
-  }};
+  // Predict gravity from the gyro delta less the learned bias, then correct it with filtered acceleration.
+  const vec3_t delta = state.gyro_delta_angle - gyro_bias * state.looptime;
+  const vec3_t rot = {{-delta.axis[1], delta.axis[0], delta.axis[2]}};
   state.GEstG = vec3_rotate(state.GEstG, rot);
 
   state.accel = accel_filter[1].step(accel_filter[0].step(state.accel_raw));
@@ -392,6 +432,7 @@ HOT_CODE void imu_calc() {
   const float refmag_squared = vec3_dot(gravity_reference, gravity_reference);
   if (refmag_squared > (ACC_MIN * ACC_1G) * (ACC_MIN * ACC_1G) && refmag_squared < (ACC_MAX * ACC_1G) * (ACC_MAX * ACC_1G)) {
     const vec3_t reference = gravity_reference * (ACC_1G / sqrtf(refmag_squared));
+    imu_update_gyro_bias(reference);
     const float filter_time = flags.on_ground ? GRAVITY_GROUND_FILTER_TIME : GRAVITY_FLIGHT_FILTER_TIME;
     // Filter times are time constants; lpfcalc() takes 1 / cutoff frequency.
     const float filtcoeff = constrain(1.0f - state.looptime / filter_time, 0.0f, 1.0f);

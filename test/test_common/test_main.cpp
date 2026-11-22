@@ -97,6 +97,9 @@ extern void test_attitude_rth_recovery_requires_valid_course_and_phase(void);
 extern void test_attitude_normal_heading_pitch_weight_matches_vehicle(void);
 extern void test_attitude_imu_pipeline_roll_and_pitch(void);
 extern void test_attitude_imu_pipeline_yaw_while_tilted(void);
+extern void test_attitude_imu_pipeline_learns_gyro_bias(void);
+extern void test_attitude_imu_pipeline_turn_teaches_no_gyro_bias(void);
+extern void test_attitude_imu_pipeline_learns_gyro_bias_before_takeoff(void);
 extern void test_attitude_euler_pitch_saturates_at_vertical(void);
 extern void test_attitude_imu_pipeline_drag_deceleration_stays_level(void);
 extern void test_gyro_cal_resting_window_averages_offset(void);
@@ -649,6 +652,9 @@ int main(int argc, char **argv) {
   RUN_TEST(test_attitude_normal_heading_pitch_weight_matches_vehicle);
   RUN_TEST(test_attitude_imu_pipeline_roll_and_pitch);
   RUN_TEST(test_attitude_imu_pipeline_yaw_while_tilted);
+  RUN_TEST(test_attitude_imu_pipeline_learns_gyro_bias);
+  RUN_TEST(test_attitude_imu_pipeline_turn_teaches_no_gyro_bias);
+  RUN_TEST(test_attitude_imu_pipeline_learns_gyro_bias_before_takeoff);
   RUN_TEST(test_attitude_euler_pitch_saturates_at_vertical);
 #ifndef VEHICLE_WING
   // Wings remove turn acceleration from body rates instead.

@@ -701,6 +701,78 @@ void test_attitude_imu_pipeline_yaw_while_tilted(void) {
   TEST_ASSERT_FLOAT_WITHIN(0.5f * DEGTORAD, 90 * DEGTORAD, state.attitude.yaw - initial_yaw);
 }
 
+// Level flight with a gyro reading 2 deg/s on one axis. The gravity filter and
+// attitude correction alone settle about 20 degrees off and stay there;
+// learning the bias brings the attitude back level within two minutes.
+void test_attitude_imu_pipeline_learns_gyro_bias(void) {
+  for (int axis = 0; axis < 2; axis++) {
+    const float biases[] = {2 * DEGTORAD, -2 * DEGTORAD};
+    for (const float bias : biases) {
+      imu_pipeline_setup(0, 0);
+      flags.arm_state = 1;
+      state.gyro.axis[axis] = bias;
+      state.gyro_delta_angle = state.gyro * state.looptime;
+      float worst = 0;
+      for (int i = 0; i < 120000; i++) {
+        imu_calc();
+        worst = MAX(worst, MAX(fabsf(state.attitude.roll), fabsf(state.attitude.pitch)));
+      }
+      // The error peaks while the bias is still being learned.
+      TEST_ASSERT_FLOAT_WITHIN(3 * DEGTORAD, 14 * DEGTORAD, worst);
+      TEST_ASSERT_FLOAT_WITHIN(1 * DEGTORAD, 0, state.attitude.roll);
+      TEST_ASSERT_FLOAT_WITHIN(1 * DEGTORAD, 0, state.attitude.pitch);
+    }
+  }
+}
+
+// A minute of coordinated turn at 30 degrees of bank: the accelerometer reads
+// the load along body up, as if level, while the gyro turns about the tilted
+// vertical. Learned as a bias, that rate would hold the attitude off level
+// for minutes after the turn. Recovering from the turn's own error still
+// teaches a little, so the attitude settles in a minute, not seconds.
+void test_attitude_imu_pipeline_turn_teaches_no_gyro_bias(void) {
+  imu_pipeline_setup(0, 0);
+  flags.arm_state = 1;
+  const float bank = 30 * DEGTORAD;
+  const float turn_rate = 15 * DEGTORAD;
+  state.accel_raw = (vec3_t){{0, 0, 1 / cosf(bank)}};
+  state.gyro = (vec3_t){{0, -turn_rate * sinf(bank), turn_rate * cosf(bank)}};
+  state.gyro_delta_angle = state.gyro * state.looptime;
+  for (int i = 0; i < 60000; i++) {
+    imu_calc();
+  }
+  state.accel_raw = (vec3_t){{0, 0, 1}};
+  state.gyro = (vec3_t){0};
+  state.gyro_delta_angle = (vec3_t){0};
+  for (int i = 0; i < 60000; i++) {
+    imu_calc();
+  }
+  TEST_ASSERT_FLOAT_WITHIN(3 * DEGTORAD, 0, state.attitude.roll);
+  TEST_ASSERT_FLOAT_WITHIN(3 * DEGTORAD, 0, state.attitude.pitch);
+}
+
+// Resting disarmed with a gyro reading 5 deg/s on one axis, as a calibration
+// that never saw the craft still leaves it. The bias is learned on the ground,
+// so the flight that follows starts level and stays there.
+void test_attitude_imu_pipeline_learns_gyro_bias_before_takeoff(void) {
+  for (int axis = 0; axis < 2; axis++) {
+    imu_pipeline_setup(0, 0);
+    flags.on_ground = 1;
+    state.gyro.axis[axis] = 5 * DEGTORAD;
+    state.gyro_delta_angle = state.gyro * state.looptime;
+    for (int i = 0; i < 20000; i++) {
+      imu_calc();
+    }
+    flags.arm_state = 1;
+    flags.on_ground = 0;
+    for (int i = 0; i < 30000; i++) {
+      imu_calc();
+      TEST_ASSERT_FLOAT_WITHIN(1.5f * DEGTORAD, 0, state.attitude.roll);
+      TEST_ASSERT_FLOAT_WITHIN(1.5f * DEGTORAD, 0, state.attitude.pitch);
+    }
+  }
+}
+
 void test_attitude_euler_pitch_saturates_at_vertical(void) {
   // Pointing straight up or down, rounding can leave sin(pitch) just above 1.
   const float c = 0.70710683f;
