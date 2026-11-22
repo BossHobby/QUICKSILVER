@@ -258,6 +258,7 @@ extern void test_failsafe_repeated_loss_keeps_outputs_blocked_after_stage2(void)
 extern void test_failsafe_blocks_new_arming_while_outputs_are_allowed(void);
 extern void test_failsafe_hold_keeps_existing_arm_until_stage2(void);
 extern void test_regular_rearm_requires_prearm_cycle_after_disarm(void);
+extern void test_uncalibrated_gyro_blocks_arming_until_calibrated(void);
 extern void test_default_prearm_allows_regular_rearm_when_always_on(void);
 extern void test_failsafe_rearm_allows_held_prearm_after_drop(void);
 extern void test_failsafe_recovery_blocks_automatic_rearm_when_arm_stays_held(void);
@@ -576,6 +577,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_failsafe_blocks_new_arming_while_outputs_are_allowed);
   RUN_TEST(test_failsafe_hold_keeps_existing_arm_until_stage2);
   RUN_TEST(test_regular_rearm_requires_prearm_cycle_after_disarm);
+  RUN_TEST(test_uncalibrated_gyro_blocks_arming_until_calibrated);
   RUN_TEST(test_default_prearm_allows_regular_rearm_when_always_on);
   RUN_TEST(test_failsafe_rearm_allows_held_prearm_after_drop);
   RUN_TEST(test_failsafe_recovery_blocks_automatic_rearm_when_arm_stays_held);

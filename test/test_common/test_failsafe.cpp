@@ -615,6 +615,31 @@ void test_regular_rearm_requires_prearm_cycle_after_disarm(void) {
   TEST_ASSERT_TRUE(flags.arm_state);
 }
 
+void test_uncalibrated_gyro_blocks_arming_until_calibrated(void) {
+  failsafe_reset(1000000);
+  failsafe_clear_arm_switch_latch();
+
+  flags.gyro_uncalibrated = 1;
+  state.aux_active = (1U << AUX_ARMING) | (1U << AUX_PREARM);
+  control_update_arming();
+  TEST_ASSERT_FALSE(flags.arm_state);
+  TEST_ASSERT_TRUE((flags.arming_disabled_flags & ARMING_DISABLED_GYRO) != 0);
+
+  // Calibrating with the switch still raised must not arm the vehicle.
+  flags.gyro_uncalibrated = 0;
+  control_update_arming();
+  TEST_ASSERT_FALSE(flags.arm_state);
+
+  state.aux_active = 1U << AUX_PREARM;
+  control_update_arming();
+  control_update_arming();
+  TEST_ASSERT_EQUAL_UINT32(ARMING_DISABLED_NONE, flags.arming_disabled_flags);
+
+  state.aux_active = (1U << AUX_ARMING) | (1U << AUX_PREARM);
+  control_update_arming();
+  TEST_ASSERT_TRUE(flags.arm_state);
+}
+
 void test_default_prearm_allows_regular_rearm_when_always_on(void) {
   failsafe_reset(1000000);
   failsafe_clear_arm_switch_latch();

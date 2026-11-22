@@ -20,6 +20,7 @@ typedef enum {
   STATUS_FAILSAFE,
   STATUS_LOOPTIME,
   STATUS_USB_SAFETY,
+  STATUS_GYRO_SAFETY,
   STATUS_ARM_SAFETY,
   STATUS_THROTTLE_SAFETY,
   STATUS_ARM,
@@ -66,6 +67,7 @@ const char *default_system_status_labels[STATUS_MAX] = {
     [STATUS_FAILSAFE] = "**FAILSAFE**",
     [STATUS_LOOPTIME] = "**LOOPTIME**",
     [STATUS_USB_SAFETY] = "USB SAFETY",
+    [STATUS_GYRO_SAFETY] = "GYRO: CALIBRATE",
     [STATUS_ARM_SAFETY] = "ARMING SAFETY",
     [STATUS_THROTTLE_SAFETY] = "THROTTLE SAFETY",
     [STATUS_ARM] = "**ARMED**",
@@ -84,6 +86,7 @@ const char *guac_system_status_labels[STATUS_MAX] = {
     [STATUS_FAILSAFE] = "**404 RX NOT FOUND**",
     [STATUS_LOOPTIME] = "**LOOPTIME**",
     [STATUS_USB_SAFETY] = "**USB SAFETY**",
+    [STATUS_GYRO_SAFETY] = "**GYRO: CALIBRATE**",
     [STATUS_ARM_SAFETY] = "**ARMING SAFETY**",
     [STATUS_THROTTLE_SAFETY] = "**DANGER ZONE**",
     [STATUS_ARM] = "**HERE WE GO AGAIN**",
@@ -532,6 +535,11 @@ bool osd_status_update(osd_element_t *el) {
 
   if (flags.arming_disabled_flags & ARMING_DISABLED_CONFIGURATOR) {
     osd_status_show(MODE_HOLD, STATUS_USB_SAFETY);
+    return osd_status_print(el);
+  }
+
+  if (flags.arming_disabled_flags & ARMING_DISABLED_GYRO) {
+    osd_status_show(MODE_HOLD, STATUS_GYRO_SAFETY);
     return osd_status_print(el);
   }
 

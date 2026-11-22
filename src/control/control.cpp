@@ -531,6 +531,10 @@ void control_update_arming() {
     flags.arming_disabled_flags |= ARMING_DISABLED_CONFIGURATOR;
   }
 
+  if (flags.gyro_uncalibrated) {
+    flags.arming_disabled_flags |= ARMING_DISABLED_GYRO;
+  }
+
   // An arm request during configuration or a disarmed failsafe must be
   // lowered before another attempt. Ending the session must not arm the vehicle.
   if (flags.arm_request && ((failsafe_active && !flags.arm_state) || configurator_active)) {
@@ -541,6 +545,7 @@ void control_update_arming() {
     // A new arm needs cleared latches, valid prearm, safe throttle and no
     // failsafe. An already armed vehicle follows the failsafe output policy.
     bool can_arm = !failsafe_active && !checked_prearm && arming_disabled_latch == ARMING_DISABLED_NONE;
+    can_arm = can_arm && !flags.gyro_uncalibrated;
 
     const bool prearm_allows_arm =
         prearm_active && (!prearm_requires_cycle || prearm_ready || failsafe_rearm_allows_prearm_hold);

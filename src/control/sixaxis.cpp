@@ -277,9 +277,10 @@ static bool sixaxis_gyro_contradicts_stored(vec3_t zero) {
 
 void sixaxis_gyro_boot_cal() {
   // Without a resting window the stored offset stands in, off by its drift
-  // since the commanded calibration; with none stored the offset stays zero.
-  // The LED blinks either way: resting disarmed, the IMU still learns the roll
-  // and pitch bias, but nothing corrects yaw.
+  // since the commanded calibration. With none stored the offset stays zero:
+  // resting disarmed, the IMU still learns the roll and pitch bias, but nothing
+  // corrects yaw, so arming waits for a commanded calibration. The LED blinks
+  // either way.
   const bool stored = flash_storage.gyrocal_valid;
   if (stored) {
     for (uint8_t i = 0; i < 3; i++) {
@@ -297,6 +298,8 @@ void sixaxis_gyro_boot_cal() {
   }
 
   led_blink(CAL_FAILED_BLINKS);
+  // The stored offset is trusted over no window, but not against one.
+  flags.gyro_uncalibrated = rested || !stored;
 }
 
 void sixaxis_gyro_cal() {
@@ -313,6 +316,7 @@ void sixaxis_gyro_cal() {
     flash_storage.gyrocal[i] = zero.axis[i];
   }
   flash_storage.gyrocal_valid = 1;
+  flags.gyro_uncalibrated = 0;
   imu_reset_gyro_bias();
 }
 
