@@ -5,6 +5,9 @@
 void imu_init();
 void imu_filter_update();
 void imu_calc();
+// The gyro offset was recalibrated: the bias learned against the old one no
+// longer applies.
+void imu_reset_gyro_bias();
 // Navigation saw the vehicle move against its commands: relearn the heading
 // from GPS course before trusting it again.
 void imu_reject_heading();
