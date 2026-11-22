@@ -33,6 +33,7 @@ typedef enum {
   ARMING_DISABLED_THROTTLE = 1U << 1,
   ARMING_DISABLED_FAILSAFE = 1U << 2,
   ARMING_DISABLED_CONFIGURATOR = 1U << 3, // USB configurator session
+  ARMING_DISABLED_GYRO = 1U << 4,         // flags.gyro_uncalibrated
 } arming_disabled_flags_t;
 
 typedef enum : uint8_t {
@@ -181,6 +182,11 @@ typedef struct {
   uint8_t lowbatt;
   uint8_t rx_mode;
   uint8_t rx_ready;
+
+  // No gyro offset can be trusted: boot found no resting window with none
+  // stored, or one that contradicts the stored offset. Set by Flight's boot
+  // calibration; a commanded calibration on the OSD or USB thread clears it.
+  uint8_t gyro_uncalibrated;
 
   volatile uint8_t usb_active;
   uint32_t arming_disabled_flags;
