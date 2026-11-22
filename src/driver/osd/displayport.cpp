@@ -7,6 +7,7 @@
 #include "io/msp.h"
 #include "util/crc.h"
 #include "util/ring_buffer.h"
+#include "util/util.h"
 
 #ifdef USE_DIGITAL_VTX
 
@@ -52,8 +53,21 @@ serial_port_t serial_displayport = {
     .tx_done = true,
 };
 
-static const uint8_t msp_options[2] = {0, 1};
-static bool is_detected = false;
+// MSP_DP_OPTIONS resolution ordinals, hardcoded by HDZero and WTFOS.
+typedef enum {
+  OPTIONS_SD_3016 = 0,
+  OPTIONS_HD_5018 = 1,
+  OPTIONS_HD_6022 = 3,
+  OPTIONS_HD_5320 = 4,
+} displayport_options_mode_t;
+
+// Owned by the OSD thread.
+displayport_status_t displayport_status = {
+    .connected = 0,
+    .cols = DISPLAYPORT_COLS,
+    .rows = DISPLAYPORT_ROWS,
+};
+static uint8_t msp_options[2] = {0, OPTIONS_HD_5320};
 
 // Frames are assembled only by the OSD task, which owns this port.
 static uint8_t msp_frame[MAX_MSP_FRAME_SIZE];
@@ -61,7 +75,7 @@ static uint8_t msp_frame[MAX_MSP_FRAME_SIZE];
 static void displayport_msp_send(msp_magic_t magic, uint8_t direction, uint16_t cmd, const uint8_t *data, uint16_t len) {
   if (cmd == MSP_FC_VARIANT) {
     // we got the first MSP_FC_VARIANT request, consider vtx detected
-    is_detected = true;
+    displayport_status.connected = 1;
   }
 
   if (len > MAX_MSP_FRAME_SIZE - MSP2_HEADER_LEN - 1) {
@@ -214,7 +228,7 @@ void displayport_intro() {
       buffer[i] = start + i;
     }
     displayport_wait_for_ready();
-    while (!displayport_push_string(OSD_ATTR_TEXT, (DISPLAYPORT_COLS / 2) - 12, (DISPLAYPORT_ROWS / 2) - 2 + row, buffer, 24))
+    while (!displayport_push_string(OSD_ATTR_TEXT, (displayport_status.cols / 2) - 12, (displayport_status.rows / 2) - 2 + row, buffer, 24))
       ;
   }
 
@@ -238,9 +252,9 @@ bool displayport_is_ready(TickType_t *wait) {
   }
 
   static bool was_detected = false;
-  if (!was_detected && is_detected) {
+  if (!was_detected && displayport_status.connected) {
     displayport_push_subcmd(SUBCMD_SET_OPTIONS, msp_options, 2);
-    was_detected = is_detected;
+    was_detected = displayport_status.connected;
     return false;
   }
 
@@ -257,8 +271,26 @@ bool displayport_is_ready(TickType_t *wait) {
   return !had_packet;
 }
 
-osd_system_t displayport_check_system() {
-  return OSD_SYS_HD;
+// Called from the OSD thread while it parses goggle MSP.
+void displayport_set_canvas(uint8_t cols, uint8_t rows) {
+  // Menus are laid out for the SD grid, so never go below it. Analog OSDs
+  // speaking DisplayPort announce that grid, 30x16 or 30x13.
+  cols = constrain(cols, SD_COLS, HD_COLS_MAX);
+  rows = constrain(rows, SD_ROWS_NTSC, HD_ROWS_MAX);
+  displayport_status.cols = cols;
+  displayport_status.rows = rows;
+  // not every goggle polls MSP_FC_VARIANT first
+  displayport_status.connected = 1;
+
+  if (cols == SD_COLS) {
+    msp_options[1] = OPTIONS_SD_3016;
+  } else if (cols == 50 && rows == 18) {
+    msp_options[1] = OPTIONS_HD_5018;
+  } else if (cols == 60 && rows == 22) {
+    msp_options[1] = OPTIONS_HD_6022;
+  } else {
+    msp_options[1] = OPTIONS_HD_5320;
+  }
 }
 
 bool displayport_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size) {

@@ -285,7 +285,7 @@ bool osd_menu_button(int8_t x, int8_t y, const char *text) {
   y = get_y_value(y);
 
   const bool is_selected = is_element_selected();
-  if (osd_system == OSD_SYS_HD) {
+  if (osd_is_hd()) {
     if (is_selected) {
       osd_start(OSD_ATTR_INVERT, x - 1, y);
       osd_write_char('>');
@@ -314,7 +314,7 @@ void osd_menu_select(int8_t x, int8_t y, const char *text) {
   y = get_y_value(y);
 
   const bool is_selected = is_element_selected();
-  if (osd_system == OSD_SYS_HD) {
+  if (osd_is_hd()) {
     if (is_selected) {
       osd_start(OSD_ATTR_INVERT, x - 1, y);
       osd_write_char('>');
@@ -341,7 +341,7 @@ bool osd_menu_select_enum(int8_t x, int8_t y, const uint8_t val, const char **la
   y = get_y_value(y);
 
   const bool is_selected = is_element_selected();
-  if (osd_system == OSD_SYS_HD) {
+  if (osd_is_hd()) {
     if (is_selected) {
       osd_start(OSD_ATTR_INVERT, x - 1, y);
       osd_write_char('>');
@@ -370,7 +370,7 @@ bool osd_menu_select_int(int8_t x, int8_t y, const int32_t val, uint8_t width) {
   y = get_y_value(y);
 
   const bool is_selected = is_element_selected();
-  if (osd_system == OSD_SYS_HD) {
+  if (osd_is_hd()) {
     if (is_selected) {
       osd_start(OSD_ATTR_INVERT, x, y);
       osd_write_char('>');
@@ -435,7 +435,7 @@ bool osd_menu_select_float(int8_t x, int8_t y, const float val, uint8_t width, u
   y = get_y_value(y);
 
   const bool is_selected = is_element_selected();
-  if (osd_system == OSD_SYS_HD) {
+  if (osd_is_hd()) {
     if (is_selected) {
       osd_start(OSD_ATTR_INVERT, x, y);
       osd_write_char('>');

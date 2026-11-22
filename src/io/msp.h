@@ -30,6 +30,7 @@
 #define MSP_MOTOR 104 // out message         motors
 
 #define MSP_DISPLAYPORT 182
+#define MSP_SET_OSD_CANVAS 188 // in message          goggle announces its DisplayPort canvas size
 
 #define MSP_STATUS 101       // out message         cycletime & errors_count & sensor present & box activation & current setting number
 #define MSP_RC 105           // out message         rc channels and more

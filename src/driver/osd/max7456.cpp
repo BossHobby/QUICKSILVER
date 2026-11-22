@@ -14,7 +14,8 @@
 #define DMA_BUFFER_SIZE 128
 #define MAX7456_BAUD_RATE MHZ_TO_HZ(10.5)
 
-static osd_system_t last_osd_system = OSD_SYS_NONE;
+// rows of the detected video system, 0 until a camera shows up
+static uint8_t detected_rows = 0;
 
 static spi_bus_device_t bus = {};
 
@@ -77,8 +78,8 @@ static bool max7456_init_display() {
   max7456_dma_spi_write(VM1, 0x0C);  // set background brightness (bits 456), blinking time(bits 23), blinking duty cycle (bits 01)
   max7456_dma_spi_write(OSDM, 0x2D); // osd mux & rise/fall ( lowest sharpness)
 
-  last_osd_system = OSD_SYS_NONE;
-  max7456_check_system();
+  detected_rows = 0;
+  max7456_check_rows();
 
   max7456_dma_spi_write(DMM, 0x04);
   time_delay_us(40);
@@ -97,23 +98,12 @@ bool max7456_init() {
 }
 
 // set the video output system PAL /NTSC
-static void max7456_set_system(osd_system_t sys) {
+static void max7456_set_pal(bool pal) {
   const uint8_t vm0 = max7456_dma_spi_read(VM0_R);
-  switch (sys) {
-  case OSD_SYS_PAL:
-    max7456_dma_spi_write(VM0, vm0 | 0x40);
-    break;
-
-  case OSD_SYS_NTSC:
-    max7456_dma_spi_write(VM0, vm0 & 0xBF);
-    break;
-
-  default:
-    break;
-  }
+  max7456_dma_spi_write(VM0, pal ? (vm0 | 0x40) : (vm0 & 0xBF));
 }
 
-static osd_system_t max7456_current_system() {
+static uint8_t max7456_current_rows() {
   static uint8_t stat = 0;
 
   const spi_txn_segment_t segs[] = {
@@ -125,20 +115,20 @@ static osd_system_t max7456_current_system() {
     stat = 0;
   });
   if (!is_done) {
-    return last_osd_system;
+    return 0;
   }
 
   if ((stat & 0x01) == 0x01) {
-    return OSD_SYS_PAL;
+    return MAX7456_ROWS;
   }
   if ((stat & 0x02) == 0x02) {
-    return OSD_SYS_NTSC;
+    return SD_ROWS_NTSC;
   }
 
   // really (x & 0x03) == 0x03 equals Loss-of-Sync
   // but its probably safe to assume if we havent detected
   // either NTSC or PAl we dont have a cam present
-  return OSD_SYS_NONE;
+  return 0;
 }
 
 bool max7456_clear_async() {
@@ -173,39 +163,17 @@ bool max7456_clear_async() {
   return false;
 }
 
-// function to detect and correct ntsc/pal mode or mismatch
-// returns the current system
-osd_system_t max7456_check_system() {
-  if (last_osd_system > OSD_SYS_NONE) {
-    return last_osd_system;
+// Detect the camera's video system once and switch the chip to it.
+uint8_t max7456_check_rows() {
+  if (detected_rows) {
+    return detected_rows;
   }
 
-  const osd_system_t sys = max7456_current_system();
-
-  switch (sys) {
-  case OSD_SYS_PAL:
-    if (last_osd_system != OSD_SYS_PAL) {
-      last_osd_system = OSD_SYS_PAL;
-      max7456_set_system(OSD_SYS_PAL);
-    }
-    break;
-
-  case OSD_SYS_NTSC:
-    if (last_osd_system != OSD_SYS_NTSC) {
-      last_osd_system = OSD_SYS_NTSC;
-      max7456_set_system(OSD_SYS_NTSC);
-    }
-    break;
-
-  default:
-    if (last_osd_system != OSD_SYS_NONE) {
-      last_osd_system = OSD_SYS_NONE;
-      max7456_set_system(OSD_SYS_NTSC);
-    }
-    break;
+  detected_rows = max7456_current_rows();
+  if (detected_rows) {
+    max7456_set_pal(detected_rows == MAX7456_ROWS);
   }
-
-  return sys;
+  return detected_rows;
 }
 
 // splash screen
@@ -243,10 +211,6 @@ bool max7456_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data
     return false;
   }
 
-  // NTSC adjustment 3 lines up if after line 12 or maybe this should be 8
-  if (last_osd_system != OSD_SYS_PAL && y > 12) {
-    y = y - 2;
-  }
   if (y > MAX7456_ROWS - 1) {
     y = MAX7456_ROWS - 1;
   }

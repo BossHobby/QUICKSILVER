@@ -12,6 +12,7 @@
 #include "core/target.h"
 #include "driver/interrupt.h"
 #include "driver/motor.h"
+#include "driver/osd/displayport.h"
 #include "driver/reset.h"
 #include "driver/serial.h"
 #include "driver/serial_4way.h"
@@ -848,6 +849,18 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
     }
 
     msp_send_reply(msp, magic, cmd, data, ptr - data);
+    break;
+  }
+#endif
+#ifdef USE_DIGITAL_VTX
+  case MSP_SET_OSD_CANVAS: {
+    // Only the goggle on the DisplayPort link knows its canvas.
+    if (msp != &displayport_msp || size < 2) {
+      msp_send_error(msp, magic, cmd);
+      break;
+    }
+    displayport_set_canvas(payload[0], payload[1]);
+    msp_send_reply(msp, magic, cmd, NULL, 0);
     break;
   }
 #endif

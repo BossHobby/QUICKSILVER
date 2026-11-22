@@ -110,8 +110,9 @@ typedef struct {
 } __attribute__((packed)) osd_element_t;
 
 #define ENCODE_OSD_ELEMENT(active, attr, sd_x, sd_y, hd_x, hd_y) ((hd_y << 20) | (hd_x << 12) | (sd_y << 7) | (sd_x << 2) | (attr << 1) | active)
-#define pos_x(el) (osd_system == OSD_SYS_HD ? el->pos_hd_x : el->pos_sd_x)
-#define pos_y(el) (osd_system == OSD_SYS_HD ? el->pos_hd_y : el->pos_sd_y)
+// Clamp at draw time so a smaller canvas never rewrites the stored layout.
+#define pos_x(el) MIN((uint32_t)(osd_is_hd() ? el->pos_hd_x : el->pos_sd_x), (uint32_t)(osd_screen.cols - 1))
+#define pos_y(el) MIN((uint32_t)(osd_is_hd() ? el->pos_hd_y : el->pos_sd_y), (uint32_t)(osd_layout_rows() - 1))
 
 typedef enum {
   OSD_PHASE_CLEAR,
@@ -141,7 +142,6 @@ typedef struct {
 } osd_state_t;
 
 extern osd_state_t osd_state;
-extern osd_system_t osd_system;
 
 void osd_init();
 // Service one bounded display pass and return its next deadline in ticks.

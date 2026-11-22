@@ -12,6 +12,7 @@
 #include "driver/time.h"
 #include "driver/osd/osd.h"
 #include "io/msp.h"
+#include "io/simulator.h"
 #include "io/quic.h"
 #include "osd/render.h"
 #include "osd/status.h"
@@ -57,9 +58,9 @@ void test_osd_aux_output_menu_is_reachable() {
     osd_state.cursor = cursor;
     osd_state.screen_phase = OSD_PHASE_CLEAR;
     for (unsigned i = 0; i < 64; i++) osd_display();
-    for (uint8_t y = 0; y < DISPLAYPORT_ROWS; y++) {
-      char row[DISPLAYPORT_COLS + 1] = {};
-      for (uint8_t x = 0; x < DISPLAYPORT_COLS; x++)
+    for (uint8_t y = 0; y < SIMULATOR_OSD_ROWS; y++) {
+      char row[SIMULATOR_OSD_COLS + 1] = {};
+      for (uint8_t x = 0; x < SIMULATOR_OSD_COLS; x++)
         row[x] = simulator_osd_test_char(x, y);
       pit_mode |= strstr(row, "VTX PIT MODE") != nullptr;
       power |= strstr(row, "VTX POWER") != nullptr;

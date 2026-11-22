@@ -8,20 +8,24 @@
 #include "driver/osd/displayport.h"
 #include "driver/osd/max7456.h"
 #include "io/simulator.h"
+#include "util/cbor_helper.h"
 #include "util/util.h"
 
-#define MAX_DISPLAY_SIZE (HD_COLS * HD_ROWS)
+#define MAX_DISPLAY_SIZE (HD_COLS_MAX * HD_ROWS_MAX)
 
 static osd_segment_t osd_seg;
 static osd_device_t osd_device = OSD_DEVICE_NONE;
 
 static osd_char_t display[MAX_DISPLAY_SIZE];
-static uint64_t display_dirty_rows[HD_ROWS];
+static uint64_t display_dirty_rows[HD_ROWS_MAX];
 static bool display_has_dirty = false;
 static uint8_t display_row;
 
-static uint8_t cols = HD_COLS;
-static uint8_t rows = HD_ROWS;
+osd_screen_t osd_screen = {
+    .connected = 0,
+    .cols = DISPLAYPORT_COLS,
+    .rows = DISPLAYPORT_ROWS,
+};
 
 static bool blink_phase = false;
 
@@ -30,8 +34,6 @@ void osd_device_init() {
   if (profile.serial.digital_vtx != SERIAL_PORT_INVALID) {
     target_set_feature(FEATURE_OSD);
     osd_device = OSD_DEVICE_DISPLAYPORT;
-    cols = DISPLAYPORT_COLS;
-    rows = DISPLAYPORT_ROWS;
     displayport_init();
   }
 #endif
@@ -39,16 +41,16 @@ void osd_device_init() {
   else if (target_spi_device_valid(&target.osd) && max7456_init()) {
     target_set_feature(FEATURE_OSD);
     osd_device = OSD_DEVICE_MAX7456;
-    cols = MAX7456_COLS;
-    rows = MAX7456_ROWS;
+    osd_screen.cols = MAX7456_COLS;
+    osd_screen.rows = MAX7456_ROWS;
   } else
 #endif
 #ifdef SIMULATOR
   {
     target_set_feature(FEATURE_OSD);
     osd_device = OSD_DEVICE_SIMULATOR;
-    cols = DISPLAYPORT_COLS;
-    rows = DISPLAYPORT_ROWS;
+    osd_screen.cols = SIMULATOR_OSD_COLS;
+    osd_screen.rows = SIMULATOR_OSD_ROWS;
   }
 #else
   {
@@ -128,9 +130,9 @@ static bool osd_mark_dirty() {
   default: {
     // Process rows to mark non-space characters as dirty
     osd_char_t *ptr = display;
-    for (uint8_t row = 0; row < rows; row++) {
+    for (uint8_t row = 0; row < osd_screen.rows; row++) {
       uint64_t dirty_mask = 0;
-      for (uint8_t col = 0; col < cols; col++, ptr++) {
+      for (uint8_t col = 0; col < osd_screen.cols; col++, ptr++) {
         if (ptr->val != ' ') {
           dirty_mask |= (1ULL << col);
         }
@@ -148,9 +150,9 @@ static bool osd_mark_dirty() {
 
 static bool osd_mark_blink_dirty() {
   osd_char_t *ptr = display;
-  for (uint8_t row = 0; row < rows; row++) {
+  for (uint8_t row = 0; row < osd_screen.rows; row++) {
     uint64_t blink_mask = 0;
-    for (uint8_t col = 0; col < cols; col++, ptr++) {
+    for (uint8_t col = 0; col < osd_screen.cols; col++, ptr++) {
       if ((ptr->attr & OSD_ATTR_BLINK) && ptr->val != ' ') {
         blink_mask |= (1ULL << col);
       }
@@ -187,11 +189,17 @@ bool osd_clear_async() {
 }
 
 static void osd_display_set(uint8_t x, uint8_t y, uint8_t attr, uint8_t val) {
-  if (x >= cols || y >= rows) {
+  if (x >= osd_screen.cols || y >= osd_layout_rows()) {
     return;
   }
 
-  const uint16_t offset = y * cols + x;
+  // NTSC has fewer lines; move the bottom of the SD layout up. Folding in the
+  // buffer keeps it in sync with the screen where two layout rows share a line.
+  if (osd_screen.rows < osd_layout_rows() && y > 12) {
+    y = y - 2 < osd_screen.rows ? y - 2 : osd_screen.rows - 1;
+  }
+
+  const uint16_t offset = y * osd_screen.cols + x;
   osd_char_t *const c = &display[offset];
   if (c->val == val && c->attr == attr) {
     return;
@@ -205,35 +213,55 @@ static void osd_display_set(uint8_t x, uint8_t y, uint8_t attr, uint8_t val) {
 }
 
 void osd_display_refresh() {
-  for (uint8_t y = 0; y < rows; y++) {
-    for (uint8_t x = 0; x < cols; x++) {
+  for (uint8_t y = 0; y < osd_screen.rows; y++) {
+    for (uint8_t x = 0; x < osd_screen.cols; x++) {
       osd_display_set(x, y, 0, ' ');
     }
   }
 }
 
-osd_system_t osd_check_system() {
+static void osd_set_canvas(uint8_t cols, uint8_t rows) {
+  if (cols == osd_screen.cols && rows == osd_screen.rows) {
+    return;
+  }
+
+  // The buffer is laid out by the old width; drop it and let the caller's
+  // screen clear repaint everything on the new grid.
+  osd_screen.cols = cols;
+  osd_screen.rows = rows;
+  for (uint32_t i = 0; i < MAX_DISPLAY_SIZE; i++) {
+    display[i] = {' ', 0};
+  }
+  memset(display_dirty_rows, 0, sizeof(display_dirty_rows));
+  display_has_dirty = false;
+  display_row = 0;
+}
+
+void osd_check_screen() {
   switch (osd_device) {
 #ifdef USE_MAX7456
-  case OSD_DEVICE_MAX7456:
-    cols = MAX7456_COLS;
-    rows = MAX7456_ROWS;
-    return max7456_check_system();
+  case OSD_DEVICE_MAX7456: {
+    // the chip idles in NTSC mode without a camera
+    const uint8_t rows = max7456_check_rows();
+    osd_screen.connected = rows != 0;
+    osd_set_canvas(SD_COLS, rows ? rows : SD_ROWS_NTSC);
+    break;
+  }
 #endif
 #ifdef USE_DIGITAL_VTX
   case OSD_DEVICE_DISPLAYPORT:
-    cols = DISPLAYPORT_COLS;
-    rows = DISPLAYPORT_ROWS;
-    return displayport_check_system();
+    osd_screen.connected = displayport_status.connected;
+    osd_set_canvas(displayport_status.cols, displayport_status.rows);
+    break;
 #endif
 #ifdef SIMULATOR
   case OSD_DEVICE_SIMULATOR:
-    cols = DISPLAYPORT_COLS;
-    rows = DISPLAYPORT_ROWS;
-    return simulator_osd_check_system();
+    osd_screen.connected = 1;
+    osd_set_canvas(SIMULATOR_OSD_COLS, SIMULATOR_OSD_ROWS);
+    break;
 #endif
   default:
-    return OSD_SYS_NONE;
+    break;
   }
 }
 
@@ -316,17 +344,17 @@ static bool osd_flush() {
 }
 
 static bool osd_update_display() {
-  static uint8_t string[DISPLAYPORT_COLS];
+  static uint8_t string[HD_COLS_MAX];
 
   if (!display_has_dirty) {
     display_row = 0;
     return true;
   }
 
-  while (display_row < rows && display_dirty_rows[display_row] == 0) {
+  while (display_row < osd_screen.rows && display_dirty_rows[display_row] == 0) {
     display_row++;
   }
-  if (display_row >= rows) {
+  if (display_row >= osd_screen.rows) {
     if (!osd_flush())
       return false;
     display_row = 0;
@@ -338,7 +366,7 @@ static bool osd_update_display() {
   if (max_chars == 0)
     return false;
 
-  const osd_char_t *row_start = &display[display_row * cols];
+  const osd_char_t *row_start = &display[display_row * osd_screen.cols];
   uint64_t dirty_mask = display_dirty_rows[display_row];
   uint8_t col = __builtin_ctzll(dirty_mask);
   const uint8_t start = col;
@@ -349,7 +377,7 @@ static bool osd_update_display() {
   // A new string costs 8 bytes on MAX7456 (2 bytes per character), or 10
   // on DisplayPort. Bridge only cheaper gaps, without crossing attributes.
   const uint8_t max_gap = osd_device == OSD_DEVICE_MAX7456 ? 3 : 9;
-  while (col < cols && size < max_chars && row_start[col].attr == attr) {
+  while (col < osd_screen.cols && size < max_chars && row_start[col].attr == attr) {
     if (!(dirty_mask & (1ULL << col))) {
       if (!dirty_mask)
         break;
@@ -548,3 +576,11 @@ void osd_write_float(float val, uint8_t width, uint8_t precision) {
 
   osd_write_data(buf, width);
 }
+
+#define MEMBER CBOR_ENCODE_MEMBER
+#define START_STRUCT CBOR_START_STRUCT_ENCODER
+#define END_STRUCT CBOR_END_STRUCT_ENCODER
+OSD_SCREEN_MEMBERS
+#undef MEMBER
+#undef START_STRUCT
+#undef END_STRUCT

@@ -87,7 +87,6 @@ static void osd_vtx_stage_commit() {
 static void osd_vtx_stage_reset() {}
 #endif
 
-osd_system_t osd_system = OSD_SYS_NONE;
 
 osd_state_t osd_state = {
     .screen = OSD_SCREEN_REGULAR,
@@ -240,10 +239,7 @@ static uint32_t *osd_elements() {
 }
 
 static void osd_start_el(osd_element_t *el) {
-  if (osd_system == OSD_SYS_HD)
-    osd_start(osd_attr(el), el->pos_hd_x, el->pos_hd_y);
-  else
-    osd_start(osd_attr(el), el->pos_sd_x, el->pos_sd_y);
+  osd_start(osd_attr(el), pos_x(el), pos_y(el));
 }
 
 static uint8_t aux_value_to_percent(uint16_t value) {
@@ -905,7 +901,7 @@ static void osd_display_regular() {
   }
 
   // Handle no camera signal warning after all elements
-  if (osd_system == OSD_SYS_NONE) {
+  if (!osd_is_hd() && !osd_screen.connected) {
     osd_start(OSD_ATTR_BLINK, 7, 7);
     osd_write_str("NO CAMERA SIGNAL");
   }
@@ -1035,11 +1031,12 @@ TickType_t osd_display() {
     return (target_info.features & FEATURE_OSD) ? 1 : pdMS_TO_TICKS(33);
   }
 
-  // check if the system changed
-  const osd_system_t sys = osd_check_system();
-  if (sys != osd_system) {
-    // sytem has changed, reset osd state
-    osd_system = sys;
+  // check if the screen changed
+  static osd_screen_t screen = {};
+  osd_check_screen();
+  if (osd_screen.connected != screen.connected || osd_screen.cols != screen.cols || osd_screen.rows != screen.rows) {
+    // reset osd state and repaint on the new grid
+    screen = osd_screen;
     osd_update_screen(OSD_SCREEN_CLEAR);
     return 1;
   }
@@ -1557,17 +1554,25 @@ TickType_t osd_display() {
       osd_element_t *el = (osd_element_t *)(osd_elements() + i);
 
       osd_menu_select(3, OSD_AUTO, osd_element_labels[i]);
+      // Adjust from the drawn position, but only store a change: a position
+      // past this canvas stays as saved until the user moves it.
       if (osd_menu_select_int(20, OSD_AUTO, pos_x(el), 3)) {
-        if (osd_system == OSD_SYS_HD)
-          el->pos_hd_x = osd_menu_adjust_int(el->pos_hd_x, 1, 0, HD_COLS);
-        else
-          el->pos_sd_x = osd_menu_adjust_int(el->pos_sd_x, 1, 0, SD_COLS);
+        const uint8_t x = osd_menu_adjust_int(pos_x(el), 1, 0, osd_screen.cols - 1);
+        if (x != pos_x(el)) {
+          if (osd_is_hd())
+            el->pos_hd_x = x;
+          else
+            el->pos_sd_x = x;
+        }
       }
       if (osd_menu_select_int(26, OSD_AUTO, pos_y(el), 3)) {
-        if (osd_system == OSD_SYS_HD)
-          el->pos_hd_y = osd_menu_adjust_int(el->pos_hd_y, 1, 0, HD_ROWS);
-        else
-          el->pos_sd_y = osd_menu_adjust_int(el->pos_sd_y, 1, 0, SD_ROWS);
+        const uint8_t y = osd_menu_adjust_int(pos_y(el), 1, 0, osd_layout_rows() - 1);
+        if (y != pos_y(el)) {
+          if (osd_is_hd())
+            el->pos_hd_y = y;
+          else
+            el->pos_sd_y = y;
+        }
       }
     }
     osd_menu_scroll_finish(3);
