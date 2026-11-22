@@ -41,6 +41,7 @@
 #define ICON_SAT_L 0x1E
 #define ICON_SAT_R 0x1F
 #define ICON_KPH 0x9E
+#define ICON_MPS 0x9F
 
 #define ROVER_ROLLOVER_WARNING_DEGREES 45
 #define ICON_ARROW_SOUTH 0x60
@@ -508,6 +509,9 @@ static void print_osd_flightmode(osd_element_t *el) {
     osd_write_char(' ');
 }
 
+// Elements lead with the glyph that identifies them and end in their unit,
+// so the glyphs of elements stacked at the same column line up. Values that
+// are identified by their unit alone only carry the trailing unit.
 static void print_osd_rssi(osd_element_t *el) {
   static float rx_rssi_filt;
   float rx_rssi = constrain(state.rx_rssi, 0.0f, 100.0f);
@@ -523,6 +527,7 @@ static void print_osd_rssi(osd_element_t *el) {
   }
 
   osd_start_el(el);
+  osd_write_char(ICON_LQI);
   if (state.rx_protocol == RX_PROTOCOL_CRSF) {
     osd_write_uint(crsf_stats.rf_mode, 1);
     osd_write_char(':');
@@ -530,7 +535,6 @@ static void print_osd_rssi(osd_element_t *el) {
   } else {
     osd_write_uint(rx_rssi - 0.5f, 4);
   }
-  osd_write_char(ICON_LQI);
 }
 
 static void print_osd_crosshair(osd_element_t *el) {
@@ -648,7 +652,8 @@ static void print_osd_crsf_tx_power(osd_element_t *el) {
     osd_write_uint(tx_power_mw, 3);
     osd_write_str("MW");
   } else {
-    osd_write_float(tx_power_mw / 1000.0f, 3, 1);
+    // Padded to the width of the milliwatt form.
+    osd_write_float(tx_power_mw / 1000.0f, 4, 1);
     osd_write_char(ICON_WATT);
   }
 }
@@ -769,13 +774,13 @@ static void osd_display_regular() {
 
     case OSD_THROTTLE: {
       osd_start_el(el);
+      osd_write_char(ICON_THROTTLE);
       const float throttle = osd_throttle() * 100.0f;
       if (profile.osd.guac_mode && throttle > 99.0f) {
         osd_write_str("GUAC");
       } else {
         osd_write_uint(throttle, 4);
       }
-      osd_write_char(ICON_THROTTLE);
       break;
     }
 
@@ -811,13 +816,15 @@ static void osd_display_regular() {
       osd_start(osd_attr(el) | (state.gps_health.lock ? 0x0 : OSD_ATTR_BLINK), pos_x(el), pos_y(el));
       osd_write_char(ICON_SAT_L);
       osd_write_char(ICON_SAT_R);
-      osd_write_int(state.gps_sats, 2);
+      osd_write_int(state.gps_sats, 3);
       break;
     }
 
     case OSD_GPS_SPEED: {
-      osd_start(osd_attr(el), pos_x(el), pos_y(el));
-      osd_write_int((uint32_t)(state.gps_speed * 3.6f), 3);
+      // Same field as airspeed and wind so the three stack.
+      osd_start_el(el);
+      osd_write_char(ICON_GAUGE);
+      osd_write_int((uint32_t)(state.gps_speed * 3.6f), 4);
       osd_write_char(ICON_KPH);
       break;
     }
@@ -853,20 +860,21 @@ static void osd_display_regular() {
         print_heading(state.home_bearing - state.heading);
       }
       if (state.home_distance >= 1000.f) {
-        osd_write_float(state.home_distance / 1000.f, 4, 1);
+        osd_write_float(state.home_distance / 1000.f, 5, 1);
         osd_write_char(ICON_KILOMETERS);
       } else {
-        osd_write_float(state.home_distance, 4, 1);
+        osd_write_float(state.home_distance, 5, 1);
         osd_write_char(ICON_METERS);
       }
       break;
     }
 
     case OSD_VARIO: {
-      // m/s; the arrow carries the direction.
+      // The arrow carries the direction.
       osd_start_el(el);
       osd_write_char(state.velocity.up < 0.0f ? ICON_DOWN : ICON_UP);
-      osd_write_float(fabsf(state.velocity.up), 4, 1);
+      osd_write_float(fabsf(state.velocity.up), 5, 1);
+      osd_write_char(ICON_MPS);
       break;
     }
 
@@ -887,12 +895,12 @@ static void osd_display_regular() {
       // The arrow points where the wind blows to, seen from the nose.
       osd_start_el(el);
       if (!flags.wind_valid) {
-        osd_write_str("  --");
+        osd_write_str("   --");
         osd_write_char(ICON_KPH);
         break;
       }
       print_heading(atan2approx_rad(state.wind_speed.east, state.wind_speed.north) * RADTODEG - state.heading);
-      osd_write_int((uint32_t)(vec2_magnitude(state.wind_speed) * 3.6f), 3);
+      osd_write_int((uint32_t)(vec2_magnitude(state.wind_speed) * 3.6f), 4);
       osd_write_char(ICON_KPH);
 #endif
       break;
