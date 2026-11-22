@@ -18,6 +18,7 @@
 #include "driver/motor.h"
 #include "driver/time.h"
 #include "io/blackbox.h"
+#include "osd/render.h"
 #include "util/util.h"
 
 enum {
@@ -1002,11 +1003,16 @@ HOT_CODE void control() {
   } else if (!flags.arm_state || flags.failsafe_outputs_blocked) {
     flags.on_ground = 1;
     state.throttle = 0.0f;
-    wing_apply_outputs(
-        MOTOR_OFF,
-        state.mixer_source[OUTPUT_SOURCE_ROLL],
-        state.mixer_source[OUTPUT_SOURCE_PITCH],
-        state.mixer_source[OUTPUT_SOURCE_YAW]);
+    if (osd_menu_active()) {
+      // The sticks drive the menu, not the preflight surface check.
+      wing_apply_outputs(MOTOR_OFF, 0.0f, 0.0f, 0.0f);
+    } else {
+      wing_apply_outputs(
+          MOTOR_OFF,
+          state.mixer_source[OUTPUT_SOURCE_ROLL],
+          state.mixer_source[OUTPUT_SOURCE_PITCH],
+          state.mixer_source[OUTPUT_SOURCE_YAW]);
+    }
   } else {
     // Once airborne, retain flight IMU filtering through unpowered glides.
     flags.on_ground = !flags.in_air;

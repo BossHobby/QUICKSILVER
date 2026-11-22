@@ -12,6 +12,7 @@
 #include "driver/time.h"
 #include "io/gps.h"
 #include "mock_outputs.h"
+#include "osd/render.h"
 #include "util/util.h"
 
 extern void imu_test_attitude_init();
@@ -370,6 +371,25 @@ static void test_wing_launch_always_on_leaves_disarmed_surfaces_on_sticks() {
   assert_launch_stabilized();
 }
 
+static void test_wing_osd_menu_holds_disarmed_surfaces_centered() {
+  prepare(0);
+  state.aux_active &= ~(1U << AUX_ARMING);
+  tick();
+  TEST_ASSERT_FALSE(flags.arm_state);
+
+  osd_state.screen = OSD_SCREEN_MAIN_MENU;
+  state.rx_filtered.roll = 0.5f;
+  state.rx_filtered.pitch = 0.5f;
+  tick();
+  TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[1]);
+  TEST_ASSERT_EQUAL_FLOAT(0, pwm_values[2]);
+
+  osd_state.screen = OSD_SCREEN_REGULAR;
+  tick();
+  TEST_ASSERT_FALSE(pwm_values[1] == 0 && pwm_values[2] == 0);
+  state.rx_filtered = {};
+}
+
 static void test_wing_launch_gps_requires_launch_attitude() {
   prepare_launch();
   state.gps_health.lock = 1;
@@ -556,6 +576,7 @@ void run_wing_safety_tests() {
   RUN_TEST(test_wing_launch_stage1_recovery_requires_disarm_before_relaunch);
   RUN_TEST(test_wing_launch_switch_reenabled_in_flight_does_not_restart);
   RUN_TEST(test_wing_launch_always_on_leaves_disarmed_surfaces_on_sticks);
+  RUN_TEST(test_wing_osd_menu_holds_disarmed_surfaces_centered);
   RUN_TEST(test_wing_launch_gps_requires_launch_attitude);
   RUN_TEST(test_wing_launch_pitch_exceeds_level_limit);
   RUN_TEST(test_wing_failsafe_stage1_levels_manual_mode);

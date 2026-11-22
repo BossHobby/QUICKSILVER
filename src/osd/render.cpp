@@ -423,6 +423,11 @@ void osd_handle_input(osd_input_t input) {
   }
 }
 
+// A single byte owned by the OSD thread; Flight only reads it.
+bool osd_menu_active() {
+  return osd_state.screen != OSD_SCREEN_REGULAR && osd_state.screen != OSD_SCREEN_CLEAR;
+}
+
 void osd_exit() {
 #ifdef USE_VTX
   if (osd_state.screen == OSD_SCREEN_VTX) {
@@ -453,8 +458,7 @@ void osd_save_exit() {
 static void osd_handle_gestures() {
   const bool enabled = !flags.arm_state && !flags.in_air && flags.on_ground &&
                        flags.rx_ready && !flags.failsafe && !flags.gestures_disabled;
-  const bool menu = osd_state.screen != OSD_SCREEN_REGULAR && osd_state.screen != OSD_SCREEN_CLEAR;
-  const auto command = gestures_detect(state.rx, enabled, menu, time_micros());
+  const auto command = gestures_detect(state.rx, enabled, osd_menu_active(), time_micros());
   static bool save_bind_only = false;
   if (command == GESTURE_NONE)
     return;
@@ -1023,7 +1027,7 @@ TickType_t osd_display() {
 
   // Close menus before returning for a busy transport. A busy display must not
   // preserve configuration actions across an arming transition.
-  if ((flags.arm_state || flags.in_air || (ready && !maintenance)) && osd_state.screen != OSD_SCREEN_REGULAR && osd_state.screen != OSD_SCREEN_CLEAR) {
+  if ((flags.arm_state || flags.in_air || (ready && !maintenance)) && osd_menu_active()) {
     while (osd_pop_screen() != OSD_SCREEN_CLEAR)
       ;
   }

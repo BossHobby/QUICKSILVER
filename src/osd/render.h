@@ -159,6 +159,8 @@ osd_screens_t osd_push_screen_replace(osd_screens_t screen);
 osd_screens_t osd_pop_screen();
 
 void osd_handle_input(osd_input_t input);
+// True while a menu screen is open; menus only open and stay open on the ground.
+bool osd_menu_active();
 
 void osd_exit();
 void osd_save_exit();
