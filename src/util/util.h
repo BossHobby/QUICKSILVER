@@ -92,3 +92,6 @@ int8_t buf_equal(const uint8_t *str1, size_t len1, const uint8_t *str2, size_t l
 int8_t buf_equal_string(const uint8_t *str1, size_t len1, const char *str2);
 
 uint32_t get_chip_uid();
+// A stable id for this chip, for telling crafts apart. Unlike get_chip_uid(),
+// which bound receivers depend on, it covers the whole hardware id.
+uint64_t get_chip_uid64();

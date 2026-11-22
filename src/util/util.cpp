@@ -118,3 +118,21 @@ uint32_t get_chip_uid() {
   return ((uint32_t *)UID_BASE)[0] ^ ((uint32_t *)UID_BASE)[1] ^ ((uint32_t *)UID_BASE)[1];
 #endif
 }
+
+static constexpr uint64_t FNV64_OFFSET = 0xcbf29ce484222325ULL;
+static constexpr uint64_t FNV64_PRIME = 0x100000001b3ULL;
+
+uint64_t get_chip_uid64() {
+#ifdef SIMULATOR
+  return 0xdeedbeefdeedbeefULL;
+#else
+  // FNV-1a over the 96-bit STM32/AT32 unique id.
+  const uint8_t *uid = (const uint8_t *)UID_BASE;
+  uint64_t hash = FNV64_OFFSET;
+  for (uint32_t i = 0; i < 12; i++) {
+    hash ^= uid[i];
+    hash *= FNV64_PRIME;
+  }
+  return hash;
+#endif
+}

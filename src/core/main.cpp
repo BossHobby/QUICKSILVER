@@ -302,6 +302,9 @@ bool flight_timer_irq_handler() {
 // Startup runs once, before the pacing timer; LTO must not inline it into
 // the loop.
 COLD_CODE static void flight_init() {
+  // Failloops from here on report target_info over USB.
+  target_info_init();
+
   // load settings from flash
   flash_load();
 
