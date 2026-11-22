@@ -29,14 +29,14 @@ typedef struct {
 typedef struct {
   pthread_mutex_t mutex;
   simulation_state_t state;
-  uint8_t osd[50 * 18];
+  uint8_t osd[SIMULATOR_OSD_COLS * SIMULATOR_OSD_ROWS];
 } shared_memory_t;
 
 float simulator_motor_values[MOTOR_PIN_MAX];
 
 static int shm_fd = 0;
 static shared_memory_t *shared = NULL;
-static uint8_t osd[50 * 18];
+static uint8_t osd[SIMULATOR_OSD_COLS * SIMULATOR_OSD_ROWS];
 
 static std::atomic<bool> rc_updated = false;
 
@@ -138,7 +138,7 @@ void simulator_osd_intro() {
     for (uint8_t i = 0; i < 24; i++) {
       buffer[i] = start + i;
     }
-    simulator_osd_push_string(OSD_ATTR_TEXT, (50 / 2) - 12, (18 / 2) - 2 + row, buffer, 24);
+    simulator_osd_push_string(OSD_ATTR_TEXT, (SIMULATOR_OSD_COLS / 2) - 12, (SIMULATOR_OSD_ROWS / 2) - 2 + row, buffer, 24);
   }
 
   simulator_update();
@@ -147,9 +147,6 @@ void simulator_osd_intro() {
 bool simulator_osd_clear_async() {
   memset(osd, ' ', sizeof(osd));
   return 1;
-}
-osd_system_t simulator_osd_check_system() {
-  return OSD_SYS_HD;
 }
 
 uint32_t simulator_osd_can_fit() {
@@ -170,7 +167,7 @@ void simulator_osd_test_reset(bool reject) {
   osd_test_reject = reject;
 }
 uint32_t simulator_osd_test_push_count() { return osd_test_pushes; }
-uint8_t simulator_osd_test_char(uint8_t x, uint8_t y) { return osd[y * 50 + x]; }
+uint8_t simulator_osd_test_char(uint8_t x, uint8_t y) { return osd[y * SIMULATOR_OSD_COLS + x]; }
 #endif
 
 bool simulator_osd_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *data, uint8_t size) {
@@ -180,7 +177,7 @@ bool simulator_osd_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t
     return false;
 #endif
   for (uint32_t i = 0; i < size; i++) {
-    osd[y * 50 + x + i] = data[i];
+    osd[y * SIMULATOR_OSD_COLS + x + i] = data[i];
   }
   return true;
 }

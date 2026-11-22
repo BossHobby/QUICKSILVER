@@ -14,6 +14,7 @@
 #include "core/profile.h"
 #include "core/tasks.h"
 #include "driver/motor.h"
+#include "driver/osd/osd.h"
 #include "driver/osd/max7456.h"
 #include "driver/reset.h"
 #include "driver/serial.h"
@@ -278,6 +279,13 @@ COLD_CODE static void get_quic(quic_t *quic, cbor_value_t *dec) {
     break;
   }
 #endif
+  case QUIC_VAL_OSD_SCREEN: {
+    res = cbor_encode_osd_screen_t(&enc, &osd_screen);
+    check_cbor_error(QUIC_CMD_GET);
+
+    quic_send(quic, QUIC_CMD_GET, QUIC_FLAG_NONE, encode_buffer, cbor_encoder_len(&enc));
+    break;
+  }
   default:
     quic_errorf(QUIC_CMD_GET, "INVALID VALUE %d", value);
     break;

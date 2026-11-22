@@ -18,6 +18,7 @@
 //         state: navigation publishes nav_target and failsafe_owner enums; RTH phases reorder so
 //         every phase from climb on owns the controls; navigation status bits move out of state.
 //         crsf: sessions no longer block arming; arming ends them. Missions work over CRSF.
+//         osd: add QUIC_VAL_OSD_SCREEN with the video system, link and canvas size.
 // 0.2.9 (30cde6a5e): profile: move bind and vtx settings into profile.
 // 0.2.8 (fab52980): rx: add CRSF bind command.
 // 0.2.7 (399b96c5): blackbox: harden logging and transfer handling.
@@ -112,6 +113,7 @@ typedef enum {
   QUIC_VAL_BLACKBOX_PRESETS,
   QUIC_VAL_TARGET,
   QUIC_VAL_GPS_STATUS,
+  QUIC_VAL_OSD_SCREEN,
 } __attribute__((__packed__)) quic_values;
 
 typedef void (*quic_send_fn_t)(uint8_t *data, uint32_t len, void *priv);
