@@ -117,6 +117,11 @@ void target_defaults_apply(profile_t *profile) {
     profile->receiver.protocol = defaults->receiver.protocol;
   }
 
+  // A digital VTX is controlled over its DisplayPort link unless the target
+  // names an analog protocol.
+  if (profile->serial.digital_vtx != SERIAL_PORT_INVALID) {
+    profile->vtx.protocol = VTX_PROTOCOL_MSP_VTX;
+  }
   if (defaults->vtx.protocol == VTX_PROTOCOL_SMART_AUDIO || defaults->vtx.protocol == VTX_PROTOCOL_TRAMP) {
     profile->vtx.protocol = defaults->vtx.protocol;
   }

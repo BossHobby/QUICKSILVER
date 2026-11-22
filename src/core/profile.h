@@ -34,6 +34,8 @@
 //            (were rth_cruise_speed and rth_throttle_*); they apply to every target.
 //        navigation: add the multirotor position hold switch after the mission switch.
 //        serial: rename hdzero to digital_vtx.
+//        vtx: an unset vtx.protocol is off; MSP VTX is no longer implied by the digital VTX
+//            port or a CRSF receiver sharing the smart audio port.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
 // 0.2.5 (c9dec9f1): add osd profiles.

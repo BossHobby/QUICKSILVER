@@ -79,21 +79,6 @@ void vtx_init() {
   vtx_actual.power_level = VTX_POWER_LEVEL_MAX;
 }
 
-static vtx_protocol_t vtx_desired_protocol() {
-  if (profile.vtx.protocol != VTX_PROTOCOL_INVALID) {
-    return profile.vtx.protocol;
-  }
-  if (serial_displayport.config.port != SERIAL_PORT_INVALID) {
-    return VTX_PROTOCOL_MSP_VTX;
-  }
-  if (profile.serial.smart_audio != SERIAL_PORT_INVALID &&
-      profile.serial.smart_audio == profile.serial.rx &&
-      state.rx_protocol == RX_PROTOCOL_CRSF) {
-    return VTX_PROTOCOL_MSP_VTX;
-  }
-  return VTX_PROTOCOL_INVALID;
-}
-
 static void vtx_init_protocol(vtx_protocol_t protocol) {
   switch (protocol) {
   case VTX_PROTOCOL_TRAMP:
@@ -190,7 +175,7 @@ TickType_t vtx_update() {
   vtx_delay_ms = 0;
   vtx_delay_start = time_millis();
 
-  const vtx_protocol_t protocol = vtx_desired_protocol();
+  const vtx_protocol_t protocol = profile.vtx.protocol;
   if (protocol == VTX_PROTOCOL_INVALID) {
     return portMAX_DELAY;
   }
