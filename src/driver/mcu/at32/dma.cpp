@@ -66,6 +66,7 @@ static void handle_dma_stream_isr(const dma_stream_t stream) {
     rgb_dma_isr(dev);
 #endif
     break;
+  case DMA_DEVICE_OSD:
   case DMA_DEVICE_INVALID:
   case DMA_DEVICE_MAX:
     break;
