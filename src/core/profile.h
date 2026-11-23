@@ -37,6 +37,7 @@
 //        vtx: an unset vtx.protocol is off; MSP VTX is no longer implied by the digital VTX
 //            port or a CRSF receiver sharing the smart audio port.
 //        motor: drop torque_boost and throttle_boost.
+//        pid: drop stick_profile and stick_rates; multirotor kff is the setpoint feedforward.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
 // 0.2.5 (c9dec9f1): add osd profiles.
@@ -158,7 +159,9 @@ typedef struct {
   vec3_t kp;
   vec3_t ki;
   vec3_t kd;
-  vec3_t kff; // Wing rate feedforward: 100 = 1 normalized output per rad/s.
+  // Feedforward. Wing: on the rate setpoint, 100 = 1 normalized output per
+  // rad/s. Multirotor: on the setpoint's rate of change, at the scale of kd.
+  vec3_t kff;
 } pid_rate_t;
 
 #define PID_RATE_MEMBERS   \
@@ -199,23 +202,6 @@ typedef enum {
   PID_PROFILE_MAX
 } __attribute__((__packed__)) pid_profile_t;
 
-typedef struct {
-  vec3_t accelerator;
-  vec3_t transition;
-} stick_rate_t;
-
-#define STICK_RATE_MEMBERS    \
-  START_STRUCT(stick_rate_t)  \
-  MEMBER(accelerator, vec3_t) \
-  MEMBER(transition, vec3_t)  \
-  END_STRUCT()
-
-typedef enum {
-  STICK_PROFILE_OFF,
-  STICK_PROFILE_ON,
-  STICK_PROFILE_MAX
-} __attribute__((__packed__)) stick_profile_t;
-
 typedef enum {
   THROTTLE_D_ATTENTUATION_NONE,
   THROTTLE_D_ATTENUATION_ACTIVE,
@@ -238,8 +224,6 @@ typedef struct {
 typedef struct {
   pid_profile_t pid_profile;
   pid_rate_t pid_rates[PID_PROFILE_MAX];
-  stick_profile_t stick_profile;
-  stick_rate_t stick_rates[STICK_PROFILE_MAX];
   angle_pid_rate_t big_angle;
   angle_pid_rate_t small_angle;
   throttle_dterm_attenuation_t throttle_dterm_attenuation;
@@ -249,8 +233,6 @@ typedef struct {
   START_STRUCT(profile_pid_t)                                      \
   MEMBER(pid_profile, uint8_t)                                     \
   ARRAY_MEMBER(pid_rates, PID_PROFILE_MAX, pid_rate_t)             \
-  MEMBER(stick_profile, uint8_t)                                   \
-  ARRAY_MEMBER(stick_rates, STICK_PROFILE_MAX, stick_rate_t)       \
   MEMBER(big_angle, angle_pid_rate_t)                              \
   MEMBER(small_angle, angle_pid_rate_t)                            \
   MEMBER(throttle_dterm_attenuation, throttle_dterm_attenuation_t) \

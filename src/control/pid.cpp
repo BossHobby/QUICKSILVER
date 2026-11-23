@@ -48,7 +48,12 @@ static pid_rate_t scaled_rates;
 
 static filter_t<vec3_t> filter[FILTER_MAX_SLOTS];
 static filter_t<vec3_t> dynamic_filter;
-static filter_t<vec3_t> rx_filter;
+#ifndef VEHICLE_WING
+// Smooths the setpoint change behind the feedforward at the receiver's rate.
+static filter_t<vec3_t> feedforward_filter;
+// Whether the previous pass took its setpoint from the pilot.
+static bool feedforward_pilot;
+#endif
 #ifdef ITERM_RELAX
 // Slow setpoint per axis; I-term relax acts on the setpoint's distance from it.
 static filter_t<> relax_filter[PID_SIZE];
@@ -77,6 +82,8 @@ void pid_rates_update() {
   scaled_rates.kd = rates->kd * pid_scales[2];
 #ifdef VEHICLE_WING
   scaled_rates.kff = rates->kff * 0.01f;
+#else
+  scaled_rates.kff = rates->kff * pid_scales[2];
 #endif
 }
 
@@ -105,7 +112,10 @@ void pid_filter_update(bool reset) {
 
 void pid_init() {
   pid_rates_update();
-  rx_filter.init(FILTER_LP_PT1, state.rx_filter_hz, state.looptime_autodetect);
+#ifndef VEHICLE_WING
+  feedforward_filter.init(FILTER_LP_PT1, state.rx_filter_hz, state.looptime_autodetect);
+  feedforward_pilot = false;
+#endif
   pid_filter_update(true);
   lastrate = (vec3_t){0};
   lastsetpoint = (vec3_t){0};
@@ -193,8 +203,6 @@ static inline float pid_tda_compensation() {
 }
 
 HOT_CODE void pid_calc() {
-  rx_filter.coeff(FILTER_LP_PT1, state.rx_filter_hz, state.looptime_autodetect);
-
   const float dynamic_throttle = state.throttle + state.throttle * (1.0f - state.throttle);
   const float dterm_dynamic_raw_freq = mapf(dynamic_throttle, 0.0f, 1.0f, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
   const float dterm_dynamic_freq = constrain(dterm_dynamic_raw_freq, profile.filter.dterm_dynamic_min, profile.filter.dterm_dynamic_max);
@@ -203,17 +211,9 @@ HOT_CODE void pid_calc() {
   static vec3_t pid_output = {.roll = 0, .pitch = 0, .yaw = 0};
   const float v_compensation = pid_voltage_compensation();
   const float tda_compensation = pid_tda_compensation();
-#if defined(VEHICLE_ROVER) || defined(VEHICLE_WING)
-  const uint8_t stick_boost_profile = STICK_PROFILE_OFF;
-#else
-  const uint8_t stick_boost_profile = rx_aux_on(AUX_STICK_BOOST_PROFILE) ? STICK_PROFILE_ON : STICK_PROFILE_OFF;
-#endif
-  const float *stick_accelerator = profile.pid.stick_rates[stick_boost_profile].accelerator.axis;
-  const float *stick_transition = profile.pid.stick_rates[stick_boost_profile].transition.axis;
 
   ierror = vec3_rotate(ierror, state.gyro_delta_angle);
 
-  const vec3_t setpoint_delta = state.setpoint - lastsetpoint;
   const vec3_t gyro_delta = state.gyro - lastrate;
 #ifdef VEHICLE_WING
   // Surface moment follows dynamic pressure (V^2); the body rate a steady
@@ -224,9 +224,24 @@ HOT_CODE void pid_calc() {
                                 ? constrain(cruise_speed / state.airspeed, WING_SPEED_SCALE_MIN, WING_SPEED_SCALE_MAX)
                                 : 1.0f;
   const float pid_speed_compensation = speed_scale * speed_scale;
-  const vec3_t current_kff = scaled_rates.kff * speed_scale;
+  // Feed the requested body rate, including level/autolaunch corrections.
+  // This remains active while disarmed; the output layer gates motors.
+  const vec3_t feedforward = state.setpoint * (scaled_rates.kff * speed_scale);
 #else
   const float pid_speed_compensation = 1.0f;
+  // Motors produce angular acceleration, so the feedforward is the setpoint's
+  // rate of change. It follows the pilot's sticks only: navigation and other
+  // overrides step the setpoint at their own cadence, and the jump on taking
+  // over or handing back is not a stick movement.
+  const bool pilot = !flags.controls_override;
+  vec3_t feedforward = {};
+  if (pilot && feedforward_pilot)
+    feedforward = (state.setpoint - lastsetpoint) * (scaled_rates.kff * state.looptime_inverse);
+  feedforward_pilot = pilot;
+  if (state.rx_filter_hz > 0.1f) {
+    feedforward_filter.coeff(FILTER_LP_PT1, state.rx_filter_hz, state.looptime_autodetect);
+    feedforward = feedforward_filter.step(feedforward);
+  }
 #endif
   const vec3_t current_kp = scaled_rates.kp * (v_compensation * pid_speed_compensation);
   const vec3_t current_ki = scaled_rates.ki * (state.looptime * pid_speed_compensation);
@@ -234,10 +249,6 @@ HOT_CODE void pid_calc() {
   const vec3_t iterm_enable = pid_should_enable_iterm_vec();
   const float iterm_decay = 1.0f - state.looptime / ITERM_DECAY_TIME;
   const vec3_t iterm_windup = pid_compute_iterm_windup_vec(&pid_output);
-  vec3_t setpoint_derivative = setpoint_delta * current_kd;
-  if (state.rx_filter_hz > 0.1f) {
-    setpoint_derivative = rx_filter.step(setpoint_derivative);
-  }
 
   vec3_t dterm;
 #pragma GCC unroll 3
@@ -251,11 +262,7 @@ HOT_CODE void pid_calc() {
     ierror.axis[x] = constrain(ierror.axis[x], -integral_limit.axis[x], integral_limit.axis[x]);
     state.pid_i_term.axis[x] = ierror.axis[x];
 
-    const float transition = stick_accelerator[x] < 1 ? stick_transition[x] : stick_transition[x] / stick_accelerator[x];
-    const float transition_setpoint_weight = (fabsf(state.rx_filtered.axis[x]) * transition) + (1 - stick_transition[x]);
-
-    const float gyro_derivative = gyro_delta.axis[x] * current_kd.axis[x] * tda_compensation;
-    dterm.axis[x] = (setpoint_derivative.axis[x] * stick_accelerator[x] * transition_setpoint_weight) - gyro_derivative;
+    dterm.axis[x] = -gyro_delta.axis[x] * current_kd.axis[x] * tda_compensation;
   }
 
   // Filter stages run across all axes; the unfiltered term stays local.
@@ -263,12 +270,7 @@ HOT_CODE void pid_calc() {
 
 #pragma GCC unroll 3
   for (uint8_t x = 0; x < PID_SIZE; x++) {
-    pid_output.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x];
-#ifdef VEHICLE_WING
-    // Feed the requested body rate, including level/autolaunch corrections.
-    // This remains active while disarmed; the output layer gates motors.
-    pid_output.axis[x] += state.setpoint.axis[x] * current_kff.axis[x];
-#endif
+    pid_output.axis[x] = state.pid_p_term.axis[x] + state.pid_i_term.axis[x] + state.pid_d_term.axis[x] + feedforward.axis[x];
     state.pidoutput.axis[x] = constrain(pid_output.axis[x], -out_limit.axis[x], out_limit.axis[x]);
   }
 

@@ -1123,10 +1123,8 @@ TickType_t osd_display() {
       osd_menu_select_screen(7, OSD_AUTO, "NAVIGATION", OSD_SCREEN_NAVIGATION);
 #ifdef VEHICLE_WING
       osd_menu_select_screen(7, OSD_AUTO, "AUTOLAUNCH", OSD_SCREEN_AUTOLAUNCH);
-      osd_menu_select_screen(7, OSD_AUTO, "LOW BATTERY", OSD_SCREEN_LOWBAT);
-#else
-      osd_menu_select_screen(7, OSD_AUTO, "SPECIAL FEATURES", OSD_SCREEN_SPECIAL_FEATURES);
 #endif
+      osd_menu_select_screen(7, OSD_AUTO, "LOW BATTERY", OSD_SCREEN_LOWBAT);
 #ifdef USE_BLACKBOX
       osd_menu_select_screen(7, OSD_AUTO, "BLACKBOX", OSD_SCREEN_BLACKBOX);
 #endif
@@ -1195,13 +1193,11 @@ TickType_t osd_display() {
       pid_rates_update();
     }
 
-#ifdef VEHICLE_WING
     osd_menu_select(4, 9, "FF");
     if (osd_menu_select_vec3(8, 9, rates->kff, 6, 0)) {
       rates->kff = osd_menu_adjust_vec3(rates->kff, 1, 0.0, 400.0);
       pid_rates_update();
     }
-#endif
 
     osd_menu_select_save_and_exit(7);
     osd_menu_finish();
@@ -1380,7 +1376,6 @@ TickType_t osd_display() {
       osd_menu_select_aux_adjust(4, OSD_AUTO, "LEVELMODE", 17, 22, &profile.receiver.aux[AUX_LEVELMODE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "RACEMODE", 17, 22, &profile.receiver.aux[AUX_RACEMODE]);
       osd_menu_select_aux_adjust(4, OSD_AUTO, "HORIZON", 17, 22, &profile.receiver.aux[AUX_HORIZON]);
-      osd_menu_select_aux_adjust(4, OSD_AUTO, "STICK BOOST", 17, 22, &profile.receiver.aux[AUX_STICK_BOOST_PROFILE]);
 
       // PAGE 2
       osd_menu_select_aux_adjust(4, OSD_AUTO, "BUZZER", 17, 22, &profile.receiver.aux[AUX_BUZZER_ENABLE]);
@@ -1458,62 +1453,6 @@ TickType_t osd_display() {
       }
     }
     break;
-
-  case OSD_SCREEN_SPECIAL_FEATURES:
-    osd_menu_start();
-    osd_menu_header("SPECIAL FEATURES");
-
-    osd_menu_select_screen(7, 4, "STICK BOOST", OSD_SCREEN_STICK_BOOST);
-    osd_menu_select_screen(7, 5, "LOW BATTERY", OSD_SCREEN_LOWBAT);
-
-    osd_menu_finish();
-    break;
-
-  case OSD_SCREEN_STICK_BOOST:
-    osd_menu_start();
-    osd_menu_header("STICK BOOST PROFILES");
-
-    if (osd_menu_button(7, 4, "AUX OFF PROFILE 1")) {
-      profile.pid.stick_profile = STICK_PROFILE_OFF;
-      osd_push_screen(OSD_SCREEN_STICK_BOOST_ADJUST);
-    }
-
-    if (osd_menu_button(7, 5, "AUX ON  PROFILE 2")) {
-      profile.pid.stick_profile = STICK_PROFILE_ON;
-      osd_push_screen(OSD_SCREEN_STICK_BOOST_ADJUST);
-    }
-
-    osd_menu_finish();
-    break;
-
-  case OSD_SCREEN_STICK_BOOST_ADJUST: {
-    osd_menu_start();
-
-    if (profile.pid.stick_profile == STICK_PROFILE_OFF)
-      osd_menu_header("BOOST PROFILE 1");
-    else
-      osd_menu_header("BOOST PROFILE 2");
-
-    osd_menu_label(14, 4, "ROLL");
-    osd_menu_label(19, 4, "PITCH");
-    osd_menu_label(25, 4, "YAW");
-
-    stick_rate_t *rates = &profile.pid.stick_rates[profile.pid.stick_profile];
-
-    osd_menu_select(2, 6, "ACCELERATOR");
-    if (osd_menu_select_vec3(13, 6, rates->accelerator, 5, 2)) {
-      rates->accelerator = osd_menu_adjust_vec3(rates->accelerator, 0.01, 0.0, 3.0);
-    }
-
-    osd_menu_select(2, 7, "TRANSITION");
-    if (osd_menu_select_vec3(13, 7, rates->transition, 5, 2)) {
-      rates->transition = osd_menu_adjust_vec3(rates->transition, 0.01, -1.0, 1.0);
-    }
-
-    osd_menu_select_save_and_exit(7);
-    osd_menu_finish();
-    break;
-  }
 
   case OSD_SCREEN_ELEMENTS:
     osd_menu_start();

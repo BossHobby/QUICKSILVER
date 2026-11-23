@@ -14,9 +14,11 @@ extern void test_pid_rates_update_preserves_integral(void);
 extern void test_pid_filter_update_retains_history_on_period_change(void);
 extern void test_pid_integral_accumulation(void);
 extern void test_pid_derivative_calculation(void);
-extern void test_pid_dterm_setpoint_response(void);
-extern void test_pid_dterm_combined_response(void);
-extern void test_pid_dterm_stick_weighting(void);
+extern void test_pid_dterm_ignores_setpoint(void);
+#ifdef VEHICLE_MULTI
+extern void test_pid_feedforward_follows_setpoint_rate(void);
+extern void test_pid_feedforward_ignores_overrides(void);
+#endif
 extern void test_pid_voltage_compensation(void);
 extern void test_pid_complete_loop(void);
 extern void test_angle_pid_uses_legacy_dterm_timefactor(void);
@@ -40,9 +42,11 @@ int main() {
   RUN_TEST(test_pid_filter_update_retains_history_on_period_change);
   RUN_TEST(test_pid_integral_accumulation);
   RUN_TEST(test_pid_derivative_calculation);
-  RUN_TEST(test_pid_dterm_setpoint_response);
-  RUN_TEST(test_pid_dterm_combined_response);
-  RUN_TEST(test_pid_dterm_stick_weighting);
+  RUN_TEST(test_pid_dterm_ignores_setpoint);
+#ifdef VEHICLE_MULTI
+  RUN_TEST(test_pid_feedforward_follows_setpoint_rate);
+  RUN_TEST(test_pid_feedforward_ignores_overrides);
+#endif
   RUN_TEST(test_pid_voltage_compensation);
   RUN_TEST(test_pid_complete_loop);
   RUN_TEST(test_angle_pid_uses_legacy_dterm_timefactor);

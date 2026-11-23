@@ -254,122 +254,86 @@ void test_pid_derivative_calculation(void) {
   profile.pid.pid_rates[0].ki.roll = 0.0f;
   profile.pid.pid_rates[0].kd.roll = 1.0f;
 
-  // Initialize stick profile (needed for D-term calculation)
-  profile.pid.stick_rates[0].accelerator.roll = 1.0f;
-  profile.pid.stick_rates[0].transition.roll = 1.0f;
-  
-  // Initialize state.looptime_inverse (needed for D-term)
-  state.looptime_inverse = 1.0f / state.looptime;
-  
-  // Initialize with no gyro rate
   state.gyro.roll = 0.0f;
   state.setpoint.roll = 0.0f;
   pid_init();
   pid_calc();
 
-  // Introduce gyro rate change - this should produce negative D-term output
+  // A rising gyro rate is opposed.
   state.gyro.roll = 1.0f;
   pid_calc();
-
-  // QUICKSILVER D-term = setpoint_derivative - gyro_derivative
-  // With no setpoint change but gyro change, we expect negative output
   TEST_ASSERT_TRUE(state.pidoutput.roll < -0.1f);
 }
 
-// Test D-term setpoint response
-void test_pid_dterm_setpoint_response(void) {
+// The D term acts on the gyro alone: a setpoint change does not move it.
+void test_pid_dterm_ignores_setpoint(void) {
   pid_setUp();
-  // Setup - only D term enabled
   profile.pid.pid_rates[0].kp.roll = 0.0f;
   profile.pid.pid_rates[0].ki.roll = 0.0f;
   profile.pid.pid_rates[0].kd.roll = 1.0f;
 
-  // Initialize stick profile (need transition < 1 for setpoint to have effect)
-  profile.pid.stick_rates[0].accelerator.roll = 1.0f;
-  profile.pid.stick_rates[0].transition.roll = 0.0f; // No transition weighting
-  
-  // Initialize state.looptime_inverse
-  state.looptime_inverse = 1.0f / state.looptime;
-  
-  // Set some stick input so transition weight isn't 0
-  state.rx_filtered.roll = 0.0f; // No stick input
-  
-  // Initialize with no movement
   state.gyro.roll = 0.0f;
   state.setpoint.roll = 0.0f;
   pid_init();
   pid_calc();
 
-  // Introduce setpoint change - this should produce positive D-term output
   state.setpoint.roll = 1.0f;
   pid_calc();
-
-  // With setpoint change but no gyro change, we expect positive output
-  TEST_ASSERT_TRUE(state.pidoutput.roll > 0.1f);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.pid_d_term.roll);
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.pidoutput.roll);
 }
 
-// Test D-term combined response
-void test_pid_dterm_combined_response(void) {
-  pid_setUp();
-  // Setup - only D term enabled
-  profile.pid.pid_rates[0].kp.roll = 0.0f;
-  profile.pid.pid_rates[0].ki.roll = 0.0f;
-  profile.pid.pid_rates[0].kd.roll = 1.0f;
+#ifdef VEHICLE_MULTI
+// Output from kff alone for a setpoint ramping at the given rate.
+static float feedforward_ramp_output(float rate) {
+  for (int i = 0; i < 2000; i++) {
+    state.setpoint.roll += rate * state.looptime;
+    pid_calc();
+  }
+  return state.pidoutput.roll;
+}
 
-  // Initialize stick profile
-  profile.pid.stick_rates[0].accelerator.roll = 1.0f;
-  profile.pid.stick_rates[0].transition.roll = 0.0f;
-  
-  // Initialize state.looptime_inverse
-  state.looptime_inverse = 1.0f / state.looptime;
-  
-  // Initialize
-  state.gyro.roll = 0.0f;
-  state.setpoint.roll = 0.0f;
+static void feedforward_setUp(void) {
+  pid_setUp();
+  profile.pid.pid_rates[0] = {};
+  profile.pid.pid_rates[0].kff.roll = 75.0f;
+  state.looptime_autodetect = 125.0f;
+  state.rx_filter_hz = 50.0f;
+  flags.controls_override = 0;
+  state.gyro = {};
+  state.setpoint = {};
+  state.error = {};
   pid_init();
   pid_calc();
-
-  // Introduce matching setpoint and gyro changes
-  // This should result in minimal D-term output (setpoint_deriv - gyro_deriv ≈ 0)
-  state.setpoint.roll = 1.0f;
-  state.gyro.roll = 1.0f;
-  pid_calc();
-
-  // The D-term should be close to zero but not exactly zero due to stick weighting
-  TEST_ASSERT_FLOAT_WITHIN(0.1f, 0.0f, state.pidoutput.roll);
 }
 
-// Test D-term stick transition weighting
-void test_pid_dterm_stick_weighting(void) {
-  pid_setUp();
-  // Setup - only D term enabled
-  profile.pid.pid_rates[0].kp.roll = 0.0f;
-  profile.pid.pid_rates[0].ki.roll = 0.0f;
-  profile.pid.pid_rates[0].kd.roll = 1.0f;
+void test_pid_feedforward_follows_setpoint_rate(void) {
+  feedforward_setUp();
+  // kff shares kd's scale: 75 / 37500 output per rad/s^2.
+  TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.02f, feedforward_ramp_output(10.0f));
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.pid_d_term.roll);
 
-  // Test different stick accelerator values
-  profile.pid.stick_rates[0].accelerator.roll = 2.0f; // Higher than 1
-  profile.pid.stick_rates[0].transition.roll = 0.0f; // Ensure setpoint has effect
-  
-  // Initialize state.looptime_inverse
-  state.looptime_inverse = 1.0f / state.looptime;
-  
-  // Set some stick input
-  state.rx_filtered.roll = 0.5f;
-  
-  // Initialize
-  state.gyro.roll = 0.0f;
+  // A steady setpoint needs none.
+  for (int i = 0; i < 2000; i++) {
+    pid_calc();
+  }
+  TEST_ASSERT_FLOAT_WITHIN(1e-5f, 0.0f, state.pidoutput.roll);
+}
+
+void test_pid_feedforward_ignores_overrides(void) {
+  feedforward_setUp();
+  flags.controls_override = 1;
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, feedforward_ramp_output(10.0f));
+
+  // Handing back steps the setpoint without any stick movement.
+  flags.controls_override = 0;
   state.setpoint.roll = 0.0f;
-  pid_init();
   pid_calc();
+  TEST_ASSERT_EQUAL_FLOAT(0.0f, state.pidoutput.roll);
 
-  // Introduce setpoint change
-  state.setpoint.roll = 1.0f;
-  pid_calc();
-
-  // Should still have output (could be positive or negative depending on stick weighting)
-  TEST_ASSERT_NOT_EQUAL(0.0f, state.pidoutput.roll);
+  TEST_ASSERT_FLOAT_WITHIN(1e-4f, 0.02f, feedforward_ramp_output(10.0f));
 }
+#endif
 
 // Test voltage compensation
 void test_pid_voltage_compensation(void) {
