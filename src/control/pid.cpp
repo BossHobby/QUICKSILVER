@@ -47,6 +47,10 @@ static pid_rate_t scaled_rates;
 static filter_t<vec3_t> filter[FILTER_MAX_SLOTS];
 static filter_t<vec3_t> dynamic_filter;
 static filter_t<vec3_t> rx_filter;
+#ifdef ITERM_RELAX
+// Slow setpoint per axis; I-term relax acts on the setpoint's distance from it.
+static filter_t<> relax_filter[PID_SIZE];
+#endif
 
 void pid_reset_i(uint8_t axis) {
   ierror.axis[axis] = 0.0f;
@@ -85,6 +89,16 @@ void pid_filter_update(bool reset) {
   if (reset) {
     dynamic_filter.init(profile.filter.dterm_dynamic_type, DTERM_DYNAMIC_FREQ_MAX, state.looptime_autodetect);
   }
+#ifdef ITERM_RELAX
+  for (uint8_t x = 0; x < PID_SIZE; x++) {
+    const float relax_hz = x < 2 ? RELAX_FREQUENCY_HZ : RELAX_FREQUENCY_HZ_YAW;
+    if (reset) {
+      relax_filter[x].init(FILTER_LP_PT1, relax_hz, state.looptime_autodetect);
+    } else {
+      relax_filter[x].coeff(FILTER_LP_PT1, relax_hz, state.looptime_autodetect);
+    }
+  }
+#endif
 }
 
 void pid_init() {
@@ -107,22 +121,13 @@ static inline vec3_t pid_compute_iterm_windup_vec(const vec3_t *pid_output) {
     }
 #ifdef ITERM_RELAX
     else {
-      static vec3_t avg_setpoint = {.roll = 0, .pitch = 0, .yaw = 0};
-      static float lpf_coeff = 0;
-      static float lpf_coeff_yaw = 0;
-      if (lpf_coeff == 0) {
-        lpf_coeff = lpfcalc(state.looptime, 1.0f / (float)RELAX_FREQUENCY_HZ);
-        lpf_coeff_yaw = lpfcalc(state.looptime, 1.0f / (float)RELAX_FREQUENCY_HZ_YAW);
-      }
       if (x < 2) {
-        lpf(&avg_setpoint.axis[x], state.setpoint.axis[x], lpf_coeff);
-        const float hpf_setpoint = fabsf(state.setpoint.axis[x] - avg_setpoint.axis[x]);
+        const float hpf_setpoint = fabsf(state.setpoint.axis[x] - relax_filter[x].step(state.setpoint.axis[x]));
         windup.axis[x] = MAX(1.0f - hpf_setpoint / RELAX_FACTOR, 0.0f);
       }
 #ifdef ITERM_RELAX_YAW
       else {
-        lpf(&avg_setpoint.axis[x], state.setpoint.axis[x], lpf_coeff_yaw);
-        const float hpf_setpoint = fabsf(state.setpoint.axis[x] - avg_setpoint.axis[x]);
+        const float hpf_setpoint = fabsf(state.setpoint.axis[x] - relax_filter[x].step(state.setpoint.axis[x]));
         windup.axis[x] = MAX(1.0f - hpf_setpoint / RELAX_FACTOR_YAW, 0.0f);
       }
 #endif

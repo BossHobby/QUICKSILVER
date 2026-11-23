@@ -51,7 +51,10 @@
 #define TEMP 1
 #define OSD_RENDER_PERIOD_US 33333
 
+static constexpr float RSSI_FILTER_HZ = 0.5f;
+
 static uint32_t last_render_time;
+static filter_t<> rssi_filter;
 
 extern profile_t profile;
 extern vtx_status_t vtx_actual;
@@ -513,17 +516,17 @@ static void print_osd_flightmode(osd_element_t *el) {
 // so the glyphs of elements stacked at the same column line up. Values that
 // are identified by their unit alone only carry the trailing unit.
 static void print_osd_rssi(osd_element_t *el) {
-  static float rx_rssi_filt;
   float rx_rssi = constrain(state.rx_rssi, 0.0f, 100.0f);
 
   if (profile.receiver.lqi_source != RX_LQI_SOURCE_DIRECT) {
     if (flags.failsafe) {
       rx_rssi = 0.0f;
     }
-    lpf(&rx_rssi_filt, rx_rssi, lpfcalc(state.looptime * 1e6f * 133.0f, 2e6f)); // 2 second filtertime and 15hz refresh rate @4k, 30hz@ 8k loop
-    rx_rssi = rx_rssi_filt;
+    // Every render pass draws each element once.
+    rssi_filter.coeff(FILTER_LP_PT1, RSSI_FILTER_HZ, OSD_RENDER_PERIOD_US);
+    rx_rssi = rssi_filter.step(rx_rssi);
   } else {
-    rx_rssi_filt = rx_rssi;
+    rssi_filter.pole[0] = rx_rssi;
   }
 
   osd_start_el(el);

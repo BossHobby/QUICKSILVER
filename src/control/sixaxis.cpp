@@ -331,36 +331,42 @@ void sixaxis_acc_cal() {
 
   sixaxis_orientation_update();
 
-  flash_storage.accelcal[0] = 0;
-  flash_storage.accelcal[1] = 0;
-  flash_storage.accelcal[2] = 2048;
+  // Average CAL_COUNT consecutive still samples. Movement can leave the craft
+  // resting at another tilt, so it restarts the window.
+  vec3_t sum = {};
+  uint32_t cal_counter = 0;
 
   gyro_data_t last_data = gyro_read();
-  for (uint32_t tries = 0, cal_counter = 0; tries < CAL_TRIES; tries++) {
+  for (uint32_t tries = 0; tries < CAL_TRIES && cal_counter < CAL_COUNT; tries++) {
     const gyro_data_t data = gyro_read();
 
     led_pwm(((float)(cal_counter) / (float)(CAL_COUNT)), CAL_INTERVAL);
 
-    // Skip samples if gyro shows movement
-    if (!test_gyro_move(&last_data, &data)) {
-      const vec3_t accel = sixaxis_apply_orientation(data.accel);
-      for (uint8_t i = 0; i < 3; i++) {
-        lpf(&flash_storage.accelcal[i], accel.axis[i], lpfcalc(CAL_INTERVAL, 0.5 * 1e6));
-      }
-
-      if (cal_counter++ == CAL_COUNT) {
-        break;
-      }
+    if (test_gyro_move(&last_data, &data)) {
+      sum = {};
+      cal_counter = 0;
+    } else {
+      sum += sixaxis_apply_orientation(data.accel);
+      cal_counter++;
     }
 
     time_delay_us(CAL_INTERVAL);
     last_data = data;
   }
+
+  // Without a complete window the stored calibration keeps its values and the
+  // LED blinks.
+  if (cal_counter < CAL_COUNT) {
+    led_blink(CAL_FAILED_BLINKS);
+    return;
+  }
+
+  vec3_t bias = sum * (1.0f / CAL_COUNT);
   // Level Z averages 1 g; store only its bias.
-  flash_storage.accelcal[2] -= 1.0f / ACCEL_RANGE;
+  bias.yaw -= 1.0f / ACCEL_RANGE;
 
   for (uint8_t i = 0; i < 3; i++) {
-    flash_storage.accelcal[i] = constrain(flash_storage.accelcal[i], -ACCEL_BIAS_LIMIT, ACCEL_BIAS_LIMIT);
+    flash_storage.accelcal[i] = constrain(bias.axis[i], -ACCEL_BIAS_LIMIT, ACCEL_BIAS_LIMIT);
   }
 }
 

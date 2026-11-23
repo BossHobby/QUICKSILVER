@@ -881,7 +881,7 @@ static void wing_update_airspeed() {
     // Attitude pitch is positive nose-down.
     const float climb_deg = -state.attitude.pitch * RADTODEG;
     const float level_throttle = state.throttle - WING_THROTTLE_PER_CLIMB_DEG * climb_deg;
-    lpf(&speed_throttle, level_throttle, constrain(1.0f - state.looptime / SPEED_THROTTLE_FILTER_TIME, 0.0f, 1.0f));
+    speed_throttle += (level_throttle - speed_throttle) * constrain(state.looptime / SPEED_THROTTLE_FILTER_TIME, 0.0f, 1.0f);
 
     const float speed_sq_ratio = constrain(speed_throttle / cruise_throttle,
                                            1.0f / (WING_SPEED_SCALE_MAX * WING_SPEED_SCALE_MAX),

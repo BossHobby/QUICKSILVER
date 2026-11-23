@@ -82,17 +82,3 @@ struct filter_biquad_notch_t {
   float step(float in);
 };
 
-//(1 - alpha. filtertime = 1 / filter-cutoff-frequency) as long as filtertime > sampleperiod
-#define lpfcalc(sampleperiod, filtertime) ({                                                   \
-  const float _sampleperiod = sampleperiod;                                                    \
-  const float _filtertime = filtertime;                                                        \
-  constrain(1.0f - (6.0f * _sampleperiod) / (3.0f * _sampleperiod + _filtertime), 0.0f, 1.0f); \
-})
-#define lpfcalc_hz(sampleperiod, filter_hz) lpfcalc(sampleperiod, 1.0f / filter_hz)
-
-#define lpf(out, in, coeff)                                  \
-  ({                                                         \
-    __typeof__(coeff) _coeff = (coeff);                          \
-    __typeof__(in) _in = (in);                                   \
-    (*(out) = (*(out)) * (_coeff) + (_in) * (1 - (_coeff))); \
-  })

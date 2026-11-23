@@ -335,9 +335,7 @@ void imu_init() {
   for (int sample = 0; sample < 100; sample++) {
     sixaxis_read();
 
-    for (int axis = 0; axis < 3; axis++) {
-      lpf(&state.GEstG.axis[axis], state.accel_raw.axis[axis], 0.85f);
-    }
+    state.GEstG += (state.accel_raw - state.GEstG) * 0.15f;
     time_delay_us(1000);
   }
 
@@ -447,11 +445,10 @@ HOT_CODE void imu_calc() {
     const vec3_t reference = gravity_reference * (ACC_1G / sqrtf(refmag_squared));
     imu_update_gyro_bias(reference);
     const float filter_time = flags.on_ground ? GRAVITY_GROUND_FILTER_TIME : GRAVITY_FLIGHT_FILTER_TIME;
-    // Filter times are time constants; lpfcalc() takes 1 / cutoff frequency.
-    const float filtcoeff = constrain(1.0f - state.looptime / filter_time, 0.0f, 1.0f);
-    lpf(&state.GEstG.roll, reference.roll, filtcoeff);
-    lpf(&state.GEstG.pitch, reference.pitch, filtcoeff);
-    lpf(&state.GEstG.yaw, reference.yaw, filtcoeff);
+    // Filter times are time constants. The gyro rotates GEstG between passes,
+    // so the correction blends in place instead of through a filter_t.
+    const float blend = constrain(state.looptime / filter_time, 0.0f, 1.0f);
+    state.GEstG += (reference - state.GEstG) * blend;
   }
 
   // Normalize once for both control consumers and attitude correction.
