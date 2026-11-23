@@ -32,6 +32,10 @@
 #define MIX_THROTTLE_INCREASE_MAX 0.2f
 #endif
 
+// Throttle per second the brushed over-throttle reduction builds and releases.
+static constexpr float OVERTHROTTLE_RISE_RATE = 5.0f;
+static constexpr float OVERTHROTTLE_FALL_RATE = 10.0f;
+
 extern profile_t profile;
 
 static void motor_brushless_mixer_scale_calc(float throttle) {
@@ -85,9 +89,9 @@ static void motor_brushed_mixer_scale_calc(float throttle) {
     overthrottle = (float)MIX_THROTTLE_REDUCTION_MAX;
 
   if (overthrottle > overthrottlefilt)
-    overthrottlefilt += 0.005f;
+    overthrottlefilt += OVERTHROTTLE_RISE_RATE * state.looptime;
   else
-    overthrottlefilt -= 0.01f;
+    overthrottlefilt -= OVERTHROTTLE_FALL_RATE * state.looptime;
 
   if (overthrottlefilt > (float)MIX_THROTTLE_REDUCTION_MAX)
     overthrottlefilt = (float)MIX_THROTTLE_REDUCTION_MAX;

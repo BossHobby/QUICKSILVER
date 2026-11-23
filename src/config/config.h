@@ -186,7 +186,6 @@
 // Motor noise has a quadratic relationship with throttle, but we use a faster parabolic curve
 // to get the filter out of the way quickly for better performance and handling
 #define DTERM_DYNAMIC_TYPE FILTER_LP_PT1
-#define DTERM_DYNAMIC_EXPO 1.0f
 #define DTERM_DYNAMIC_FREQ_MIN 70
 #define DTERM_DYNAMIC_FREQ_MAX 260
 
@@ -204,7 +203,6 @@
 // ---- MOTOR CONFIGURATION ----
 #define DIGITAL_IDLE 4.5   // minimum throttle for motors to spin
 #define MOTOR_LIMIT 100.0  // maximum motor output percentage
-#define INVERT_YAW_PID     // for "props out" configuration
 
 // ---- BRUSHED MOTOR MIXER ----
 // #define MIX_THROTTLE_REDUCTION_PERCENT 10

@@ -15,6 +15,8 @@
 #define PID_SIZE 3
 
 #define PID_VC_FACTOR 1.33f
+// Time constant the integral decays with while it is disabled, in seconds.
+static constexpr float ITERM_DECAY_TIME = 0.05f;
 #define RELAX_FACTOR (RELAX_FACTOR_DEG * DEGTORAD)
 #define RELAX_FACTOR_YAW (RELAX_FACTOR_YAW_DEG * DEGTORAD)
 
@@ -236,6 +238,7 @@ HOT_CODE void pid_calc() {
   const vec3_t current_ki = scaled_rates.ki * (state.looptime * pid_speed_compensation);
   const vec3_t current_kd = scaled_rates.kd * (state.looptime_inverse * pid_speed_compensation);
   const vec3_t iterm_enable = pid_should_enable_iterm_vec();
+  const float iterm_decay = 1.0f - state.looptime / ITERM_DECAY_TIME;
   const vec3_t iterm_windup = pid_compute_iterm_windup_vec(&pid_output);
   vec3_t setpoint_derivative = setpoint_delta * current_kd;
   if (state.rx_filter_hz > 0.1f) {
@@ -250,18 +253,12 @@ HOT_CODE void pid_calc() {
 
     const float simpson_sum = last_error2.axis[x] + 4.0f * last_error.axis[x] + state.error.axis[x];
     const float ierror_delta = simpson_sum * current_ki.axis[x] * iterm_windup.axis[x];
-    ierror.axis[x] = iterm_enable.axis[x] ? (ierror.axis[x] + ierror_delta) : (ierror.axis[x] * 0.98f);
+    ierror.axis[x] = iterm_enable.axis[x] ? (ierror.axis[x] + ierror_delta) : (ierror.axis[x] * iterm_decay);
     ierror.axis[x] = constrain(ierror.axis[x], -integral_limit.axis[x], integral_limit.axis[x]);
     state.pid_i_term.axis[x] = ierror.axis[x];
 
-    float transition_setpoint_weight = 0;
-    if (stick_accelerator[x] < 1) {
-      transition_setpoint_weight = (fabsf(state.rx_filtered.axis[x]) * stick_transition[x]) + (1 - stick_transition[x]);
-    } else if (stick_accelerator[x] > 0) {
-      transition_setpoint_weight = (fabsf(state.rx_filtered.axis[x]) * (stick_transition[x] / stick_accelerator[x])) + (1 - stick_transition[x]);
-    } else {
-      transition_setpoint_weight = 1.0f;
-    }
+    const float transition = stick_accelerator[x] < 1 ? stick_transition[x] : stick_transition[x] / stick_accelerator[x];
+    const float transition_setpoint_weight = (fabsf(state.rx_filtered.axis[x]) * transition) + (1 - stick_transition[x]);
 
     const float gyro_derivative = gyro_delta.axis[x] * current_kd.axis[x] * tda_compensation;
     dterm.axis[x] = (setpoint_derivative.axis[x] * stick_accelerator[x] * transition_setpoint_weight) - gyro_derivative;
