@@ -103,24 +103,3 @@ HOT_CODE float filter_biquad_notch_t::step(float in) {
 
   return result;
 }
-
-// 16Hz hpf filter for throttle compensation
-// High pass bessel filter order=1 alpha1=0.016
-void filter_hp_be_init(filter_hp_be *filter) {
-  filter->v[0] = 0.0;
-}
-
-float filter_hp_be_step(filter_hp_be *filter, float x) { // class II
-  filter->v[0] = filter->v[1];
-  filter->v[1] = (9.521017968695103528e-1f * x) + (0.90420359373902081668f * filter->v[0]);
-  return (filter->v[1] - filter->v[0]);
-}
-
-filter_hp_be throttlehpf1;
-float throttlehpf(float in) {
-  return filter_hp_be_step(&throttlehpf1, in);
-}
-
-void filter_global_init() {
-  filter_hp_be_init(&throttlehpf1);
-}

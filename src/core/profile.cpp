@@ -275,17 +275,6 @@ const profile_t default_profile = {
         .dshot_time = DSHOT_TIME_600,
         .dshot_telemetry = false,
         .gyro_orientation = GYRO_ROTATE_NONE,
-
-#ifdef TORQUE_BOOST
-        .torque_boost = TORQUE_BOOST,
-#else
-        .torque_boost = 0.0,
-#endif
-#ifdef THROTTLE_BOOST
-        .throttle_boost = THROTTLE_BOOST,
-#else
-        .throttle_boost = 0.0,
-#endif
         .turtle_throttle_percent = 10.0f,
     },
 

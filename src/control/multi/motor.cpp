@@ -34,19 +34,6 @@
 
 extern profile_t profile;
 
-static float motord(float in, int x) {
-  static float lastratexx[4][4];
-
-  const float factor = profile.motor.torque_boost;
-  const float out = (+0.125f * in + 0.250f * lastratexx[x][0] - 0.250f * lastratexx[x][2] - (0.125f) * lastratexx[x][3]) * factor;
-  lastratexx[x][3] = lastratexx[x][2];
-  lastratexx[x][2] = lastratexx[x][1];
-  lastratexx[x][1] = lastratexx[x][0];
-  lastratexx[x][0] = in;
-
-  return in + out;
-}
-
 static void motor_brushless_mixer_scale_calc(float throttle) {
   // only enable once really in the air
   if (flags.on_ground || !flags.in_air) {
@@ -184,12 +171,6 @@ HOT_CODE void motor_mixer_calc(void) {
   state.mixer_source[OUTPUT_SOURCE_YAW] = state.pidoutput.yaw;
 
   output_apply_mixer_rules();
-
-  if (profile.motor.torque_boost > 0.0f) {
-    for (uint32_t i = 0; i < MULTI_MOTOR_COUNT; i++) {
-      state.output[i] = motord(state.output[i], i);
-    }
-  }
 
   if (profile_outputs_use_protocol(OUTPUT_PROTOCOL_DSHOT)) {
     motor_brushless_mixer_scale_calc(state.throttle);

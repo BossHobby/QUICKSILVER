@@ -311,8 +311,6 @@ COLD_CODE static void flight_init() {
   // wait for flash to stabilze
   time_delay_us(100);
 
-  // setup filters early
-  filter_global_init();
   timer_alloc_init();
 
   // Turn on LED during boot so that if a delay is used as part of using programming pins for other functions,

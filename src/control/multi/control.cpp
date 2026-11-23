@@ -287,13 +287,11 @@ HOT_CODE void control() {
   } else {
     flags.on_ground = 0;
 
-    if (!flags.controls_override) {
-      if (profile.motor.throttle_boost > 0.0f) {
-        state.throttle += (float)(profile.motor.throttle_boost) * throttlehpf(state.throttle);
-        state.throttle = constrain(state.throttle, 0.0f, 1.0f);
-      }
-    }
-
+    // There is no throttle boost: the old one high-passed the throttle with
+    // coefficients fixed for a 1 kHz loop, so at 4-8 kHz its corner sat at
+    // 64-128 Hz, above what the motors follow. A replacement would add
+    // gain * (throttle - PT1(throttle)) here, with a corner near 15 Hz derived
+    // from the loop time, as Betaflight does.
     motor_mixer_calc();
 #ifndef NOMOTORS
     output_finalize_motor_values();

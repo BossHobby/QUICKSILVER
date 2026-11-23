@@ -1460,8 +1460,7 @@ TickType_t osd_display() {
     osd_menu_start();
     osd_menu_header("SPECIAL FEATURES");
 
-    osd_menu_select_screen(7, 3, "STICK BOOST", OSD_SCREEN_STICK_BOOST);
-    osd_menu_select_screen(7, 4, "MOTOR BOOST", OSD_SCREEN_MOTOR_BOOST);
+    osd_menu_select_screen(7, 4, "STICK BOOST", OSD_SCREEN_STICK_BOOST);
     osd_menu_select_screen(7, 5, "LOW BATTERY", OSD_SCREEN_LOWBAT);
 
     osd_menu_finish();
@@ -1647,16 +1646,6 @@ TickType_t osd_display() {
 
     osd_menu_select_screen(7, 4, "MAX ANGLE", OSD_SCREEN_LEVEL_MAX_ANGLE);
     osd_menu_select_screen(7, 5, "LEVEL STRENGTH", OSD_SCREEN_LEVEL_STRENGTH);
-
-    osd_menu_finish();
-    break;
-
-  case OSD_SCREEN_MOTOR_BOOST:
-    osd_menu_start();
-    osd_menu_header("MOTOR BOOST TYPES");
-
-    osd_menu_select_screen(7, 4, "TORQUE BOOST", OSD_SCREEN_TORQUE_BOOST);
-    osd_menu_select_screen(7, 5, "THROTTLE BOOST", OSD_SCREEN_THROTTLE_BOOST);
 
     osd_menu_finish();
     break;
@@ -2027,32 +2016,6 @@ TickType_t osd_display() {
     }
 
     osd_menu_select_save_and_exit(1);
-    osd_menu_finish();
-    break;
-
-  case OSD_SCREEN_TORQUE_BOOST:
-    osd_menu_start();
-    osd_menu_header("TORQUE BOOST");
-
-    osd_menu_select(4, 5, "MOTOR TORQUE BOOST");
-    if (osd_menu_select_float(22, 5, profile.motor.torque_boost, 4, 1)) {
-      profile.motor.torque_boost = osd_menu_adjust_float(profile.motor.torque_boost, 0.1, 0, 3.0);
-    }
-
-    osd_menu_select_save_and_exit(4);
-    osd_menu_finish();
-    break;
-
-  case OSD_SCREEN_THROTTLE_BOOST:
-    osd_menu_start();
-    osd_menu_header("THROTTLE BOOST");
-
-    osd_menu_select(2, 5, "MOTOR THROTTLE BOOST");
-    if (osd_menu_select_float(22, 5, profile.motor.throttle_boost, 4, 1)) {
-      profile.motor.throttle_boost = osd_menu_adjust_float(profile.motor.throttle_boost, 0.1, 0, 10.0);
-    }
-
-    osd_menu_select_save_and_exit(4);
     osd_menu_finish();
     break;
 

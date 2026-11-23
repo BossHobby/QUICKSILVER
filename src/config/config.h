@@ -206,10 +206,6 @@
 #define MOTOR_LIMIT 100.0  // maximum motor output percentage
 #define INVERT_YAW_PID     // for "props out" configuration
 
-// ---- MOTOR BOOST FEATURES ----
-// #define THROTTLE_BOOST 7.0  // can cause thrust imbalances if too high
-// #define TORQUE_BOOST 1.0    // EXPERIMENTAL - can damage motors!
-
 // ---- BRUSHED MOTOR MIXER ----
 // #define MIX_THROTTLE_REDUCTION_PERCENT 10
 // #define MIX_THROTTLE_INCREASE_MAX 0.2f

@@ -36,6 +36,7 @@
 //        serial: rename hdzero to digital_vtx.
 //        vtx: an unset vtx.protocol is off; MSP VTX is no longer implied by the digital VTX
 //            port or a CRSF receiver sharing the smart audio port.
+//        motor: drop torque_boost and throttle_boost.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
 // 0.2.5 (c9dec9f1): add osd profiles.
@@ -278,8 +279,6 @@ typedef struct {
   dshot_time_t dshot_time;
   bool dshot_telemetry;
   uint8_t gyro_orientation;
-  float torque_boost;
-  float throttle_boost;
   float turtle_throttle_percent;
 } profile_motor_t;
 
@@ -290,8 +289,6 @@ typedef struct {
   MEMBER(dshot_time, uint16_t)                     \
   MEMBER(dshot_telemetry, bool)                    \
   MEMBER(gyro_orientation, uint8_t)                \
-  MEMBER(torque_boost, float)                      \
-  MEMBER(throttle_boost, float)                    \
   MEMBER(turtle_throttle_percent, float)           \
   END_STRUCT()
 

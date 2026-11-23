@@ -82,10 +82,6 @@ struct filter_biquad_notch_t {
   float step(float in);
 };
 
-typedef struct {
-  float v[2];
-} filter_hp_be;
-
 //(1 - alpha. filtertime = 1 / filter-cutoff-frequency) as long as filtertime > sampleperiod
 #define lpfcalc(sampleperiod, filtertime) ({                                                   \
   const float _sampleperiod = sampleperiod;                                                    \
@@ -100,10 +96,3 @@ typedef struct {
     __typeof__(in) _in = (in);                                   \
     (*(out) = (*(out)) * (_coeff) + (_in) * (1 - (_coeff))); \
   })
-
-void filter_global_init();
-
-void filter_hp_be_init(filter_hp_be *filter);
-float filter_hp_be_step(filter_hp_be *filter, float x);
-
-float throttlehpf(float in);
