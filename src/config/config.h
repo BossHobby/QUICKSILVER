@@ -149,7 +149,6 @@
 // Raises PIDs automatically as battery voltage drops
 // CRITICAL: ensure voltage is calibrated before use!
 #define PID_VOLTAGE_COMPENSATION
-#define LEVELMODE_PID_ATTENUATION 0.90f  // prevents oscillations in angle modes
 
 // ---- LOW VOLTAGE WARNINGS ----
 #define VBATTLOW 3.6  // voltage per cell to start warning

@@ -181,13 +181,7 @@ static inline float pid_voltage_compensation() {
   // Thrust follows the voltage under load, so use the sag filter rather than
   // the slower display filter.
   const float cell_voltage = state.vbat_sag_filtered / (float)state.lipo_cell_count;
-  float res = constrain(mapf(cell_voltage, 2.5f, 3.85f, PID_VC_FACTOR, 1.0f), 1.0f, PID_VC_FACTOR);
-#ifdef LEVELMODE_PID_ATTENUATION
-  if (rx_aux_on(AUX_LEVELMODE)) {
-    res *= LEVELMODE_PID_ATTENUATION;
-  }
-#endif
-  return res;
+  return constrain(mapf(cell_voltage, 2.5f, 3.85f, PID_VC_FACTOR, 1.0f), 1.0f, PID_VC_FACTOR);
 }
 
 static inline float pid_tda_compensation() {
