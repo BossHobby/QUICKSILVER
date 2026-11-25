@@ -154,6 +154,7 @@ void blackbox_device_reset() {
 
   blackbox_device_header.magic = BLACKBOX_HEADER_MAGIC;
   blackbox_device_header.file_num = 0;
+  flags.blackbox_full = 0;
 }
 
 bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, float looptime, const profile_t *recording_profile) {
@@ -170,7 +171,7 @@ bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, float
 
   const uint32_t offset = MEMORY_ALIGN(blackbox_device_usage(), blackbox_bounds.page_size);
   if (offset >= blackbox_bounds.total_size) {
-    // flash is full
+    flags.blackbox_full = 1;
     return false;
   }
 
@@ -187,6 +188,7 @@ bool blackbox_device_restart(uint32_t field_flags, uint32_t blackbox_rate, float
   if (!blackbox_device_write_profile(recording_profile)) {
     return false;
   }
+  flags.blackbox_full = 0;
 
   blackbox_device_header.file_num++;
   dev->start();
@@ -213,8 +215,23 @@ void blackbox_device_read(const uint32_t file_index, const uint32_t offset, uint
   }
 }
 
+// Queue size bytes for the current file if they fit in storage whole. The
+// first that do not end the log on the frame before them; disarm commits it.
+static bool blackbox_device_append(const uint8_t *buffer, const uint16_t size) {
+  if (flags.blackbox_full) {
+    return false;
+  }
+  // Written, queued, and up to the write buffer the backend holds in between.
+  const uint64_t end = (uint64_t)blackbox_device_usage() + ring_buffer_available(&blackbox_encode_buffer) + BLACKBOX_WRITE_BUFFER_SIZE;
+  if (end + size > blackbox_bounds.total_size) {
+    flags.blackbox_full = 1;
+    return false;
+  }
+  return dev->write(buffer, size);
+}
+
 bool blackbox_device_write_frame(const uint32_t field_flags, const blackbox_t *current, const blackbox_t *previous, blackbox_frame_type_t frame_type) {
-  if (dev == NULL) {
+  if (dev == NULL || flags.blackbox_full) {
     return false;
   }
 
@@ -228,14 +245,14 @@ bool blackbox_device_write_frame(const uint32_t field_flags, const blackbox_t *c
     return false;
   }
 
-  return dev->write(buffer, cbor_encoder_len(&enc));
+  return blackbox_device_append(buffer, cbor_encoder_len(&enc));
 }
 
 bool blackbox_device_write(const uint8_t *buffer, const uint16_t size) {
   if (dev == NULL) {
     return false;
   }
-  return dev->write(buffer, size);
+  return blackbox_device_append(buffer, size);
 }
 
 #endif

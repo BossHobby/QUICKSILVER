@@ -6,6 +6,7 @@
 #include "control/mission.h"
 #include "control/navigation.h"
 #include "core/profile.h"
+#include "core/project.h"
 #include "driver/osd/osd.h"
 #include "driver/time.h"
 #include "osd/render.h"
@@ -32,6 +33,7 @@ typedef enum {
   STATUS_AUTOTRIM,
   STATUS_RTH,
   STATUS_GPS,
+  STATUS_BLACKBOX,
   STATUS_MAX,
 } osd_status_entries_t;
 
@@ -79,6 +81,7 @@ const char *default_system_status_labels[STATUS_MAX] = {
     [STATUS_AUTOTRIM] = "AUTOTRIM",
     [STATUS_RTH] = "RTH",
     [STATUS_GPS] = "GPS",
+    [STATUS_BLACKBOX] = "BLACKBOX",
 };
 
 const char *guac_system_status_labels[STATUS_MAX] = {
@@ -98,6 +101,7 @@ const char *guac_system_status_labels[STATUS_MAX] = {
     [STATUS_AUTOTRIM] = "AUTOTRIM",
     [STATUS_RTH] = "RTH",
     [STATUS_GPS] = "GPS",
+    [STATUS_BLACKBOX] = "BLACKBOX",
 };
 
 static void osd_status_write_label(osd_element_t *el) {
@@ -593,6 +597,22 @@ bool osd_status_update(osd_element_t *el) {
       }
     }
   }
+
+#ifdef USE_BLACKBOX
+  {
+    // Once per log, while armed: it ran out of storage, or had none to start.
+    static bool last_full = false;
+    const bool full = flags.blackbox_full;
+    if (full != last_full && (!full || (flags.arm_state && rx_aux_on(AUX_BLACKBOX)))) {
+      last_full = full;
+      if (full) {
+        osd_status_show_text(MODE_TEMP, STATUS_BLACKBOX, "BLACKBOX FULL");
+        current_status.state = PRINT_START; // Restart even if the previous log showed the same label.
+        return osd_status_print(el);
+      }
+    }
+  }
+#endif
 
   if (flags.lowbatt && state.vbat >= 1.0f) {
     // only show lowbat if we detect some voltage at all

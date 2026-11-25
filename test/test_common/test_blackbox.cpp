@@ -1307,3 +1307,48 @@ static void test_blackbox_erase_waits_for_storage_body() {
 void test_blackbox_erase_waits_for_storage() {
   run_blackbox_test(test_blackbox_erase_waits_for_storage_body);
 }
+
+void test_blackbox_ends_full_log_on_a_whole_frame() {
+  blackbox_test_t fixture;
+  // Queue like a backend, which holds bytes until they are written.
+  blackbox_device_simulator.write = [](const uint8_t *bytes, uint16_t size) {
+    writes++;
+    return ring_buffer_write_multi(&blackbox_encode_buffer, bytes, size) == size;
+  };
+  ring_buffer_clear(&blackbox_encode_buffer);
+  blackbox_device_header.file_num = 0;
+  TEST_ASSERT_TRUE(blackbox_device_restart(1U << BBOX_FIELD_LOOP, 1, 125.0f));
+  TEST_ASSERT_FALSE(flags.blackbox_full);
+  const uint32_t profile_end = 256 + ring_buffer_available(&blackbox_encode_buffer);
+
+  // Room for exactly three 40-byte frames and some of a fourth, besides the
+  // write buffer a backend may hold.
+  blackbox_bounds.total_size = profile_end + BLACKBOX_WRITE_BUFFER_SIZE + 3 * 40 + 20;
+  const uint8_t frame[40] = {};
+  for (unsigned i = 0; i < 3; i++)
+    TEST_ASSERT_TRUE(blackbox_device_write(frame, sizeof(frame)));
+  TEST_ASSERT_EQUAL_UINT32(0, stops);
+
+  // The frame that does not fit whole ends the log.
+  TEST_ASSERT_FALSE(blackbox_device_write(frame, sizeof(frame)));
+  TEST_ASSERT_TRUE(flags.blackbox_full);
+  TEST_ASSERT_EQUAL_UINT32(0, stops);
+  TEST_ASSERT_EQUAL_UINT(3, writes);
+  // Not even a frame that would fit is taken after it.
+  TEST_ASSERT_FALSE(blackbox_device_write(frame, 1));
+  TEST_ASSERT_EQUAL_UINT(3, writes);
+
+  // Disarm commits it.
+  blackbox_device_finish();
+  TEST_ASSERT_EQUAL_UINT32(1, stops);
+  TEST_ASSERT_EQUAL_UINT32(1, blackbox_device_header.file_num);
+
+  // The next arm finds no room for a log and keeps reporting it.
+  TickType_t wait;
+  while (!blackbox_device_ready()) blackbox_device_update(wait);
+  blackbox_bounds.total_size = 256;
+  TEST_ASSERT_FALSE(blackbox_device_restart(1U << BBOX_FIELD_LOOP, 1, 125.0f));
+  TEST_ASSERT_TRUE(flags.blackbox_full);
+  TEST_ASSERT_EQUAL_UINT32(1, blackbox_device_header.file_num);
+  ring_buffer_clear(&blackbox_encode_buffer);
+}

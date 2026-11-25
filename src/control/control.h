@@ -181,6 +181,9 @@ typedef struct {
   // Separate bytes prevent IO flag writes from overwriting Flight's bitfields.
   uint8_t failsafe_signal_lost; // RX reports loss; Flight also enforces timeout.
   uint8_t lowbatt;
+  // The log ran out of storage and ends on its last whole frame, or there was
+  // no room to start one; cleared when a log starts. Set by the blackbox thread.
+  uint8_t blackbox_full;
   uint8_t rx_mode;
   uint8_t rx_ready;
 

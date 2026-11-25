@@ -672,3 +672,53 @@ void test_osd_msp_keeps_telemetry_but_rejects_airborne_maintenance() {
   flags = saved_flags;
   motor_test = saved_motor_test;
 }
+
+void test_osd_blackbox_notice_once_per_log() {
+#ifdef USE_BLACKBOX
+  const auto saved_state = state;
+  const auto saved_flags = flags;
+  const auto saved_guac = profile.osd.guac_mode;
+  flags = {};
+  flags.rx_ready = 1;
+  flags.arm_state = 1;
+  state = {};
+  state.aux_active = 1U << AUX_BLACKBOX;
+  profile.osd.guac_mode = false;
+  osd_element_t el = {};
+  osd_device_init();
+  osd_clear();
+  osd_status_reset();
+  simulator_osd_test_reset(false);
+  // Let the arming announcement expire.
+  osd_status_update(&el);
+  time_test_advance_us(1001000);
+  osd_status_update(&el);
+  osd_status_update(&el);
+  assert_status_label("BLACKBOX", false);
+
+  flags.blackbox_full = 1;
+  osd_status_update(&el);
+  assert_status_label("BLACKBOX FULL", true);
+  time_test_advance_us(1001000);
+  osd_status_update(&el);
+  osd_status_update(&el);
+  assert_status_label("BLACKBOX", false);
+  // Shown once per log.
+  for (unsigned i = 0; i < 4; i++)
+    osd_status_update(&el);
+  assert_status_label("BLACKBOX", false);
+
+  // The next log to run out shows it again.
+  flags.blackbox_full = 0;
+  osd_status_update(&el);
+  flags.blackbox_full = 1;
+  osd_status_update(&el);
+  assert_status_label("BLACKBOX FULL", true);
+
+  state = saved_state;
+  flags = saved_flags;
+  profile.osd.guac_mode = saved_guac;
+  osd_clear();
+  osd_status_reset();
+#endif
+}
