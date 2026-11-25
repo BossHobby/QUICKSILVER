@@ -12,6 +12,7 @@
 #ifdef USE_DIGITAL_VTX
 
 #define MAX_MSP_FRAME_SIZE 1024
+#define MAX_STRING_LENGTH 30U
 
 typedef enum {
   SUBCMD_HEARTBEAT = 0,
@@ -311,7 +312,9 @@ bool displayport_push_string(uint8_t attr, uint8_t x, uint8_t y, const uint8_t *
 uint32_t displayport_can_fit() {
   const uint32_t free = serial_bytes_free(&serial_displayport);
   const uint32_t overhead = MSP_HEADER_LEN + 2 + 3 + 1;
-  return (free > overhead) ? (free - overhead) : 0;
+  // Betaflight never sends more than 30 characters per string and DJI O4
+  // drops the rest, so longer merged rows lose their right-hand elements.
+  return (free > overhead) ? MIN(free - overhead, MAX_STRING_LENGTH) : 0;
 }
 
 bool displayport_flush() {
