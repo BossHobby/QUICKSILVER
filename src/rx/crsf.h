@@ -51,6 +51,8 @@ enum {
   CRSF_FRAME_LINK_STATISTICS_PAYLOAD_SIZE = 10,
   CRSF_FRAME_LINK_STATISTICS_RX_PAYLOAD_SIZE = 5,
   CRSF_FRAME_LINK_STATISTICS_TX_PAYLOAD_SIZE = 6,
+  // Newer receivers append the second antenna RSSI and the active antenna.
+  CRSF_FRAME_LINK_STATISTICS_TX_EXT_PAYLOAD_SIZE = 8,
   CRSF_FRAME_RC_CHANNELS_PAYLOAD_SIZE = 22, // 11 bits per channel * 16 channels = 22 bytes.
   CRSF_FRAME_RC_CHANNELS_SUBSET_MIN_PAYLOAD_SIZE = 3,
   CRSF_FRAME_ATTITUDE_PAYLOAD_SIZE = 6,
@@ -345,14 +347,14 @@ typedef struct {
 } __attribute__((__packed__)) crsf_channels_subset_payload_t;
 
 typedef struct {
-  uint8_t uplink_rssi_2;
-  uint8_t uplink_rssi_1;
+  uint8_t uplink_rssi_1; // dBm * -1
+  uint8_t uplink_rssi_2; // dBm * -1
   uint8_t uplink_link_quality;
   int8_t uplink_snr;
   uint8_t active_antenna;
   uint8_t rf_mode;
   uint8_t uplink_tx_power;
-  uint8_t downlink_rssi;
+  uint8_t downlink_rssi; // dBm * -1
   uint8_t downlink_link_quality;
   int8_t downlink_snr;
 } __attribute__((__packed__)) crsf_link_statistics_payload_t;
@@ -363,9 +365,10 @@ static_assert(sizeof(crsf_link_statistics_payload_t) == CRSF_FRAME_LINK_STATISTI
 _Static_assert(sizeof(crsf_link_statistics_payload_t) == CRSF_FRAME_LINK_STATISTICS_PAYLOAD_SIZE, "wrong crsf link statistics payload size");
 #endif
 
+// RSSI values keep the frame encoding, dBm * -1; 0 when the antenna is absent.
 typedef struct {
-  uint8_t uplink_rssi_2;
   uint8_t uplink_rssi_1;
+  uint8_t uplink_rssi_2;
   uint8_t uplink_link_quality;
   int8_t uplink_snr;
   uint8_t active_antenna;
@@ -392,6 +395,9 @@ typedef struct {
   int8_t snr;
   uint8_t rf_power_db;
   uint8_t fps;
+  // Optional, see CRSF_FRAME_LINK_STATISTICS_TX_EXT_PAYLOAD_SIZE.
+  uint8_t rssi_ant2_db;
+  uint8_t active_antenna;
 } __attribute__((__packed__)) crsf_link_stats_tx_t;
 
 typedef struct {
@@ -407,6 +413,7 @@ typedef union {
 } crsf_frame_t;
 
 extern crsf_stats_t crsf_stats;
+extern const uint16_t crsf_tx_power_mw[CRSF_TX_POWER_MAX];
 
 uint8_t crsf_crc8(uint8_t *data, uint16_t len);
 uint8_t crsf_command_crc8(const uint8_t *data, uint8_t size);

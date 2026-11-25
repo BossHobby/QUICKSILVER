@@ -636,6 +636,8 @@ static bool elrs_process_packet() {
   elrs_last_packet_stats(&raw_rssi, &raw_snr);
   rssi = elrs_lpf_update(&rssi_lpf, raw_rssi);
   elrs_snr_mean_add(raw_snr);
+  state.rx_rssi_dbm = rssi;
+  state.rx_snr = SNR_DESCALE(raw_snr);
 
   elrs_lq_add();
 

@@ -129,6 +129,17 @@ float rx_serial_crsf_expected_fps() {
   return 1;
 }
 
+static int8_t rx_serial_crsf_dbm(uint8_t rssi) {
+  return -(int8_t)MIN(rssi, (uint8_t)127);
+}
+
+// Receivers without diversity report 0 for the second antenna.
+static void rx_serial_crsf_publish_uplink() {
+  const bool second = crsf_stats.active_antenna != 0 && crsf_stats.uplink_rssi_2 != 0;
+  state.rx_rssi_dbm = rx_serial_crsf_dbm(second ? crsf_stats.uplink_rssi_2 : crsf_stats.uplink_rssi_1);
+  state.rx_snr = crsf_stats.uplink_snr;
+}
+
 static uint8_t rx_serial_crsf_payload_length(uint8_t frame_length) {
   if (frame_length < CRSF_FRAME_LENGTH_TYPE_CRC)
     return 0;
@@ -305,8 +316,8 @@ static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
       break;
 
     const crsf_link_statistics_payload_t *stats = (const crsf_link_statistics_payload_t *)&rx_data[1];
-    crsf_stats.uplink_rssi_2 = stats->uplink_rssi_2;
     crsf_stats.uplink_rssi_1 = stats->uplink_rssi_1;
+    crsf_stats.uplink_rssi_2 = stats->uplink_rssi_2;
     crsf_stats.uplink_link_quality = stats->uplink_link_quality;
     crsf_stats.uplink_snr = stats->uplink_snr;
     crsf_stats.active_antenna = stats->active_antenna;
@@ -315,6 +326,7 @@ static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
     crsf_stats.downlink_rssi = stats->downlink_rssi;
     crsf_stats.downlink_link_quality = stats->downlink_link_quality;
     crsf_stats.downlink_snr = stats->downlink_snr;
+    rx_serial_crsf_publish_uplink();
 
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT)
       rx_lqi_update_direct(crsf_stats.uplink_link_quality);
@@ -342,11 +354,14 @@ static packet_status_t rx_serial_crsf_process_frame(uint8_t frame_length) {
       break;
 
     const crsf_link_stats_tx_t *stats = (const crsf_link_stats_tx_t *)&rx_data[1];
+    const bool extended = payload_length >= CRSF_FRAME_LINK_STATISTICS_TX_EXT_PAYLOAD_SIZE;
     crsf_stats.uplink_rssi_1 = stats->rssi_db;
-    crsf_stats.uplink_rssi_2 = stats->rssi_db;
+    crsf_stats.uplink_rssi_2 = extended ? stats->rssi_ant2_db : 0;
+    crsf_stats.active_antenna = extended ? stats->active_antenna : 0;
     crsf_stats.uplink_link_quality = stats->link_quality;
     crsf_stats.uplink_snr = stats->snr;
     crsf_stats.uplink_fps = (uint16_t)stats->fps * 10;
+    rx_serial_crsf_publish_uplink();
 
     if (profile.receiver.lqi_source == RX_LQI_SOURCE_DIRECT)
       rx_lqi_update_direct(stats->link_quality);

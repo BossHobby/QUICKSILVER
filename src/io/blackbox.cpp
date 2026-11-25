@@ -14,6 +14,7 @@
 #include "io/blackbox_device.h"
 #include "io/gps.h"
 #include "io/usb_configurator.h"
+#include "rx/crsf.h"
 #include "util/cbor_helper.h"
 #include "util/util.h"
 
@@ -161,6 +162,22 @@ static bool compute_and_check_gps_fix_delta(blackbox_gps_fix_t *delta, const bla
   delta->error = delta_int16(current->error, previous->error);
   return delta->status || delta->satellites || delta->h_acc || delta->s_acc || delta->rf_noise || delta->rf_agc || delta->rf_cw ||
          delta->trust || delta->error;
+}
+
+static bool compute_and_check_rx_link_delta(blackbox_rx_link_t *delta, const blackbox_rx_link_t *current, const blackbox_rx_link_t *previous) {
+  delta->lq = delta_int16(current->lq, previous->lq);
+  delta->rssi = delta_int16(current->rssi, previous->rssi);
+  delta->snr = delta_int16(current->snr, previous->snr);
+  delta->rssi_1 = delta_int16(current->rssi_1, previous->rssi_1);
+  delta->rssi_2 = delta_int16(current->rssi_2, previous->rssi_2);
+  delta->antenna = delta_int16(current->antenna, previous->antenna);
+  delta->rf_mode = delta_int16(current->rf_mode, previous->rf_mode);
+  delta->tx_power = delta_int16(current->tx_power, previous->tx_power);
+  delta->downlink_rssi = delta_int16(current->downlink_rssi, previous->downlink_rssi);
+  delta->downlink_lq = delta_int16(current->downlink_lq, previous->downlink_lq);
+  delta->downlink_snr = delta_int16(current->downlink_snr, previous->downlink_snr);
+  return delta->lq || delta->rssi || delta->snr || delta->rssi_1 || delta->rssi_2 || delta->antenna || delta->rf_mode ||
+         delta->tx_power || delta->downlink_rssi || delta->downlink_lq || delta->downlink_snr;
 }
 
 static bool debug_has_changed(const int16_t *current, const int16_t *previous, uint32_t size) {
@@ -316,6 +333,9 @@ cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *cu
     if ((field_flags & (1 << BBOX_FIELD_GPS_FIX)) && compute_and_check_gps_fix_delta(&deltas.gps_fix, &current->gps_fix, &previous->gps_fix)) {
       active_fields |= 1 << BBOX_FIELD_GPS_FIX;
     }
+    if ((field_flags & (1 << BBOX_FIELD_RX_LINK)) && compute_and_check_rx_link_delta(&deltas.rx_link, &current->rx_link, &previous->rx_link)) {
+      active_fields |= 1 << BBOX_FIELD_RX_LINK;
+    }
     encoded_field_flags = active_fields | BLACKBOX_FRAME_TYPE_BIT;
   }
   
@@ -405,6 +425,21 @@ cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *cu
     CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.rf_cw));
     CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.trust));
     CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.error));
+  }
+  if (active_flags & (1 << BBOX_FIELD_RX_LINK)) {
+    const blackbox_rx_link_t &link = source->rx_link;
+    CBOR_CHECK_ERROR(res = cbor_encode_array(enc, 11));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &link.lq));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &link.rssi));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &link.snr));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &link.rssi_1));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &link.rssi_2));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &link.antenna));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &link.rf_mode));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &link.tx_power));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &link.downlink_rssi));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &link.downlink_lq));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &link.downlink_snr));
   }
   CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
   return res;
@@ -597,6 +632,25 @@ __attribute__((noinline)) static void blackbox_capture_frame() {
         .rf_cw = gps_status.cw_jamming,
         .trust = (int16_t)(constrain(state.gps_trust, 0.0f, 1.0f) * 100.0f + 0.5f),
         .error = (int16_t)constrain(state.gps_position_error * 100.0f, 0.0f, 32767.0f),
+    };
+  }
+
+  if (BLACKBOX_FIELD_ENABLED(field_flags, BBOX_FIELD_RX_LINK)) {
+    // IO writes these bytes as frames arrive; a sample may mix two link statistics frames.
+    const bool crsf = state.rx_protocol == RX_PROTOCOL_CRSF;
+    const uint8_t tx_power = crsf_stats.uplink_tx_power;
+    blackbox.rx_link = {
+        .lq = (int16_t)(state.rx_rssi + 0.5f),
+        .rssi = state.rx_rssi_dbm,
+        .snr = state.rx_snr,
+        .rssi_1 = (int16_t)(crsf ? -crsf_stats.uplink_rssi_1 : 0),
+        .rssi_2 = (int16_t)(crsf ? -crsf_stats.uplink_rssi_2 : 0),
+        .antenna = (int16_t)(crsf ? crsf_stats.active_antenna : 0),
+        .rf_mode = (int16_t)(crsf ? crsf_stats.rf_mode : 0),
+        .tx_power = (int16_t)(crsf && tx_power < CRSF_TX_POWER_MAX ? crsf_tx_power_mw[tx_power] : -1),
+        .downlink_rssi = (int16_t)(crsf ? -crsf_stats.downlink_rssi : 0),
+        .downlink_lq = (int16_t)(crsf ? crsf_stats.downlink_link_quality : 0),
+        .downlink_snr = (int16_t)(crsf ? crsf_stats.downlink_snr : 0),
     };
   }
 

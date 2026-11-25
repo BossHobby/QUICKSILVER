@@ -32,6 +32,7 @@ extern void test_osd_looptime_warning_is_temporary_until_2khz();
 extern void test_osd_mission_status_names_the_waypoint();
 extern void test_osd_blackbox_notice_once_per_log();
 extern void test_osd_warns_without_home();
+extern void test_osd_rx_link_shows_rssi_dbm_and_snr();
 extern void test_osd_transfer_is_bounded_and_retries();
 extern void test_osd_merges_short_gaps_and_retries();
 extern void test_osd_render_completes_before_transfer();
@@ -82,6 +83,7 @@ extern void test_blackbox_gps_velocity_follows_state(void);
 extern void test_blackbox_attitude_yaw_crosses_south(void);
 extern void test_blackbox_gps_fix_records_navigation_status(void);
 extern void test_blackbox_full_frame_fits_device_buffer(void);
+extern void test_blackbox_rx_link_records_crsf_statistics(void);
 extern void test_flash_streams_without_startup_erase_and_commits_at_stop();
 extern void test_flash_flushes_last_page_at_capacity();
 extern void test_blackbox_captures_before_delayed_encoding();
@@ -293,6 +295,7 @@ extern void test_crsf_quic_session_serves_configurator_requests(void);
 extern void test_crsf_quic_session_paces_standard_telemetry(void);
 extern void test_crsf_quic_rt_serves_the_ground_station_while_armed(void);
 extern void test_crsf_link_statistics_updates_collected_stats(void);
+extern void test_crsf_extended_tx_link_statistics_select_active_antenna(void);
 extern void test_crsf_tx_link_statistics_updates_direct_lqi(void);
 extern void test_crsf_rx_link_statistics_updates_direct_lqi_and_downlink_stats(void);
 
@@ -382,6 +385,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_osd_looptime_warning_is_temporary_until_2khz);
   RUN_TEST(test_osd_mission_status_names_the_waypoint);
   RUN_TEST(test_osd_warns_without_home);
+  RUN_TEST(test_osd_rx_link_shows_rssi_dbm_and_snr);
   RUN_TEST(test_osd_transfer_is_bounded_and_retries);
   RUN_TEST(test_osd_blackbox_notice_once_per_log);
   RUN_TEST(test_osd_merges_short_gaps_and_retries);
@@ -547,6 +551,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_blackbox_attitude_yaw_crosses_south);
   RUN_TEST(test_blackbox_gps_fix_records_navigation_status);
   RUN_TEST(test_blackbox_full_frame_fits_device_buffer);
+  RUN_TEST(test_blackbox_rx_link_records_crsf_statistics);
   RUN_TEST(test_flash_streams_without_startup_erase_and_commits_at_stop);
   RUN_TEST(test_flash_flushes_last_page_at_capacity);
   RUN_TEST(test_blackbox_captures_before_delayed_encoding);
@@ -622,6 +627,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_crsf_quic_rt_serves_the_ground_station_while_armed);
   RUN_TEST(test_crsf_link_statistics_updates_collected_stats);
   RUN_TEST(test_crsf_tx_link_statistics_updates_direct_lqi);
+  RUN_TEST(test_crsf_extended_tx_link_statistics_select_active_antenna);
   RUN_TEST(test_crsf_rx_link_statistics_updates_direct_lqi_and_downlink_stats);
 
   // Attitude tests

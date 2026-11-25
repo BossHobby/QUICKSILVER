@@ -622,8 +622,10 @@ void osd_write_int(int32_t val, uint8_t width) {
     }
   }
 
-  if (actual_width < width - 1) {
-    buf[actual_width + 1] = '-';
+  // The sign takes the column left of the digits; when it has none, the
+  // value is cut to its low digits.
+  if (actual_width < width) {
+    buf[width - actual_width - 1] = '-';
   }
 
   osd_write_data(buf, width);

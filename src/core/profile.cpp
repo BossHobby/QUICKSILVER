@@ -371,12 +371,14 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(0, 0, 1, 12, 0, 15),    // OSD_GPS_SATS
                     ENCODE_OSD_ELEMENT(0, 0, 8, 12, 10, 15),   // OSD_GPS_SPEED
                     ENCODE_OSD_ELEMENT(0, 0, 12, 12, 19, 15),  // OSD_ROVER_INCLINOMETER
-                    ENCODE_OSD_ELEMENT(0, 0, 19, 1, 37, 0),    // OSD_CRSF_TX_POWER
-                    ENCODE_OSD_ELEMENT(0, 0, 23, 2, 43, 1),    // OSD_ALTITUDE
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 2, 44, 1),    // OSD_CRSF_TX_POWER
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 2, 0, 1),      // OSD_ALTITUDE
                     ENCODE_OSD_ELEMENT(0, 0, 12, 2, 22, 1),    // OSD_GPS_HOME
-                    ENCODE_OSD_ELEMENT(0, 0, 23, 3, 43, 2),    // OSD_VARIO
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 3, 0, 2),      // OSD_VARIO
                     ENCODE_OSD_ELEMENT(0, 0, 8, 11, 10, 14),   // OSD_WING_AIRSPEED
                     ENCODE_OSD_ELEMENT(0, 0, 8, 10, 10, 13),   // OSD_WIND
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 3, 44, 2),    // OSD_RSSI_DBM
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 4, 44, 3),    // OSD_SNR
                 },
             },
             [OSD_PROFILE_2] = {
@@ -400,12 +402,14 @@ const profile_t default_profile = {
                     ENCODE_OSD_ELEMENT(0, 0, 1, 12, 0, 15),    // OSD_GPS_SATS
                     ENCODE_OSD_ELEMENT(0, 0, 8, 12, 10, 15),   // OSD_GPS_SPEED
                     ENCODE_OSD_ELEMENT(0, 0, 12, 12, 19, 15),  // OSD_ROVER_INCLINOMETER
-                    ENCODE_OSD_ELEMENT(0, 0, 19, 1, 37, 0),    // OSD_CRSF_TX_POWER
-                    ENCODE_OSD_ELEMENT(0, 0, 23, 2, 43, 1),    // OSD_ALTITUDE
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 2, 44, 1),    // OSD_CRSF_TX_POWER
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 2, 0, 1),      // OSD_ALTITUDE
                     ENCODE_OSD_ELEMENT(0, 0, 12, 2, 22, 1),    // OSD_GPS_HOME
-                    ENCODE_OSD_ELEMENT(0, 0, 23, 3, 43, 2),    // OSD_VARIO
+                    ENCODE_OSD_ELEMENT(0, 0, 1, 3, 0, 2),      // OSD_VARIO
                     ENCODE_OSD_ELEMENT(0, 0, 8, 11, 10, 14),   // OSD_WING_AIRSPEED
                     ENCODE_OSD_ELEMENT(0, 0, 8, 10, 10, 13),   // OSD_WIND
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 3, 44, 2),    // OSD_RSSI_DBM
+                    ENCODE_OSD_ELEMENT(0, 0, 24, 4, 44, 3),    // OSD_SNR
                 },
             },
         },

@@ -236,7 +236,9 @@ typedef struct {
   float rx_filter_hz;
   uint32_t aux_active;                           // cached active aux_function_t bitmask
   stick_wizard_state_t stick_calibration_wizard; // current phase of the calibration wizard
-  float rx_rssi;
+  float rx_rssi;               // link quality or RSSI percent, per profile.receiver.lqi_source
+  int8_t rx_rssi_dbm;          // uplink RSSI at the receiver's active antenna, dBm; 0 until the receiver reports one
+  int8_t rx_snr;               // uplink SNR, dB
   uint32_t rx_status;          // SPI receiver bind state (rx_spi_status_t)
   rx_protocol_t rx_protocol;   // IO-owned active receiver protocol; SERIAL_AUTO until detection locks
   uint32_t rx_frame_time_us;   // time_micros() of the latest received frame
@@ -392,6 +394,8 @@ typedef struct {
   MEMBER(aux_active, uint32_t)                         \
   MEMBER(stick_calibration_wizard, uint8_t)            \
   MEMBER(rx_rssi, float)                               \
+  MEMBER(rx_rssi_dbm, int8_t)                          \
+  MEMBER(rx_snr, int8_t)                               \
   MEMBER(rx_status, uint32_t)                          \
   MEMBER(rx_protocol, uint8_t)                         \
   MEMBER(rx_frame_time_us, uint32_t)                   \

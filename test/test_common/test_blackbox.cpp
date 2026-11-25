@@ -560,6 +560,41 @@ void test_blackbox_gps_fix_records_navigation_status(void) {
   }
 }
 
+void test_blackbox_rx_link_records_crsf_statistics(void) {
+  const uint32_t fields = 1 << BBOX_FIELD_RX_LINK;
+  blackbox_t previous = {};
+  previous.rx_link = {.lq = 100, .rssi = -62, .snr = 9, .rssi_1 = -62, .rssi_2 = -70, .antenna = 0,
+                      .rf_mode = 2, .tx_power = 100, .downlink_rssi = -55, .downlink_lq = 100, .downlink_snr = 11};
+  blackbox_t current = previous;
+  current.rx_link.lq = 71;
+  current.rx_link.rssi = -98; // diversity switched to the second antenna
+  current.rx_link.snr = -3;
+  current.rx_link.rssi_1 = -105;
+  current.rx_link.rssi_2 = -98;
+  current.rx_link.antenna = 1;
+  current.rx_link.tx_power = 1000; // dynamic power raised
+
+  uint8_t buffer[BLACKBOX_MAX_SIZE];
+  cbor_value_t codec;
+  cbor_encoder_init(&codec, buffer, sizeof(buffer));
+  TEST_ASSERT_EQUAL(CBOR_OK, cbor_encode_blackbox_frame(&codec, &current, &previous, BLACKBOX_FRAME_P, fields));
+  cbor_decoder_init(&codec, buffer, cbor_encoder_len(&codec));
+  cbor_container_t array;
+  TEST_ASSERT_TRUE(cbor_decode_array(&codec, &array) >= CBOR_OK);
+  uint32_t flags;
+  TEST_ASSERT_TRUE(cbor_decode_uint32_t(&codec, &flags) >= CBOR_OK);
+  TEST_ASSERT_TRUE(flags & (1 << BBOX_FIELD_RX_LINK));
+  TEST_ASSERT_TRUE(cbor_decode_skip(&codec) >= CBOR_OK); // loop
+  TEST_ASSERT_TRUE(cbor_decode_skip(&codec) >= CBOR_OK); // time
+  TEST_ASSERT_TRUE(cbor_decode_array(&codec, &array) >= CBOR_OK);
+  TEST_ASSERT_EQUAL_UINT32(11, cbor_decode_array_size(&codec, &array));
+  int16_t deltas[11];
+  for (auto &delta : deltas)
+    TEST_ASSERT_TRUE(cbor_decode_int16_t(&codec, &delta) >= CBOR_OK);
+  const int16_t expected[11] = {-29, -36, -12, -43, -28, 1, 0, 900, 0, 0, 0};
+  TEST_ASSERT_EQUAL_INT16_ARRAY(expected, deltas, 11);
+}
+
 void test_blackbox_attitude_yaw_crosses_south(void) {
   const uint32_t fields = 1 << BBOX_FIELD_ATTITUDE;
   blackbox_t previous = {};

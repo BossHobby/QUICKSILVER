@@ -133,20 +133,10 @@ static const char *osd_element_labels[] = {
     "VARIO",
     "AIRSPEED",
     "WIND",
+    "RSSI DBM",
+    "SNR",
 };
 static_assert(sizeof(osd_element_labels) / sizeof(osd_element_labels[0]) == OSD_ELEMENT_MAX, "osd_element_labels must cover every osd element");
-
-static const uint16_t crsf_tx_power_mw[CRSF_TX_POWER_MAX] = {
-    [CRSF_TX_POWER_0_MW] = 0,
-    [CRSF_TX_POWER_10_MW] = 10,
-    [CRSF_TX_POWER_25_MW] = 25,
-    [CRSF_TX_POWER_100_MW] = 100,
-    [CRSF_TX_POWER_500_MW] = 500,
-    [CRSF_TX_POWER_1000_MW] = 1000,
-    [CRSF_TX_POWER_2000_MW] = 2000,
-    [CRSF_TX_POWER_250_MW] = 250,
-    [CRSF_TX_POWER_50_MW] = 50,
-};
 
 static const char *aux_channel_labels[] = {
     "CHANNEL 1  ",
@@ -661,6 +651,33 @@ static void print_osd_crsf_tx_power(osd_element_t *el) {
   }
 }
 
+// Receivers report link statistics at their own rate, Crossfire at 10 Hz
+// already filtered, and fall silent once the link is lost: the last values
+// would otherwise stay on screen.
+static bool osd_rx_link_valid() {
+  return !flags.failsafe_signal_lost && state.rx_rssi_dbm != 0;
+}
+
+// The fonts have no dB glyph, so like Betaflight the RSSI glyph alone marks
+// RSSI and SNR; RSSI is always negative and only its magnitude is drawn.
+static void print_osd_rssi_dbm(osd_element_t *el) {
+  osd_start_el(el);
+  osd_write_char(ICON_RSSI);
+  if (osd_rx_link_valid())
+    osd_write_uint(-state.rx_rssi_dbm, 3);
+  else
+    osd_write_str("---");
+}
+
+static void print_osd_snr(osd_element_t *el) {
+  osd_start_el(el);
+  osd_write_char(ICON_RSSI);
+  if (osd_rx_link_valid())
+    osd_write_int(state.rx_snr, 3);
+  else
+    osd_write_str("---");
+}
+
 // Navigation replaces the stick with its own command in state.throttle.
 static float osd_throttle() {
 #if defined(VEHICLE_WING)
@@ -842,6 +859,16 @@ static void osd_display_regular() {
 
     case OSD_CRSF_TX_POWER: {
       print_osd_crsf_tx_power(el);
+      break;
+    }
+
+    case OSD_RSSI_DBM: {
+      print_osd_rssi_dbm(el);
+      break;
+    }
+
+    case OSD_SNR: {
+      print_osd_snr(el);
       break;
     }
 

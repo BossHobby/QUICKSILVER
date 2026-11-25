@@ -21,6 +21,8 @@
 //        the altitude field records the fused estimate (was the filtered barometer) and
 //        navigation debug 2 the barometer height; accel_filter keeps its magnitude.
 //        the GPS fix field ends with the estimated position error, which navigation accepts the fix by.
+//        add the RX link field (link quality, RSSI dBm and SNR dB, CRSF antennas, RF mode, TX power
+//        and downlink) after GPS fix.
 // 0.3.1 (95765fe1): add GPS coordinate, home and altitude fields; grow debug to 16 entries.
 //        replace the four-motor field with per-output values (a1887d4f).
 // 0.2.0 (7343f574): delta-encode I/P frames, scale 100 (was 1000), store the profile with each log
@@ -53,6 +55,7 @@ typedef enum {
   BBOX_FIELD_STATE,
   BBOX_FIELD_GPS_VEL,
   BBOX_FIELD_GPS_FIX,
+  BBOX_FIELD_RX_LINK,
 
   BBOX_FIELD_MAX,
 } blackbox_field_t;
@@ -130,6 +133,22 @@ typedef struct {
   int16_t error;    // state.gps_position_error, cm (saturated)
 } blackbox_gps_fix_t;
 
+// Logged as int16 members like blackbox_gps_fix_t.
+typedef struct {
+  int16_t lq;   // state.rx_rssi, percent; link quality only with lqi_source DIRECT
+  int16_t rssi; // state.rx_rssi_dbm, dBm
+  int16_t snr;  // state.rx_snr, dB
+  // CRSF link statistics; zero for other protocols, tx_power -1.
+  int16_t rssi_1;        // uplink antenna 1, dBm; 0 when absent
+  int16_t rssi_2;        // uplink antenna 2, dBm; 0 when absent
+  int16_t antenna;       // active uplink antenna, 0 or 1
+  int16_t rf_mode;       // crsf_stats.rf_mode
+  int16_t tx_power;      // ground transmitter power, mW; -1 when unknown
+  int16_t downlink_rssi; // dBm
+  int16_t downlink_lq;   // percent
+  int16_t downlink_snr;  // dB
+} blackbox_rx_link_t;
+
 typedef struct {
   uint32_t loop;
   uint32_t time;
@@ -165,6 +184,7 @@ typedef struct {
 
   compact_vec3_t gps_vel; // GPS north, east, down velocity; m/s scaled like other vec3 fields
   blackbox_gps_fix_t gps_fix;
+  blackbox_rx_link_t rx_link;
 } blackbox_t;
 
 // Frame types for I-frame/P-frame encoding

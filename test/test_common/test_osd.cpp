@@ -472,6 +472,59 @@ void test_osd_renders_latest_telemetry() {
   osd_display_reset();
 }
 
+static void render_rx_link_row(char *row, uint8_t size) {
+  for (unsigned i = 0; i < 40; i++) {
+    time_test_advance_us(1000);
+    osd_display();
+  }
+  for (uint8_t x = 0; x < size - 1; x++)
+    row[x] = simulator_osd_test_char(x, 0);
+  row[size - 1] = 0;
+}
+
+void test_osd_rx_link_shows_rssi_dbm_and_snr() {
+  const auto saved_osd = profile.osd;
+  const auto saved_state = state;
+  const auto saved_flags = flags;
+  flags = {};
+  state = {};
+  for (auto &p : profile.osd.profiles) {
+    memset(p.elements, 0, sizeof(p.elements));
+    p.elements[OSD_RSSI_DBM] = ENCODE_OSD_ELEMENT(1, 0, 0, 0, 0, 0);
+    p.elements[OSD_SNR] = ENCODE_OSD_ELEMENT(1, 0, 10, 0, 10, 0);
+  }
+  osd_device_init();
+  osd_clear();
+  osd_display_reset();
+  simulator_osd_test_reset(false);
+
+  // Nothing reported yet.
+  char row[17];
+  render_rx_link_row(row, sizeof(row));
+  TEST_ASSERT_EQUAL_STRING("\x01---      \x01---  ", row);
+
+  state.rx_rssi_dbm = -98;
+  state.rx_snr = -7;
+  render_rx_link_row(row, sizeof(row));
+  TEST_ASSERT_EQUAL_STRING("\x01 98      \x01 -7  ", row);
+
+  state.rx_rssi_dbm = -112;
+  state.rx_snr = 12;
+  render_rx_link_row(row, sizeof(row));
+  TEST_ASSERT_EQUAL_STRING("\x01" "112      \x01 12  ", row);
+
+  // The receiver's last report goes stale once the link is lost.
+  flags.failsafe_signal_lost = 1;
+  render_rx_link_row(row, sizeof(row));
+  TEST_ASSERT_EQUAL_STRING("\x01---      \x01---  ", row);
+
+  state = saved_state;
+  flags = saved_flags;
+  profile.osd = saved_osd;
+  osd_clear();
+  osd_display_reset();
+}
+
 static void osd_test_flight(void *) {
   flags = {};
   state = {};

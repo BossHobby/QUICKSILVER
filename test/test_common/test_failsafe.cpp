@@ -1584,8 +1584,8 @@ void test_crsf_link_statistics_updates_collected_stats(void) {
 
   TEST_ASSERT_FALSE(rx_serial_check());
   TEST_ASSERT_EQUAL_FLOAT(92.0f, state.rx_rssi);
-  TEST_ASSERT_EQUAL_UINT8(90U, crsf_stats.uplink_rssi_2);
-  TEST_ASSERT_EQUAL_UINT8(91U, crsf_stats.uplink_rssi_1);
+  TEST_ASSERT_EQUAL_UINT8(90U, crsf_stats.uplink_rssi_1);
+  TEST_ASSERT_EQUAL_UINT8(91U, crsf_stats.uplink_rssi_2);
   TEST_ASSERT_EQUAL_UINT8(92U, crsf_stats.uplink_link_quality);
   TEST_ASSERT_EQUAL_INT8(3, crsf_stats.uplink_snr);
   TEST_ASSERT_EQUAL_UINT8(1U, crsf_stats.active_antenna);
@@ -1595,6 +1595,9 @@ void test_crsf_link_statistics_updates_collected_stats(void) {
   TEST_ASSERT_EQUAL_UINT8(79U, crsf_stats.downlink_link_quality);
   TEST_ASSERT_EQUAL_INT8(-2, crsf_stats.downlink_snr);
   TEST_ASSERT_EQUAL_UINT16(777U, crsf_stats.uplink_fps);
+  // The second antenna is active.
+  TEST_ASSERT_EQUAL_INT8(-91, state.rx_rssi_dbm);
+  TEST_ASSERT_EQUAL_INT8(3, state.rx_snr);
 }
 
 void test_crsf_tx_link_statistics_updates_direct_lqi(void) {
@@ -1608,11 +1611,28 @@ void test_crsf_tx_link_statistics_updates_direct_lqi(void) {
   TEST_ASSERT_FALSE(rx_serial_check());
   TEST_ASSERT_EQUAL_FLOAT(63.0f, state.rx_rssi);
   TEST_ASSERT_EQUAL_UINT8(70U, crsf_stats.uplink_rssi_1);
-  TEST_ASSERT_EQUAL_UINT8(70U, crsf_stats.uplink_rssi_2);
+  TEST_ASSERT_EQUAL_UINT8(0U, crsf_stats.uplink_rssi_2);
   TEST_ASSERT_EQUAL_UINT8(63U, crsf_stats.uplink_link_quality);
   TEST_ASSERT_EQUAL_INT8(5, crsf_stats.uplink_snr);
   TEST_ASSERT_EQUAL_UINT16(500U, crsf_stats.uplink_fps);
   TEST_ASSERT_EQUAL_FLOAT(500.0f, rx_serial_crsf_expected_fps());
+  TEST_ASSERT_EQUAL_INT8(-70, state.rx_rssi_dbm);
+  TEST_ASSERT_EQUAL_INT8(5, state.rx_snr);
+}
+
+void test_crsf_extended_tx_link_statistics_select_active_antenna(void) {
+  crsf_test_reset(2500000);
+  profile.receiver.lqi_source = RX_LQI_SOURCE_DIRECT;
+
+  const uint8_t tx_link_stats[CRSF_FRAME_LINK_STATISTICS_TX_EXT_PAYLOAD_SIZE] = {70, 80, 63, static_cast<uint8_t>(-4), 20, 50, 65, 1};
+  crsf_test_write_frame(CRSF_FRAMETYPE_LINK_STATISTICS_TX, tx_link_stats, sizeof(tx_link_stats));
+
+  TEST_ASSERT_FALSE(rx_serial_check());
+  TEST_ASSERT_EQUAL_UINT8(70U, crsf_stats.uplink_rssi_1);
+  TEST_ASSERT_EQUAL_UINT8(65U, crsf_stats.uplink_rssi_2);
+  TEST_ASSERT_EQUAL_UINT8(1U, crsf_stats.active_antenna);
+  TEST_ASSERT_EQUAL_INT8(-65, state.rx_rssi_dbm);
+  TEST_ASSERT_EQUAL_INT8(-4, state.rx_snr);
 }
 
 void test_crsf_rx_link_statistics_updates_direct_lqi_and_downlink_stats(void) {

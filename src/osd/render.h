@@ -89,6 +89,8 @@ typedef enum {
   OSD_VARIO,
   OSD_WING_AIRSPEED,
   OSD_WIND,
+  OSD_RSSI_DBM,
+  OSD_SNR,
 
   OSD_ELEMENT_MAX
 } osd_elements_t;

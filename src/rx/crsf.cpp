@@ -13,6 +13,18 @@
 
 crsf_stats_t crsf_stats;
 
+const uint16_t crsf_tx_power_mw[CRSF_TX_POWER_MAX] = {
+    [CRSF_TX_POWER_0_MW] = 0,
+    [CRSF_TX_POWER_10_MW] = 10,
+    [CRSF_TX_POWER_25_MW] = 25,
+    [CRSF_TX_POWER_100_MW] = 100,
+    [CRSF_TX_POWER_500_MW] = 500,
+    [CRSF_TX_POWER_1000_MW] = 1000,
+    [CRSF_TX_POWER_2000_MW] = 2000,
+    [CRSF_TX_POWER_250_MW] = 250,
+    [CRSF_TX_POWER_50_MW] = 50,
+};
+
 typedef struct {
   uint32_t serial_number;
   uint32_t hardware_id;
