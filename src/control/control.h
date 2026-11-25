@@ -170,9 +170,10 @@ typedef struct {
   // Flight navigation status. Shared navigation owns the sensor checks and
   // home; gps_valid and home_valid are clear without a GPS port.
   uint8_t altitude_valid : 1; // altitude and climb rate are aided: a finite barometer sample at most BARO_STALE_MS old, checked at the 10 ms navigation cadence
-  uint8_t gps_valid : 1;      // lock, accuracy, freshness and state.gps_trust are sufficient, and no position jump is settling
+  uint8_t gps_valid : 1;      // a fresh lock, state.gps_position_error and state.gps_trust are sufficient, and no position jump is settling
+  uint8_t gps_home_ready : 1; // gps_valid with the smaller position error and the satellites home latches from
   uint8_t gps_glitch : 1;     // GPS position disagrees with the estimate beyond its gate and is not fused
-  uint8_t home_valid : 1;     // home latched from a valid GPS position on arming, or at the first one after it before leaving the ground; clear while disarmed
+  uint8_t home_valid : 1;     // home latched from a gps_home_ready position on arming, or at the first one after it before leaving the ground; clear while disarmed
   uint8_t guided_ready : 1;    // the pilot grants guided flight: ground station commands are accepted
   uint8_t mission_engaged : 1; // navigation flies the mission, its end action or a return the mission switch ends
   uint8_t wind_valid : 1;      // state.wind_speed is estimated: a wing has turned enough in flight to show it; owned by wing control
@@ -299,6 +300,9 @@ typedef struct {
   // 0..1, how consistently GPS agrees with itself and the accelerometer,
   // graded by shared navigation; it scales every GPS correction.
   float gps_trust;
+  // Meters, the estimated horizontal error of position, as INAV's eph; with
+  // gps_trust it decides flags.gps_valid. Published at the 10 ms navigation cadence.
+  float gps_position_error;
 
   // Home, latched by shared navigation; valid with flags.home_valid. Bearing
   // and distance update only while GPS and home are valid, and otherwise
@@ -416,6 +420,7 @@ typedef struct {
   MEMBER(velocity, vec3_t)                             \
   MEMBER(gps_accel, vec2_t)                            \
   MEMBER(gps_trust, float)                             \
+  MEMBER(gps_position_error, float)                    \
   MEMBER(home, gps_coord_t)                            \
   MEMBER(home_altitude, float)                         \
   MEMBER(home_bearing, float)                          \

@@ -250,10 +250,11 @@ void test_navigation_rth_requires_recent_altitude_source(void) {
   TEST_ASSERT_EQUAL_FLOAT(0.0f, state.nav_yaw_rate);
 }
 
-// Navigation accepts a fix as ArduPilot's GPS pre-arm limits do, and keeps it
-// until it fails looser limits. The LR4 flew a return on 5 satellites, 17 m
-// and 3.8 m/s accuracy, and its velocity read half the speed it flew.
-void test_navigation_accepts_only_a_good_fix(void) {
+// Navigation accepts the position by its estimated error rather than by
+// fixed receiver limits: Orange_3in flew on 5 satellites at 2 to 3 m/s speed
+// accuracy, which a 1 m/s limit rejected for its whole flight. The LR4 flew a
+// return on 5 satellites at 17 m accuracy, rejected once that lasts.
+void test_navigation_accepts_the_fix_by_its_position_error(void) {
   navigation_test_setup();
   time_test_set_us(1000000);
   const auto sample = [](uint8_t sats, float horizontal, float speed) {
@@ -265,15 +266,50 @@ void test_navigation_accepts_only_a_good_fix(void) {
     nav_test_update_gps_sanity();
     return (bool)flags.gps_valid;
   };
-  TEST_ASSERT_FALSE(sample(5, 1.0f, 0.3f));
-  TEST_ASSERT_FALSE(sample(12, 6.0f, 0.3f));
-  TEST_ASSERT_FALSE(sample(12, 1.0f, 1.2f));
-  TEST_ASSERT_TRUE(sample(6, 4.0f, 0.8f));
-  // Accepted, a marginal fix keeps.
-  TEST_ASSERT_TRUE(sample(5, 7.0f, 1.4f));
-  TEST_ASSERT_FALSE(sample(5, 17.0f, 3.8f));
-  // And must meet the stricter limits again.
-  TEST_ASSERT_FALSE(sample(5, 7.0f, 1.4f));
+  // The first fix starts the error at its accuracy.
+  TEST_ASSERT_FALSE(sample(5, 12.0f, 3.0f));
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 12.0f, state.gps_position_error);
+  int samples = 1;
+  while (!sample(5, 4.0f, 3.0f) && samples < 10)
+    samples++;
+  TEST_ASSERT_TRUE(samples <= 4);
+  for (int i = 0; i < 20; i++)
+    TEST_ASSERT_TRUE(sample(5, 4.0f, 3.0f));
+  TEST_ASSERT_FALSE(flags.gps_home_ready); // home takes 6 satellites
+  TEST_ASSERT_TRUE(sample(6, 4.0f, 3.0f));
+  TEST_ASSERT_TRUE(flags.gps_home_ready);
+  // A few worse fixes keep it; lasting, they lose it.
+  for (int i = 0; i < 5; i++)
+    TEST_ASSERT_TRUE(sample(5, 17.0f, 3.8f));
+  samples = 0;
+  while (sample(5, 17.0f, 3.8f) && samples < 50)
+    samples++;
+  TEST_ASSERT_TRUE(samples < 20);
+}
+
+// Without a fused position the error grows as the estimate dead reckons.
+void test_navigation_position_error_grows_without_gps(void) {
+  navigation_test_setup();
+  time_test_set_us(1000000);
+  state.gps_horizontal_accuracy = 2.0f;
+  state.gps_last_update_ms = time_millis();
+  nav_test_update_gps_sanity();
+  TEST_ASSERT_TRUE(flags.gps_valid);
+  TEST_ASSERT_FLOAT_WITHIN(0.01f, 2.0f, state.gps_position_error);
+  // A 20 m glitch is not fused: two seconds later, 1.5 m more.
+  state.gps_coord.lat = GPS_DEG_10M * 2;
+  for (int i = 0; i < 20; i++) {
+    time_test_advance_us(100000);
+    state.gps_last_update_ms = time_millis();
+    nav_test_update_gps_sanity();
+  }
+  TEST_ASSERT_TRUE(flags.gps_glitch);
+  TEST_ASSERT_FLOAT_WITHIN(0.05f, 3.5f, state.gps_position_error);
+  // A lost lock ends it at once.
+  time_test_advance_us(100000);
+  state.gps_health.lock = false;
+  nav_test_update_gps_sanity();
+  TEST_ASSERT_FALSE(flags.gps_valid);
 }
 
 void test_navigation_resets_gps_jump_baseline_after_outage(void) {
@@ -1289,7 +1325,7 @@ static float sim_velocity_step(float speed_accuracy) {
   for (int i = 0; i < 1500; i++) {
     time_test_advance_us(1000);
     if (time_millis() % 100 == 0) {
-      // Accepted with a good fix; the accuracy then degrades within the hold limits.
+      // Accepted with a good fix; the accuracy then degrades.
       if (i > 500) {
         state.gps_speed_accuracy = speed_accuracy;
         state.gps_velocity.north = 0.8f;
@@ -1303,11 +1339,14 @@ static float sim_velocity_step(float speed_accuracy) {
   return state.velocity.axis[0];
 }
 
+// Less accurate, it still counts, by the ratio as Betaflight weighs it: at the
+// 3 m/s Orange_3in flew with, the square of the ratio all but ignored GPS.
 void test_navigation_velocity_weighs_gps_by_its_accuracy(void) {
   const float accurate = sim_velocity_step(0.2f);
-  const float uncertain = sim_velocity_step(1.4f);
+  const float uncertain = sim_velocity_step(3.0f);
   TEST_ASSERT_TRUE(accurate > 0.7f);
   TEST_ASSERT_TRUE(uncertain < 0.4f);
+  TEST_ASSERT_TRUE(uncertain > 0.2f);
 }
 
 void test_navigation_velocity_spike_is_not_fused(void) {
@@ -2998,7 +3037,8 @@ int main() {
   RUN_TEST(test_navigation_takeover_keeps_speed_toward_the_target);
   RUN_TEST(test_navigation_command_respects_level_angle_limit);
   RUN_TEST(test_navigation_rth_requires_recent_altitude_source);
-  RUN_TEST(test_navigation_accepts_only_a_good_fix);
+  RUN_TEST(test_navigation_accepts_the_fix_by_its_position_error);
+  RUN_TEST(test_navigation_position_error_grows_without_gps);
   RUN_TEST(test_navigation_resets_gps_jump_baseline_after_outage);
   RUN_TEST(test_navigation_gps_jump_settles_where_gps_is);
   RUN_TEST(test_navigation_yaw_rate_bypasses_pilot_curves);

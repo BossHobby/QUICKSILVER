@@ -388,6 +388,59 @@ void test_osd_mission_status_names_the_waypoint() {
 #endif
 }
 
+// With GPS, the status warns until home can latch, and armed without one,
+// whether or not failsafe returns home.
+void test_osd_warns_without_home() {
+#ifndef VEHICLE_ROVER
+  const auto saved_state = state;
+  const auto saved_flags = flags;
+  const auto saved_navigation = profile.navigation;
+  const auto saved_gps = profile.serial.gps;
+  profile.navigation.rth_on_failsafe = false;
+  profile.serial.gps = SERIAL_PORT1;
+  flags = {};
+  flags.rx_ready = 1;
+  flags.altitude_valid = 1;
+  flags.gps_valid = 1; // navigation could use it, home could not latch yet
+  state = {};
+  osd_element_t el = {};
+  osd_device_init();
+  osd_clear();
+  osd_status_reset();
+  simulator_osd_test_reset(false);
+  // Let any arming announcement expire.
+  osd_status_update(&el);
+  time_test_advance_us(1001000);
+  osd_status_update(&el);
+  osd_status_update(&el);
+  osd_status_update(&el);
+  assert_status_label("NO GPS FIX", true);
+  flags.gps_home_ready = 1;
+  osd_status_update(&el);
+  assert_status_label("NO GPS FIX", false);
+
+  // Armed without home, past the arming announcement.
+  flags.gps_home_ready = 0;
+  flags.arm_state = 1;
+  osd_status_update(&el);
+  time_test_advance_us(1001000);
+  osd_status_update(&el);
+  osd_status_update(&el);
+  osd_status_update(&el);
+  assert_status_label("NO HOME", true);
+  flags.home_valid = 1;
+  osd_status_update(&el);
+  assert_status_label("NO HOME", false);
+
+  profile.navigation = saved_navigation;
+  profile.serial.gps = saved_gps;
+  state = saved_state;
+  flags = saved_flags;
+  osd_clear();
+  osd_status_reset();
+#endif
+}
+
 void test_osd_renders_latest_telemetry() {
   const auto saved_osd = profile.osd;
   const auto saved_state = state;

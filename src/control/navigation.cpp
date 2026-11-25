@@ -38,8 +38,9 @@ static constexpr float GPS_BIAS_TIME = 10.0f;              // seconds, mostly ti
 static constexpr uint32_t GPS_LAG_MS = 120U; // u-blox M8 to M10, measurement to epoch stamp, as ArduPilot
 static constexpr float GPS_VELOCITY_GATE = 3.0f;      // multiples of the receiver speed accuracy
 static constexpr float GPS_VELOCITY_GATE_MIN = 1.0f;  // m/s
+static constexpr float GPS_VELOCITY_GATE_MAX = 4.5f;  // m/s, however inaccurate the receiver says it is
 // GPS velocity no more accurate than this corrects at the full rate; less
-// accurate, by the square of the ratio. The fix limits bound the gate.
+// accurate, by the ratio (see nav_gps_weight()).
 static constexpr float GPS_SPEED_ACCURACY_FULL = 0.5f; // m/s
 // The horizontal accelerometer turns with the heading: the estimate predicts
 // north and east only once it is well learned; otherwise they are GPS
@@ -60,7 +61,7 @@ static constexpr uint32_t GPS_EXTRAPOLATE_MAX_MS = 500U;
 // GPS position corrects north and east position, compared with
 // the estimate GPS_LAG_MS before its epoch: at the full rate up to
 // GPS_HORIZONTAL_ACCURACY_FULL of reported accuracy, less accurate by the
-// square of the ratio. Velocity carries the position between fixes.
+// ratio. Velocity carries the position between fixes.
 static constexpr float GPS_POSITION_FUSION_TIME = 0.5f;     // seconds
 static constexpr float GPS_HORIZONTAL_ACCURACY_FULL = 2.0f; // meters
 // GPS consistency, from two tests in multiples of what the
@@ -75,7 +76,7 @@ static constexpr float GPS_HORIZONTAL_ACCURACY_FULL = 2.0f; // meters
 // GPS: full up to GPS_CONSISTENT, none from GPS_INCONSISTENT. Trust scales
 // every GPS correction, no lower than GPS_TRUST_MIN so a consistent receiver
 // can earn it back. Below GPS_TRUST_VALID, held to GPS_TRUST_HOLD once valid,
-// navigation stops using GPS.
+// navigation stops using GPS: a stalled receiver still reports a good accuracy.
 static constexpr float GPS_POSITION_ACCURACY_MIN = 1.0f; // meters
 static constexpr float GPS_SPEED_CHECK_TIME = 2.0f;      // seconds
 static constexpr float GPS_SPEED_CHECK_MIN = 1.0f;       // m/s
@@ -87,6 +88,24 @@ static constexpr float GPS_INNOVATION_MAX = 4.0f * GPS_INCONSISTENT; // counted 
 static constexpr float GPS_TRUST_MIN = 0.1f;
 static constexpr float GPS_TRUST_VALID = 0.5f;
 static constexpr float GPS_TRUST_HOLD = 0.2f;
+// A measurement less accurate than full still counts at least this share, as
+// Betaflight caps its GPS measurement noise at ten times the base.
+static constexpr float GPS_WEIGHT_MIN = 0.1f;
+// Estimated horizontal position error, as INAV's eph: each fused GPS position
+// pulls it over GPS_ERROR_TIME toward the larger of the reported accuracy and
+// the innovation. Without a fused position for GPS_ERROR_STALE_MS it grows by
+// GPS_ERROR_GROWTH, as the estimate dead reckons. Navigation accepts the
+// position below GPS_ERROR_VALID and keeps it until GPS_ERROR_HOLD, so a
+// marginal fix does not flap.
+static constexpr float GPS_ERROR_TIME = 1.0f;     // seconds
+static constexpr float GPS_ERROR_GROWTH = 1.0f;   // m/s
+static constexpr uint32_t GPS_ERROR_STALE_MS = 500U;
+static constexpr float GPS_ERROR_MAX = 100.0f;    // meters, also without a position
+static constexpr float GPS_ERROR_VALID = 10.0f;   // meters, INAV's inav_max_eph_epv
+static constexpr float GPS_ERROR_HOLD = 15.0f;    // meters
+// Home latches only from a better position than navigation needs.
+static constexpr float GPS_ERROR_HOME = 5.0f;     // meters
+static constexpr uint8_t GPS_HOME_MIN_SATS = 6;
 // A position innovation beyond GPS_POSITION_GATE is a glitch: not fused and
 // not graded. One lasting GPS_POSITION_RESET_MS while GPS velocity is
 // consistent is where GPS now is, as ArduPilot's GPS glitch reset: the
@@ -95,7 +114,7 @@ static constexpr float GPS_POSITION_GATE = 3.0f;
 static constexpr uint32_t GPS_POSITION_RESET_MS = 5000U;
 // Armed, GPS altitude above home slowly corrects barometer drift from
 // temperature and weather: at the full rate up to GPS_VERTICAL_ACCURACY_FULL
-// of reported accuracy, less accurate by the square of the ratio. Not near
+// of reported accuracy, less accurate by the ratio. Not near
 // the ground, where rotor wash moves the barometer. GPS altitude is the
 // noisier of the two over minutes, so the correction is slow, as Betaflight's
 // is, and as INAV does GPS altitude counts less from GPS_ALTITUDE_GATE of
@@ -134,13 +153,8 @@ static constexpr float GROUND_EFFECT_LOW_WEIGHT = 0.25f; // of a reading between
 // excess, as ArduPilot's EK3_GND_EFF_DZ.
 static constexpr float GROUND_EFFECT_DEAD_ZONE = 5.0f; // meters
 
-// A fix navigation accepts, as ArduPilot's GPS pre-arm limits. An accepted
-// fix keeps until it fails looser limits, so a marginal one does not flap.
-static constexpr uint8_t NAV_GPS_MIN_SATS = 6;
-static constexpr float NAV_GPS_MAX_HORIZONTAL_ACCURACY = 5.0f; // meters
-static constexpr float NAV_GPS_MAX_SPEED_ACCURACY = 1.0f;      // m/s
-static constexpr uint8_t NAV_GPS_HOLD_MIN_SATS = 5;
-static constexpr float NAV_GPS_HOLD_ACCURACY_SCALE = 1.5f;
+// A fix the receiver reports as a fresh 3D lock is fused; whether navigation
+// accepts the position is the estimated position error.
 static constexpr float NAV_GPS_MAX_POSITION_JUMP = 50.0f;       // meters per fix
 // A jump is where GPS now is once the fixes after it agree for this long.
 static constexpr uint32_t NAV_GPS_JUMP_SETTLE_MS = 1000U;
@@ -181,6 +195,8 @@ static struct {
   gps_coord_t origin;    // GPS position the latest position restart began at
   float lon_scale;       // meters per longitude unit at origin
   bool positioned;       // position follows GPS since the latest restart; restarts at the next fix otherwise
+  float position_error;  // meters, estimated horizontal error at error_ms
+  uint32_t error_ms;     // time of the latest fused GPS position
   float inconsistency;   // mean square of the larger normalized GPS innovation per sample
   uint32_t glitch_ms;    // epoch of the first innovation of flags.gps_glitch
   float baro_drift;      // meters the barometer reads above GPS altitude since arming
@@ -575,20 +591,13 @@ void nav_update_target() {
   nav_vector(state.position, state.nav_target_position, &state.nav_target_distance, &state.nav_target_bearing);
 }
 
-// The receiver reports a usable fix.
+// The receiver reports a fresh 3D lock; its accuracy weighs the fusion.
 static bool nav_gps_quality_ok(void) {
-  const bool held = gps.position_valid;
-  const float scale = held ? NAV_GPS_HOLD_ACCURACY_SCALE : 1.0f;
-  return state.gps_health.lock &&
-         state.gps_sats >= (held ? NAV_GPS_HOLD_MIN_SATS : NAV_GPS_MIN_SATS) &&
-         state.gps_horizontal_accuracy <= NAV_GPS_MAX_HORIZONTAL_ACCURACY * scale &&
-         state.gps_speed_accuracy <= NAV_GPS_MAX_SPEED_ACCURACY * scale &&
-         (time_millis() - state.gps_last_update_ms) <= NAV_GPS_STALE_MS;
+  return state.gps_health.lock && (time_millis() - state.gps_last_update_ms) <= NAV_GPS_STALE_MS;
 }
 
 static void nav_update_gps_sanity(void) {
   if (!nav_gps_quality_ok()) {
-    flags.gps_valid = false;
     gps.position_valid = false;
     return;
   }
@@ -605,15 +614,29 @@ static void nav_update_gps_sanity(void) {
   }
   gps.position = state.gps_coord;
   gps.position_valid = true;
-  if (gps.jumped) {
-    if (state.gps_last_update_ms - gps.jump_ms < NAV_GPS_JUMP_SETTLE_MS) {
-      flags.gps_valid = false;
-      return;
-    }
+  if (gps.jumped && state.gps_last_update_ms - gps.jump_ms >= NAV_GPS_JUMP_SETTLE_MS)
     gps.jumped = false;
-  }
-  // The estimate grades how GPS agrees with itself and the accelerometer.
-  flags.gps_valid = state.gps_trust >= (flags.gps_valid ? GPS_TRUST_HOLD : GPS_TRUST_VALID);
+}
+
+// The estimated horizontal position error now: the latest, grown while no GPS
+// position is fused.
+static float nav_position_error(uint32_t now_ms) {
+  if (!estimate.positioned)
+    return GPS_ERROR_MAX;
+  const uint32_t stale_ms = now_ms - estimate.error_ms;
+  const float growth = stale_ms > GPS_ERROR_STALE_MS ? (stale_ms - GPS_ERROR_STALE_MS) * 0.001f * GPS_ERROR_GROWTH : 0.0f;
+  return MIN(estimate.position_error + growth, GPS_ERROR_MAX);
+}
+
+// Navigation accepts the position by its estimated error and the trust in
+// GPS, and not while a position jump is settling. Home needs more.
+static void nav_update_gps_valid(void) {
+  state.gps_position_error = nav_position_error(time_millis());
+  const bool held = flags.gps_valid;
+  flags.gps_valid = gps.position_valid && !gps.jumped &&
+                    state.gps_trust >= (held ? GPS_TRUST_HOLD : GPS_TRUST_VALID) &&
+                    state.gps_position_error < (held ? GPS_ERROR_HOLD : GPS_ERROR_VALID);
+  flags.gps_home_ready = flags.gps_valid && state.gps_position_error < GPS_ERROR_HOME && state.gps_sats >= GPS_HOME_MIN_SATS;
 }
 
 // Home latches on arming, or at the first valid fix after it while still on
@@ -624,7 +647,7 @@ static void nav_update_home(bool arming) {
     flags.home_valid = false;
     return;
   }
-  if (!flags.home_valid && flags.gps_valid && (arming || !flags.in_air)) {
+  if (!flags.home_valid && flags.gps_home_ready && (arming || !flags.in_air)) {
     flags.home_valid = true;
     state.home = state.position;
     state.home_altitude = estimate.gps_launch_valid ? estimate.gps_launch : state.gps_altitude - estimate.height;
@@ -673,6 +696,12 @@ static gps_coord_t nav_estimated_coord() {
   };
 }
 
+// The position error a GPS position fused now leaves: the larger of its
+// reported accuracy and its innovation.
+static float nav_gps_position_error(float innovation) {
+  return MIN(MAX(MAX(state.gps_horizontal_accuracy, GPS_POSITION_ACCURACY_MIN), innovation), GPS_ERROR_MAX);
+}
+
 // Restart the position at the latest GPS position, here and in the stored
 // estimates. Trust keeps its grade, so a receiver that jumped earns it back.
 static void nav_restart_position() {
@@ -682,6 +711,8 @@ static void nav_restart_position() {
   for (auto &entry : estimate.history)
     entry.position[0] = entry.position[1] = 0.0f;
   estimate.positioned = true;
+  estimate.position_error = nav_gps_position_error(0.0f);
+  estimate.error_ms = time_millis();
   flags.gps_glitch = false;
 }
 
@@ -705,10 +736,11 @@ static void nav_start_horizontal(uint32_t now_ms) {
 }
 
 // The weight of a GPS measurement: one up to full accuracy, then falling
-// with the square of the reported accuracy, and with the trust in GPS.
+// with the reported accuracy, as Betaflight scales its measurement noise, and
+// with the trust in GPS.
 static float nav_gps_weight(float accuracy, float full) {
-  const float ratio = full / MAX(accuracy, full);
-  return ratio * ratio * MAX(state.gps_trust, GPS_TRUST_MIN);
+  const float ratio = MAX(full / MAX(accuracy, full), GPS_WEIGHT_MIN);
+  return ratio * MAX(state.gps_trust, GPS_TRUST_MIN);
 }
 
 // Corrections a GPS sample made to the present estimate, applied to the
@@ -834,6 +866,11 @@ static void nav_correct_gps_position(const float past[2], float sample_dt, uint3
   if (fused) {
     flags.gps_glitch = false;
     nav_correct_position(innovation, sample_dt, shift);
+    const uint32_t now_ms = time_millis();
+    const float error = nav_position_error(now_ms);
+    const float magnitude = sqrtf(innovation[0] * innovation[0] + innovation[1] * innovation[1]);
+    estimate.position_error = error + MIN(sample_dt / GPS_ERROR_TIME, 1.0f) * (nav_gps_position_error(magnitude) - error);
+    estimate.error_ms = now_ms;
   } else if (!flags.gps_glitch) {
     flags.gps_glitch = true;
     estimate.glitch_ms = sample_ms;
@@ -918,7 +955,7 @@ static void nav_correct_gps(uint32_t now_ms) {
   nav_correct_baro_drift(sample_dt);
 
   const vec3_t innovation = gps_vel - past.velocity;
-  const float gate = MAX(GPS_VELOCITY_GATE * state.gps_speed_accuracy, GPS_VELOCITY_GATE_MIN);
+  const float gate = constrain(GPS_VELOCITY_GATE * state.gps_speed_accuracy, GPS_VELOCITY_GATE_MIN, GPS_VELOCITY_GATE_MAX);
   // GPS velocity changing clearly less or more than the accelerometer's says
   // is GPS at fault: the accelerometer carries north and east meanwhile.
   // Otherwise a rejected velocity may be a wrong heading.
@@ -1084,7 +1121,9 @@ void nav_init() {
   state.position = {};
   state.gps_accel = {};
   state.gps_trust = 1.0f;
+  state.gps_position_error = GPS_ERROR_MAX;
   flags.altitude_valid = false;
+  flags.gps_home_ready = false;
   flags.gps_glitch = false;
   flags.gps_valid = false;
   flags.home_valid = false;
@@ -1100,13 +1139,12 @@ __attribute__((noinline)) static void nav_step(uint32_t now) {
 
   nav_update_altitude(arming);
   const bool gps_configured = profile.serial.gps != SERIAL_PORT_INVALID;
-  if (gps_configured) {
+  if (gps_configured)
     nav_update_gps_sanity();
-  } else {
-    flags.gps_valid = false;
+  else
     gps.position_valid = false;
-  }
   nav_update_estimate(dt, nav_take_accel());
+  nav_update_gps_valid();
   if (gps_configured)
     nav_update_home(arming);
   else
@@ -1148,8 +1186,11 @@ void nav_test_set_vertical(float altitude, float climb) {
   nav_update_estimate(0.0f, nav_take_accel());
 }
 
+// One GPS sample through the checks and the estimate, without advancing it.
 void nav_test_update_gps_sanity(void) {
   nav_update_gps_sanity();
+  nav_update_estimate(0.0f, nav_take_accel());
+  nav_update_gps_valid();
 }
 
 void nav_test_vertical_update(float dt) {

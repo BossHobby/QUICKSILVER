@@ -816,7 +816,10 @@ static void osd_display_regular() {
     }
 
     case OSD_GPS_SATS: {
-      osd_start(osd_attr(el) | (state.gps_health.lock ? 0x0 : OSD_ATTR_BLINK), pos_x(el), pos_y(el));
+      // Blinks until GPS is good enough for what it is needed for next:
+      // latching home on arming, then navigating.
+      const bool ready = flags.arm_state ? flags.gps_valid : flags.gps_home_ready;
+      osd_start(osd_attr(el) | (ready ? 0x0 : OSD_ATTR_BLINK), pos_x(el), pos_y(el));
       osd_write_char(ICON_SAT_L);
       osd_write_char(ICON_SAT_R);
       osd_write_int(state.gps_sats, 3);
@@ -857,6 +860,13 @@ static void osd_display_regular() {
 
     case OSD_GPS_HOME: {
       osd_start_el(el);
+      // Bearing and distance hold their last values without a valid fix.
+      if (!flags.home_valid || !flags.gps_valid) {
+        osd_write_char(ICON_HOME);
+        osd_write_str("  ---");
+        osd_write_char(' ');
+        break;
+      }
       if (state.home_distance < 5.f) {
         osd_write_char(ICON_HOME);
       } else {

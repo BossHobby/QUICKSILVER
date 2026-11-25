@@ -158,8 +158,9 @@ static bool compute_and_check_gps_fix_delta(blackbox_gps_fix_t *delta, const bla
   delta->rf_agc = delta_int16(current->rf_agc, previous->rf_agc);
   delta->rf_cw = delta_int16(current->rf_cw, previous->rf_cw);
   delta->trust = delta_int16(current->trust, previous->trust);
+  delta->error = delta_int16(current->error, previous->error);
   return delta->status || delta->satellites || delta->h_acc || delta->s_acc || delta->rf_noise || delta->rf_agc || delta->rf_cw ||
-         delta->trust;
+         delta->trust || delta->error;
 }
 
 static bool debug_has_changed(const int16_t *current, const int16_t *previous, uint32_t size) {
@@ -394,7 +395,7 @@ cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *cu
   CBOR_CHECK_ERROR(res = encode_vec3_field_if_present(enc, active_flags, BBOX_FIELD_GPS_VEL, &source->gps_vel));
   if (active_flags & (1 << BBOX_FIELD_GPS_FIX)) {
     const blackbox_gps_fix_t &fix = source->gps_fix;
-    CBOR_CHECK_ERROR(res = cbor_encode_array(enc, 8));
+    CBOR_CHECK_ERROR(res = cbor_encode_array(enc, 9));
     CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.status));
     CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.satellites));
     CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.h_acc));
@@ -403,6 +404,7 @@ cbor_result_t cbor_encode_blackbox_frame(cbor_value_t *enc, const blackbox_t *cu
     CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.rf_agc));
     CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.rf_cw));
     CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.trust));
+    CBOR_CHECK_ERROR(res = cbor_encode_int16_t(enc, &fix.error));
   }
   CBOR_CHECK_ERROR(res = cbor_encode_end_indefinite(enc));
   return res;
@@ -594,6 +596,7 @@ __attribute__((noinline)) static void blackbox_capture_frame() {
         .rf_agc = (int16_t)gps_status.agc_count,
         .rf_cw = gps_status.cw_jamming,
         .trust = (int16_t)(constrain(state.gps_trust, 0.0f, 1.0f) * 100.0f + 0.5f),
+        .error = (int16_t)constrain(state.gps_position_error * 100.0f, 0.0f, 32767.0f),
     };
   }
 

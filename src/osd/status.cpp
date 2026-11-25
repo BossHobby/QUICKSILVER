@@ -291,6 +291,13 @@ static const char *osd_wing_nav_message(void) {
     // Starting needs a switch edge in flight, after any launch.
     if (mission_unavailable && flags.arm_state)
       return mission.count ? "MISSION: TOGGLE IN AIR" : osd_no_mission_message();
+    // With GPS, warn until home can latch on arming, and armed without one.
+    if (profile.serial.gps == SERIAL_PORT_INVALID)
+      return NULL;
+    if (flags.arm_state && !flags.home_valid)
+      return "NO HOME";
+    if (!flags.arm_state && !flags.gps_home_ready)
+      return "NO GPS FIX";
     return NULL;
   default:
     return NULL;
@@ -408,12 +415,14 @@ static const char *osd_rth_message() {
   }
 
   // Arming is always allowed; warn when failsafe RTH will not be available.
-  if (profile.navigation.rth_on_failsafe && profile.serial.gps != SERIAL_PORT_INVALID) {
+  // Disarmed, until GPS is good enough to latch home on arming.
+  const bool gps_configured = profile.serial.gps != SERIAL_PORT_INVALID;
+  if (profile.navigation.rth_on_failsafe && gps_configured) {
     if (!flags.altitude_valid)
       return "NO BARO";
     if (flags.arm_state && !flags.home_valid)
       return "NO HOME";
-    if (!flags.arm_state && !flags.gps_valid)
+    if (!flags.arm_state && !flags.gps_home_ready)
       return "NO GPS FIX";
   }
 
@@ -446,6 +455,12 @@ static const char *osd_rth_message() {
     }
     return flags.arm_state ? "MISSION: TOGGLE IN AIR" : "MISSION: ARM FIRST";
   }
+
+  // Without failsafe RTH, warn after the switches, which name what they lack.
+  if (gps_configured && flags.arm_state && !flags.home_valid)
+    return "NO HOME";
+  if (gps_configured && !flags.arm_state && !flags.gps_home_ready)
+    return "NO GPS FIX";
   return NULL;
 }
 #endif

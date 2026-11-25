@@ -521,7 +521,7 @@ void test_blackbox_gps_fix_records_navigation_status(void) {
   const uint32_t fields = 1 << BBOX_FIELD_GPS_FIX;
   blackbox_t previous = {};
   previous.gps_fix = {.status = BBOX_GPS_LOCK | BBOX_GPS_VALID, .satellites = 14, .h_acc = 180, .s_acc = 25,
-                      .rf_noise = 85, .rf_agc = 2046, .rf_cw = 5, .trust = 100};
+                      .rf_noise = 85, .rf_agc = 2046, .rf_cw = 5, .trust = 100, .error = 250};
   for (int pass = 0; pass < 2; pass++) {
     blackbox_t current = previous;
     if (pass == 0) {
@@ -529,6 +529,7 @@ void test_blackbox_gps_fix_records_navigation_status(void) {
       current.gps_fix.satellites = 9;
       current.gps_fix.rf_cw = 60; // a transmitter close to the antenna
       current.gps_fix.trust = 40; // navigation stopped trusting it
+      current.gps_fix.error = 1600; // and estimates the position 16 m off
     }
     uint8_t buffer[BLACKBOX_MAX_SIZE];
     cbor_value_t codec;
@@ -544,8 +545,8 @@ void test_blackbox_gps_fix_records_navigation_status(void) {
     TEST_ASSERT_TRUE(cbor_decode_skip(&codec) >= CBOR_OK); // loop
     TEST_ASSERT_TRUE(cbor_decode_skip(&codec) >= CBOR_OK); // time
     TEST_ASSERT_TRUE(cbor_decode_array(&codec, &array) >= CBOR_OK);
-    TEST_ASSERT_EQUAL_UINT32(8, cbor_decode_array_size(&codec, &array));
-    int16_t deltas[8];
+    TEST_ASSERT_EQUAL_UINT32(9, cbor_decode_array_size(&codec, &array));
+    int16_t deltas[9];
     for (auto &delta : deltas)
       TEST_ASSERT_TRUE(cbor_decode_int16_t(&codec, &delta) >= CBOR_OK);
     TEST_ASSERT_EQUAL_INT16(-BBOX_GPS_VALID, deltas[0]);
@@ -554,6 +555,7 @@ void test_blackbox_gps_fix_records_navigation_status(void) {
     TEST_ASSERT_EQUAL_INT16(0, deltas[5]);
     TEST_ASSERT_EQUAL_INT16(55, deltas[6]);
     TEST_ASSERT_EQUAL_INT16(-60, deltas[7]);
+    TEST_ASSERT_EQUAL_INT16(1350, deltas[8]);
     previous = current;
   }
 }

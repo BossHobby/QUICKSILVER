@@ -30,6 +30,7 @@ extern void test_io_worker_publishes_rx_without_configuration_wait();
 extern void test_io_worker_services_cadence_without_notification();
 extern void test_osd_looptime_warning_is_temporary_until_2khz();
 extern void test_osd_mission_status_names_the_waypoint();
+extern void test_osd_warns_without_home();
 extern void test_osd_transfer_is_bounded_and_retries();
 extern void test_osd_merges_short_gaps_and_retries();
 extern void test_osd_render_completes_before_transfer();
@@ -378,6 +379,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_imu_without_gps_publishes_tilt_without_heading_estimator);
   RUN_TEST(test_osd_looptime_warning_is_temporary_until_2khz);
   RUN_TEST(test_osd_mission_status_names_the_waypoint);
+  RUN_TEST(test_osd_warns_without_home);
   RUN_TEST(test_osd_transfer_is_bounded_and_retries);
   RUN_TEST(test_osd_merges_short_gaps_and_retries);
   RUN_TEST(test_osd_render_completes_before_transfer);
