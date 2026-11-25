@@ -191,6 +191,12 @@ void max7456_intro() {
 }
 
 uint32_t max7456_can_fit() {
+  // Every SPI device on every bus shares the transaction pool. Keep one string
+  // in flight: it takes microseconds, and its completion wakes the OSD thread
+  // for the next, so queueing more would only take transactions from others.
+  if (!spi_txn_ready(&bus)) {
+    return 0;
+  }
   // Reserve at least 8 slots for critical devices (gyro, etc)
   // This prevents OSD from starving real-time SPI devices
   if (spi_txn_free_count() <= 8) {

@@ -57,6 +57,7 @@ typedef struct {
   uint8_t label_len;
   uint8_t scroll_offset;
   uint32_t last_scroll_ms;
+  bool blink;
 } osd_status_t;
 
 static osd_status_t current_status = {
@@ -104,8 +105,13 @@ const char *guac_system_status_labels[STATUS_MAX] = {
     [STATUS_BLACKBOX] = "BLACKBOX",
 };
 
+// Messages blink to call for attention; routine progress stays steady.
+static uint8_t osd_status_attr(osd_element_t *el) {
+  return osd_attr(el) | (current_status.blink ? OSD_ATTR_BLINK : 0);
+}
+
 static void osd_status_write_label(osd_element_t *el) {
-  osd_start(osd_attr(el) | OSD_ATTR_BLINK, pos_x(el), pos_y(el));
+  osd_start(osd_status_attr(el), pos_x(el), pos_y(el));
   if (current_status.label_len <= LABEL_LEN) {
     const uint32_t offset = (LABEL_LEN - current_status.label_len) / 2;
     for (uint32_t i = 0; i < offset; i++) {
@@ -125,12 +131,13 @@ static void osd_status_write_label(osd_element_t *el) {
   }
 }
 
-static void osd_status_show_text(osd_status_mode_t mode, osd_status_entries_t entry, const char *label) {
-  if (current_status.entry == entry && current_status.mode == mode && strcmp((const char *)current_status.label, label) == 0) {
+static void osd_status_show_text(osd_status_mode_t mode, osd_status_entries_t entry, const char *label, bool blink = true) {
+  if (current_status.entry == entry && current_status.mode == mode && current_status.blink == blink && strcmp((const char *)current_status.label, label) == 0) {
     return;
   }
 
   current_status.entry = entry;
+  current_status.blink = blink;
   current_status.state = PRINT_START;
   current_status.mode = mode;
   current_status.scroll_offset = 0;
@@ -308,6 +315,19 @@ static const char *osd_wing_nav_message(void) {
   }
 }
 
+// Following the route, returning or circling home is routine progress.
+static bool osd_wing_nav_routine(void) {
+  switch (state.wing_nav_state) {
+  case WING_NAV_MISSION:
+  case WING_NAV_MISSION_HOLD:
+  case WING_NAV_RTH_RETURN:
+  case WING_NAV_RTH_HOME:
+    return true;
+  default:
+    return false;
+  }
+}
+
 // Announce one-shot launch and autotrim results for the default status time.
 static const char *osd_wing_result_message(void) {
   static wing_launch_state_t last_launch_state = WING_LAUNCH_IDLE;
@@ -352,6 +372,25 @@ static const char *osd_target_action() {
     return "HOLD";
   default:
     return NULL;
+  }
+}
+
+// The phases of a working return, mission or guided flight are routine
+// progress; failures and prompts to the pilot are not.
+static bool osd_rth_routine() {
+  switch (state.nav_state) {
+  case NAV_STATE_CLIMB:
+  case NAV_STATE_ACQUIRE_HEADING:
+  case NAV_STATE_TURN:
+  case NAV_STATE_NAVIGATE:
+  case NAV_STATE_HOLD:
+  case NAV_STATE_BRAKE:
+  case NAV_STATE_TAKEOFF_SPINUP:
+  case NAV_STATE_TAKEOFF:
+  case NAV_STATE_LAND:
+    return true;
+  default:
+    return false;
   }
 }
 
@@ -493,7 +532,7 @@ static bool osd_status_print(osd_element_t *el) {
     return false;
 
   case PRINT_CLEAR:
-    osd_start(osd_attr(el) | OSD_ATTR_BLINK, pos_x(el), pos_y(el));
+    osd_start(osd_status_attr(el), pos_x(el), pos_y(el));
     for (uint32_t i = 0; i < LABEL_LEN; i++) {
       osd_write_char(' ');
     }
@@ -652,7 +691,7 @@ bool osd_status_update(osd_element_t *el) {
 
   const char *nav_message = osd_wing_nav_message();
   if (nav_message) {
-    osd_status_show_text(MODE_HOLD, STATUS_RTH, nav_message);
+    osd_status_show_text(MODE_HOLD, STATUS_RTH, nav_message, !osd_wing_nav_routine());
     return osd_status_print(el);
   }
 #endif
@@ -672,7 +711,7 @@ bool osd_status_update(osd_element_t *el) {
 #ifdef VEHICLE_MULTI
   const char *rth_message = osd_rth_message();
   if (rth_message) {
-    osd_status_show_text(MODE_HOLD, STATUS_RTH, rth_message);
+    osd_status_show_text(MODE_HOLD, STATUS_RTH, rth_message, !osd_rth_routine());
     return osd_status_print(el);
   }
 #endif

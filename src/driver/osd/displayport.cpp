@@ -13,6 +13,8 @@
 
 #define MAX_MSP_FRAME_SIZE 1024
 #define MAX_STRING_LENGTH 30U
+// Kept free for replies to the goggles, which are dropped when they do not fit.
+#define REPLY_HEADROOM 128U
 
 typedef enum {
   SUBCMD_HEARTBEAT = 0,
@@ -314,7 +316,8 @@ uint32_t displayport_can_fit() {
   const uint32_t overhead = MSP_HEADER_LEN + 2 + 3 + 1;
   // Betaflight never sends more than 30 characters per string and DJI O4
   // drops the rest, so longer merged rows lose their right-hand elements.
-  return (free > overhead) ? MIN(free - overhead, MAX_STRING_LENGTH) : 0;
+  // Wait for room for a whole string: a fragment costs a full header.
+  return free >= REPLY_HEADROOM + overhead + MAX_STRING_LENGTH ? MAX_STRING_LENGTH : 0;
 }
 
 bool displayport_flush() {

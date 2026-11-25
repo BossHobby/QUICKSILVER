@@ -28,6 +28,9 @@ osd_screen_t osd_screen = {
     .rows = DISPLAYPORT_ROWS,
 };
 
+// Half the soft blink period: 2 Hz, as Betaflight blinks.
+#define BLINK_HALF_PERIOD_MS 250
+
 static bool blink_phase = false;
 
 // MAX7456 blinks in hardware; the others redraw blinking characters.
@@ -390,12 +393,18 @@ static bool osd_flush() {
   }
 }
 
-static bool osd_update_display() {
+typedef enum {
+  DISPLAY_DONE,    // everything sent and flushed
+  DISPLAY_PUSHED,  // sent a string, or flushed with rows marked meanwhile
+  DISPLAY_BLOCKED, // the device cannot take more yet
+} osd_display_result_t;
+
+static osd_display_result_t osd_update_display() {
   static uint8_t string[HD_COLS_MAX];
 
   if (!display_has_dirty) {
     display_row = 0;
-    return true;
+    return DISPLAY_DONE;
   }
 
   while (display_row < osd_screen.rows && display_dirty_rows[display_row] == 0) {
@@ -403,15 +412,20 @@ static bool osd_update_display() {
   }
   if (display_row >= osd_screen.rows) {
     if (!osd_flush())
-      return false;
+      return DISPLAY_BLOCKED;
     display_row = 0;
+    // A blink edge during the transfer can mark rows the scan already passed.
+    for (uint8_t row = 0; row < osd_screen.rows; row++) {
+      if (display_dirty_rows[row])
+        return DISPLAY_PUSHED;
+    }
     display_has_dirty = false;
-    return true;
+    return DISPLAY_DONE;
   }
 
   const uint32_t max_chars = MIN(osd_can_fit(), sizeof(string));
   if (max_chars == 0)
-    return false;
+    return DISPLAY_BLOCKED;
 
   const osd_char_t *row_start = &display[display_row * osd_screen.cols];
   uint64_t dirty_mask = display_dirty_rows[display_row];
@@ -453,10 +467,10 @@ static bool osd_update_display() {
 
   // Leave every character dirty on failure so the whole string can be retried.
   if (!osd_push_string(attr, start, display_row, string, size))
-    return false;
+    return DISPLAY_BLOCKED;
 
   display_dirty_rows[display_row] = dirty_mask;
-  return false;
+  return DISPLAY_PUSHED;
 }
 
 void osd_notify_from_isr(void *) {
@@ -492,30 +506,31 @@ bool osd_is_ready(TickType_t *wait) {
 }
 
 bool osd_update(TickType_t *wait) {
-  if (display_has_dirty) {
-    if (osd_update_display()) {
-      display_has_dirty = false;
+  if (osd_soft_blink()) {
+    // The phase follows the clock rather than the last toggle, and flips even
+    // while a transfer is pending, so edges stay evenly spaced however long
+    // the transfers between them take.
+    const uint32_t now = time_millis();
+    const bool phase = (now / BLINK_HALF_PERIOD_MS) & 1;
+    if (phase != blink_phase) {
+      blink_phase = phase;
+      osd_mark_blink_dirty();
     }
+    if (wait) {
+      *wait = MIN(*wait, pdMS_TO_TICKS(BLINK_HALF_PERIOD_MS - now % BLINK_HALF_PERIOD_MS));
+    }
+  }
+
+  if (display_has_dirty) {
+    // Hand the device all it can take on every wake, so its transfer never
+    // idles waiting for the next pass of this thread.
+    while (osd_update_display() == DISPLAY_PUSHED)
+      ;
     return false;
   }
 
   // Periodic refresh for displayport devices
   bool can_render = true;
-
-  if (osd_soft_blink()) {
-    const uint32_t now = time_millis();
-
-    static uint32_t last_blink = 0;
-    if (now - last_blink > 250) {
-      osd_mark_blink_dirty();
-      blink_phase = !blink_phase;
-      last_blink = now;
-      can_render = false;
-    }
-    if (wait) {
-      *wait = MIN(*wait, pdMS_TO_TICKS(251 - MIN(now - last_blink, 251U)));
-    }
-  }
 
   // DisplayPort receivers can drop state; repaint everything periodically.
   if (osd_device == OSD_DEVICE_DISPLAYPORT) {

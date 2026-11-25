@@ -138,14 +138,12 @@ void test_osd_transfer_is_bounded_and_retries() {
   TEST_ASSERT_EQUAL_UINT8(' ', simulator_osd_test_char(0, 0));
   simulator_osd_test_reset(false);
   if (xSemaphoreTake(profile_mutex, 0) != pdTRUE) _exit(9);
-  for (uint32_t i = 1; i <= 3; i++) {
-    TEST_ASSERT_FALSE(osd_update());
-    TEST_ASSERT_EQUAL_UINT32(i, simulator_osd_test_push_count());
-  }
+  // One pass hands the device every string it can take, then flushes.
+  TEST_ASSERT_FALSE(osd_update());
+  TEST_ASSERT_EQUAL_UINT32(3, simulator_osd_test_push_count());
   TEST_ASSERT_EQUAL_UINT8('A', simulator_osd_test_char(0, 0));
   TEST_ASSERT_EQUAL_UINT8('D', simulator_osd_test_char(3, 0));
   TEST_ASSERT_EQUAL_UINT8('F', simulator_osd_test_char(1, 1));
-  TEST_ASSERT_FALSE(osd_update()); // Flush after the final string.
   TEST_ASSERT_TRUE(osd_update());
 
   // Clearing a partial transfer must restart at the first row.
