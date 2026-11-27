@@ -212,7 +212,12 @@ HOT_CODE void pid_calc() {
   const float v_compensation = pid_voltage_compensation();
   const float tda_compensation = pid_tda_compensation();
 
+#ifndef VEHICLE_WING
+  // A multirotor integral is a torque that stays fixed in the world while the
+  // craft rotates. A wing integral is a surface trim fixed to the airframe;
+  // rotating it in a turn moves aileron trim into the rudder and back.
   ierror = vec3_rotate(ierror, state.gyro_delta_angle);
+#endif
 
   const vec3_t gyro_delta = state.gyro - lastrate;
 #ifdef VEHICLE_WING

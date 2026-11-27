@@ -486,6 +486,28 @@ static void test_autotrim_requires_switch_and_averages_applied_surfaces_once() {
   start_autotrim();
 }
 
+static void test_pid_integral_stays_on_its_surface_in_turns() {
+  arm();
+  flags.in_air = 1;
+  profile.pid.pid_rates[0].ki = (vec3_t){{100.0f, 100.0f, 0.0f}};
+  pid_rates_update();
+  state.error = (vec3_t){{0.1f, 0.1f, 0.0f}};
+  for (unsigned i = 0; i < 1000; i++)
+    pid_calc();
+  const vec3_t trim = *pid_get_ierror();
+  TEST_ASSERT_TRUE(trim.roll > 0.1f);
+
+  // A banked turn pitches and yaws the body; the trims stay with their surfaces.
+  profile.pid.pid_rates[0].ki = {};
+  pid_rates_update();
+  state.error = {};
+  state.gyro_delta_angle = (vec3_t){{0.0f, 0.3f * state.looptime, 0.6f * state.looptime}};
+  for (unsigned i = 0; i < 5000; i++)
+    pid_calc();
+  TEST_ASSERT_FLOAT_WITHIN(0.0001f, trim.roll, pid_get_ierror()->roll);
+  TEST_ASSERT_FLOAT_WITHIN(0.0001f, trim.pitch, pid_get_ierror()->pitch);
+  TEST_ASSERT_FLOAT_WITHIN(0.0001f, 0.0f, pid_get_ierror()->yaw);
+}
 static void test_autotrim_captures_integral_correction_before_reset() {
   arm();
   state.aux_active |= (1U << AUX_ACROMODE);
@@ -758,6 +780,7 @@ int main() {
   RUN_TEST(test_pwm_motor_stops_but_disarmed_surfaces_work);
   RUN_TEST(test_level_tilt_moves_disarmed_surfaces_without_integral);
   RUN_TEST(test_pid_gains_follow_airspeed);
+  RUN_TEST(test_pid_integral_stays_on_its_surface_in_turns);
   RUN_TEST(test_throttle_model_estimates_airspeed_from_throttle_and_climb);
   RUN_TEST(test_crsf_airspeed_reports_the_estimate_in_flight);
   RUN_TEST(test_level_turn_coordination_adds_turn_rates);
