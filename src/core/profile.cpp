@@ -690,7 +690,7 @@ const profile_t default_profile = {
             .spinup_ms = 100,
             .min_time_ms = 300, // ignores sticks bumped by the throw
             .timeout_ms = 5000,
-            .finish_ms = 3000,
+            .finish_ms = 2000,
         },
         .turn_coordination = 1,
     },

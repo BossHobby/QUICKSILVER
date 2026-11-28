@@ -717,7 +717,9 @@ static float wing_autolaunch_throttle() {
     return profile.wing.autolaunch.throttle;
 
   case WING_LAUNCH_FINISH:
-    if (elapsed_ms >= profile.wing.autolaunch.finish_ms || wing_launch_sticks_moved()) {
+    // Navigation takes over from the launch's attitude and throttle itself;
+    // otherwise they blend to the sticks.
+    if (state.wing_nav_state != WING_NAV_INACTIVE || elapsed_ms >= profile.wing.autolaunch.finish_ms || wing_launch_sticks_moved()) {
       wing_launch_set_state(WING_LAUNCH_DONE);
       return state.throttle;
     }

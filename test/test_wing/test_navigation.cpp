@@ -360,11 +360,12 @@ static void test_failsafe_drops_without_failsafe_rth() {
   TEST_ASSERT_FALSE(flags.arm_state);
 }
 
-static void test_loiter_waits_for_autolaunch() {
+// Armed with the autolaunch switch and the given mode switches, throttle up.
+static void arm_for_autolaunch(uint32_t aux) {
   nav_init();
   profile.serial.gps = SERIAL_PORT1;
   set_gps(0.0f, 0.0f, 0.0f, 0.0f);
-  state.aux_active = (1U << AUX_PREARM) | (1U << AUX_AUTOLAUNCH) | (1U << AUX_LOITER);
+  state.aux_active = (1U << AUX_PREARM) | (1U << AUX_AUTOLAUNCH) | aux;
   step();
   state.aux_active |= 1U << AUX_ARMING;
   step();
@@ -373,8 +374,23 @@ static void test_loiter_waits_for_autolaunch() {
   state.rx_filtered.throttle = 0.5f;
   step(100);
   TEST_ASSERT_TRUE(flags.in_air);
+}
+
+// The launch hands over in flight, once it finishes, flying east.
+static void finish_autolaunch() {
+  set_gps(0.0f, 0.0f, 0.0f, 15.0f);
+  step(500);
+  state.wing_launch_state = WING_LAUNCH_DONE;
+  step(100);
+}
+
+static void test_loiter_waits_for_autolaunch() {
+  arm_for_autolaunch(1U << AUX_LOITER);
   TEST_ASSERT_TRUE(state.wing_launch_state < WING_LAUNCH_DONE);
   TEST_ASSERT_EQUAL(WING_NAV_INACTIVE, state.wing_nav_state);
+
+  finish_autolaunch();
+  TEST_ASSERT_EQUAL(WING_NAV_LOITER, state.wing_nav_state);
 }
 
 static void fly_with_baro(float altitude) {
@@ -553,6 +569,28 @@ static void test_failsafe_after_launch_spinup_can_return() {
   TEST_ASSERT_TRUE(flags.wing_nav_failsafe);
   TEST_ASSERT_EQUAL(WING_NAV_RTH_HOME, state.wing_nav_state);
   TEST_ASSERT_TRUE(state.throttle > 0.0f);
+}
+
+static void test_navigation_takes_over_when_the_launch_climb_ends() {
+  wait_for_launch();
+  state.aux_active |= 1U << AUX_LOITER;
+  set_gps(0.0f, 0.0f, 0.0f, 15.0f);
+  state.accel_raw.pitch = -2.0f * ACC_1G;
+  step(100);
+  state.accel_raw.pitch = 0.0f;
+  step(300);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_ACTIVE, state.wing_launch_state);
+  TEST_ASSERT_EQUAL(WING_NAV_INACTIVE, state.wing_nav_state);
+
+  // Without the blend to the 0.5 stick: loiter starts from the launch
+  // throttle and slews from there, at most 0.1 in the 200 ms checked.
+  while (state.wing_launch_state == WING_LAUNCH_ACTIVE)
+    step();
+  step(200);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_DONE, state.wing_launch_state);
+  TEST_ASSERT_EQUAL(WING_NAV_LOITER, state.wing_nav_state);
+  TEST_ASSERT_FLOAT_WITHIN(0.1f, profile.wing.autolaunch.throttle, state.throttle);
+  TEST_ASSERT_TRUE(state.throttle > state.rx_filtered.throttle);
 }
 
 static void test_failsafe_rth_preserves_throttle_during_handoff() {
@@ -1517,6 +1555,32 @@ static void test_mission_needs_switch_edge_after_arming() {
   TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
 }
 
+static void test_mission_follows_autolaunch() {
+  mission_route(MISSION_END_HOLD);
+  // Set for the launch, the switch needs no edge.
+  arm_for_autolaunch(1U << AUX_MISSION);
+  TEST_ASSERT_EQUAL(WING_NAV_INACTIVE, state.wing_nav_state);
+
+  finish_autolaunch();
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+}
+
+static void test_aborted_autolaunch_hands_back_from_mission() {
+  mission_route(MISSION_END_HOLD);
+  arm_for_autolaunch(1U << AUX_MISSION);
+  set_gps(0.0f, 0.0f, 0.0f, 15.0f);
+  state.wing_launch_state = WING_LAUNCH_ABORTED;
+  step(1000);
+  TEST_ASSERT_EQUAL(WING_NAV_INACTIVE, state.wing_nav_state);
+
+  state.aux_active &= ~(1U << AUX_MISSION);
+  step();
+  state.aux_active |= 1U << AUX_MISSION;
+  step();
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+}
+
 static void test_mission_starts_once_gps_recovers() {
   mission_route(MISSION_END_HOLD);
   fly(0);
@@ -1870,6 +1934,7 @@ void run_wing_navigation_tests() {
   RUN_TEST(test_failsafe_before_throw_disarms_without_rth);
   RUN_TEST(test_failsafe_during_launch_delay_cannot_start_rth_motor);
   RUN_TEST(test_failsafe_after_launch_spinup_can_return);
+  RUN_TEST(test_navigation_takes_over_when_the_launch_climb_ends);
   RUN_TEST(test_failsafe_rth_preserves_throttle_during_handoff);
   RUN_TEST(test_rth_turns_toward_home);
   RUN_TEST(test_rth_circles_home_on_arrival);
@@ -1916,6 +1981,8 @@ void run_wing_navigation_tests() {
   RUN_TEST(test_mission_link_recovery_keeps_the_mission_switch);
   RUN_TEST(test_mission_link_loss_without_gps_hands_over_to_failsafe);
   RUN_TEST(test_mission_needs_switch_edge_after_arming);
+  RUN_TEST(test_mission_follows_autolaunch);
+  RUN_TEST(test_aborted_autolaunch_hands_back_from_mission);
   RUN_TEST(test_mission_starts_once_gps_recovers);
   RUN_TEST(test_mission_changes_altitude_evenly_along_the_leg);
   RUN_TEST(test_mission_gps_loss_returns_at_rth_altitude);

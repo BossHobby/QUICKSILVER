@@ -90,7 +90,7 @@ static struct {
   uint32_t gps_lost_ms;      // start of the IMU-heading return
   uint32_t descend_ms;       // start of the failsafe glide
   uint32_t waypoint_hold_ms; // start of circling a waypoint for its hold time
-  bool mission_held;         // mission switch on since before navigation was available
+  bool mission_held;         // mission switch on since before navigation was available, other than through a finished launch
   bool mission_requested;    // the switches requested the mission in the latest update
 } nav;
 
@@ -461,20 +461,23 @@ static bool nav_landed(uint32_t now_ms) {
 // MISSION_END_RTH or without GPS, or a loiter in place until the route can
 // be flown.
 static nav_request_t nav_request(uint32_t now_ms) {
-  // Launch owns attitude and throttle until it finishes; navigation never
-  // starts or keeps the motor running on the ground, where a link loss takes
-  // the failsafe procedure to a disarm. Failsafe ignores the switches, which
-  // hold stale values.
+  // Launch owns attitude and throttle until its climb ends; navigation takes
+  // over from there instead of the pilot. It never starts or keeps the motor
+  // running on the ground, where a link loss takes the failsafe procedure to
+  // a disarm. Failsafe ignores the switches, which hold stale values.
   const bool landed = nav_landed(now_ms);
-  const bool launching = flags.wing_launch_available && state.wing_launch_state < WING_LAUNCH_DONE;
+  const bool launching = flags.wing_launch_available && state.wing_launch_state < WING_LAUNCH_FINISH;
+  const bool launched = state.wing_launch_state == WING_LAUNCH_FINISH || state.wing_launch_state == WING_LAUNCH_DONE;
   // As on a multirotor, a mission needs a switch edge in flight: a switch left
-  // on through arming and launch does not fly an old route.
+  // on through arming and launch does not fly an old route. A launch is set
+  // up from arming, so like the other modes its mission switch takes over
+  // once the launch finishes; an aborted launch hands back to the pilot.
   const bool mission_switch = rx_aux_on(AUX_MISSION);
   nav_request_t request = NAV_REQUEST_NONE;
   if (!flags.arm_state || !flags.in_air || launching || landed) {
     nav.mission_held = mission_switch;
   } else {
-    nav.mission_held = nav.mission_held && mission_switch;
+    nav.mission_held = nav.mission_held && mission_switch && !launched;
     // A mission flying through a link loss locks the switches until the pilot
     // unlocks them with the sticks.
     if (state.failsafe_owner == FAILSAFE_OWNER_MISSION)
