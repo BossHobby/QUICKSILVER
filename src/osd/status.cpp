@@ -202,11 +202,8 @@ static const char *osd_no_mission_message() {
 #ifdef VEHICLE_WING
 // Messages fit LABEL_LEN so they read without scrolling.
 static const char *osd_wing_autolaunch_message(void) {
-  if (!rx_aux_on(AUX_AUTOLAUNCH)) {
+  if (!rx_aux_on(AUX_AUTOLAUNCH) || !flags.arm_state) {
     return NULL;
-  }
-  if (!flags.arm_state) {
-    return "LAUNCH: ARM FIRST";
   }
 
   // A finished or aborted launch is announced once; it stays silent until disarm.
@@ -452,10 +449,8 @@ static const char *osd_rth_message() {
     break;
   }
 
-  if (rx_aux_on(AUX_RETURN_TO_HOME)) {
-    if (!flags.arm_state) return "RTH: ARM FIRST";
+  if (rx_aux_on(AUX_RETURN_TO_HOME) && flags.arm_state)
     return "RTH: UNAVAILABLE";
-  }
 
   // Arming is always allowed; warn when failsafe RTH will not be available.
   // Disarmed, until GPS is good enough to latch home on arming.
@@ -471,8 +466,6 @@ static const char *osd_rth_message() {
 
   // Position hold engages once it can, clear of the ground.
   if (rx_aux_on(AUX_POSHOLD)) {
-    if (!flags.arm_state)
-      return "POSHOLD: ARM FIRST";
     if (!flags.gps_valid)
       return "POSHOLD: NO GPS FIX";
     if (!flags.altitude_valid)
@@ -492,11 +485,11 @@ static const char *osd_rth_message() {
         return "TAKEOFF: NO BARO";
       if (!nav_within(mission.waypoints[0].coord, MISSION_TAKEOFF_MAX_DISTANCE))
         return "TAKEOFF: MOVE TO WP 1";
-      if (flags.arm_state && !flags.home_valid)
-        return "TAKEOFF: NO HOME";
-      return flags.arm_state ? "TAKEOFF: TOGGLE SWITCH" : "TAKEOFF: ARM FIRST";
+      if (flags.arm_state)
+        return flags.home_valid ? "TAKEOFF: TOGGLE SWITCH" : "TAKEOFF: NO HOME";
+    } else if (flags.arm_state) {
+      return "MISSION: TOGGLE IN AIR";
     }
-    return flags.arm_state ? "MISSION: TOGGLE IN AIR" : "MISSION: ARM FIRST";
   }
 
   // Without failsafe RTH, warn after the switches, which name what they lack.
