@@ -143,11 +143,11 @@ void test_mission_waypoint_types(void) {
   mission_t route = mission_test_route(3);
   route.waypoints[1].type = MISSION_WAYPOINT_PASS;
   route.waypoints[2].type = MISSION_WAYPOINT_PASS; // flown as a stop
-#ifdef VEHICLE_MULTI
-  TEST_ASSERT_TRUE(mission_valid(&route));
-#else
-  // A wing flies through every waypoint without being told.
+#ifdef VEHICLE_ROVER
+  // A rover flies no missions of its own.
   TEST_ASSERT_FALSE(mission_valid(&route));
+#else
+  TEST_ASSERT_TRUE(mission_valid(&route));
 #endif
 
   // The type survives the codec.
@@ -170,7 +170,7 @@ void test_mission_waypoint_types(void) {
   cbor_decoder_init(&codec, buffer, cbor_encoder_len(&codec));
   TEST_ASSERT_TRUE(cbor_decode_mission_t(&codec, &decoded) >= CBOR_OK);
   TEST_ASSERT_EQUAL_UINT8(30, decoded.waypoints[1].hold);
-#ifdef VEHICLE_MULTI
+#ifndef VEHICLE_ROVER
   held.waypoints[1].type = MISSION_WAYPOINT_PASS;
   TEST_ASSERT_FALSE(mission_valid(&held));
 #endif
@@ -198,8 +198,20 @@ void test_mission_waypoint_types(void) {
   invalid.waypoints[2].type = MISSION_WAYPOINT_STOP;
   TEST_ASSERT_FALSE(mission_valid(&invalid));
 #else
-  // Only a multirotor takes off and lands on its own.
+  // Only a multirotor lands on its own.
   TEST_ASSERT_FALSE(mission_valid(&landing));
+#endif
+
+  mission_t takeoff = mission_test_route(3);
+  takeoff.waypoints[0].type = MISSION_WAYPOINT_TAKEOFF;
+#ifdef VEHICLE_ROVER
+  TEST_ASSERT_FALSE(mission_valid(&takeoff));
+#else
+  // A wing takes off with its launch.
+  TEST_ASSERT_TRUE(mission_valid(&takeoff));
+  takeoff.waypoints[0].type = MISSION_WAYPOINT_STOP;
+  takeoff.waypoints[1].type = MISSION_WAYPOINT_TAKEOFF;
+  TEST_ASSERT_FALSE(mission_valid(&takeoff));
 #endif
 }
 

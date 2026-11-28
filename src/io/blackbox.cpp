@@ -489,7 +489,7 @@ static uint32_t blackbox_rate_div() {
 static_assert(AUX_FUNCTION_MAX < 32, "aux bits must stay below 2^31 for int32 state deltas");
 static_assert(FAILSAFE_PHASE_RECOVERY < 1 << 3);
 #if defined(VEHICLE_WING)
-static_assert(WING_NAV_MISSION_HOLD < 1 << 4);
+static_assert(WING_NAV_MISSION_TAKEOFF < 1 << 4);
 static_assert(WING_LAUNCH_ABORTED < 1 << 4);
 static_assert(WING_AUTOTRIM_SAVED < 1 << 3);
 #elif defined(VEHICLE_MULTI)

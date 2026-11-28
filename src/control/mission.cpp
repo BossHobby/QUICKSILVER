@@ -26,8 +26,10 @@ static constexpr int16_t MISSION_ALTITUDE_MAX = 5000; // launching from a mounta
 static constexpr int16_t MISSION_GROUND_ALTITUDE_MIN = -1000;
 #ifdef VEHICLE_MULTI
 static constexpr uint8_t MISSION_WAYPOINT_TYPES = MISSION_WAYPOINT_TYPE_MAX;
+#elif defined(VEHICLE_WING)
+// A wing takes off with its launch and lands by hand.
+static constexpr uint8_t MISSION_WAYPOINT_TYPES = MISSION_WAYPOINT_LAND;
 #else
-// A wing flies through every waypoint and takes off and lands by hand.
 static constexpr uint8_t MISSION_WAYPOINT_TYPES = MISSION_WAYPOINT_PASS;
 #endif
 // Degrees a leg may turn through. A rover flies no missions.

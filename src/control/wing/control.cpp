@@ -210,10 +210,17 @@ static wing_mode_t wing_active_mode() {
   return WING_MODE_MANUAL;
 }
 
+// The autolaunch switch requests a launch, as does the mission switch for a
+// route starting with TAKEOFF; either keeps it running.
+static bool wing_launch_switch_on() {
+  return rx_aux_on(AUX_AUTOLAUNCH) ||
+         (rx_aux_on(AUX_MISSION) && mission.count > 0 && mission.waypoints[0].type == MISSION_WAYPOINT_TAKEOFF);
+}
+
 // Launch takes over from arming, so an always-on switch leaves the disarmed
 // surfaces on the sticks for preflight checks and OSD menus.
 static bool wing_launch_in_progress() {
-  return flags.arm_state && rx_aux_on(AUX_AUTOLAUNCH) && flags.wing_launch_available &&
+  return flags.arm_state && wing_launch_switch_on() && flags.wing_launch_available &&
          !flags.failsafe && state.wing_launch_state < WING_LAUNCH_DONE;
 }
 
@@ -549,7 +556,7 @@ static bool wing_launch_probably_not_flying() {
 }
 
 static void wing_launch_reset_pids_if_needed() {
-  if (!rx_aux_on(AUX_AUTOLAUNCH) || !flags.wing_launch_available || state.wing_launch_state >= WING_LAUNCH_DONE) {
+  if (!wing_launch_switch_on() || !flags.wing_launch_available || state.wing_launch_state >= WING_LAUNCH_DONE) {
     return;
   }
   if (state.wing_launch_state < WING_LAUNCH_SPINUP || wing_launch_probably_not_flying()) {
@@ -583,16 +590,18 @@ static bool wing_launch_max_altitude_reached() {
           state.gps_altitude - launch.takeoff_altitude >= profile.wing.autolaunch.max_altitude;
 }
 
-// Disarmed, launch only tracks the switch and stays idle.
-COLD_CODE static void wing_launch_disarmed(bool launch_aux_on) {
-  flags.wing_launch_available = launch_aux_on;
+// Disarmed, launch only tracks the switches and stays idle. A TAKEOFF
+// launches held in hand at its waypoint, with GPS to show it.
+COLD_CODE static void wing_launch_disarmed() {
+  flags.wing_launch_available = rx_aux_on(AUX_AUTOLAUNCH) ||
+                                (wing_launch_switch_on() && flags.gps_valid &&
+                                 nav_within(mission.waypoints[0].coord, MISSION_TAKEOFF_MAX_DISTANCE));
   wing_launch_set_state(WING_LAUNCH_IDLE);
 }
 
 static float wing_autolaunch_throttle() {
-  const bool launch_aux_on = rx_aux_on(AUX_AUTOLAUNCH);
   if (!flags.arm_state) {
-    wing_launch_disarmed(launch_aux_on);
+    wing_launch_disarmed();
     return state.throttle;
   }
   // Launch runs at most once per arm: DONE or ABORTED holds until disarm, so
@@ -601,7 +610,7 @@ static float wing_autolaunch_throttle() {
     flags.wing_launch_available = false;
     return state.throttle;
   }
-  if (flags.failsafe || !launch_aux_on) {
+  if (flags.failsafe || !wing_launch_switch_on()) {
     if (flags.wing_launch_available) {
       // Throttle already latched in_air before release. A link loss must not
       // let navigation bypass the throw detection or hand-clear delay.

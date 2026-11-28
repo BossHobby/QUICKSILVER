@@ -75,6 +75,7 @@ typedef enum {
   ROUTE_UNCHECKED,       // checked until the stored route can be flown
   ROUTE_FLYING,          // nav_route.complete circles its last waypoint
   ROUTE_CLIMBING,        // circling where the leg starts until the active waypoint's altitude is reached
+  ROUTE_TAKEOFF,         // climbing along the launch track to the TAKEOFF waypoint's altitude
   ROUTE_WAITING,         // circling the active waypoint for its hold time
   ROUTE_GUIDED,          // flying to the ground station target
   ROUTE_GUIDED_CLIMBING, // circling where the leg starts until the target's altitude is reached
@@ -235,9 +236,16 @@ static float circle_lateral_accel() {
   return orbit_lateral_accel(position, MAX(profile.navigation.loiter_radius, 1.0f), loiter_direction());
 }
 
-static void cruise_lock() {
+// Latches the current ground track; false, keeping the old one, when too
+// slow for its course to orient a track.
+static bool cruise_lock() {
+  const vec2_t vel = vec3_horizontal(state.velocity);
+  const float speed = vec2_magnitude(vel);
+  if (speed < LOITER_CENTER_MIN_SPEED)
+    return false;
   cruise.origin = state.position;
-  cruise.dir = vec3_horizontal(state.velocity) * (1.0f / nav.speed);
+  cruise.dir = vel * (1.0f / speed);
+  return true;
 }
 
 // The locked track has no end; look CRUISE_LOOKAHEAD along it, as in ArduPlane's CRUISE.
@@ -274,7 +282,7 @@ static bool route_climbing() {
 
 // The stored route has been checked and is being flown.
 static bool route_stored() {
-  return route == ROUTE_FLYING || route == ROUTE_CLIMBING || route == ROUTE_WAITING;
+  return route == ROUTE_FLYING || route == ROUTE_CLIMBING || route == ROUTE_TAKEOFF || route == ROUTE_WAITING;
 }
 
 // The ground station target, or the active waypoint of the stored route.
@@ -288,12 +296,29 @@ static bool route_holding() {
          (route == ROUTE_FLYING && nav_route.complete);
 }
 
+// The stored route's active waypoint is its TAKEOFF.
+static bool route_takeoff() {
+  return route_stored() && mission.waypoints[nav_route.index].type == MISSION_WAYPOINT_TAKEOFF;
+}
+
 // Fly to the route target from here, its altitude changing evenly along the
 // leg. As on a multirotor, a leg that does not continue flight on the route
-// first climbs in place to a higher target, circling where it starts.
+// first climbs in place to a higher target, circling where it starts. A
+// TAKEOFF waypoint is reached by climbing to its altitude on the track the
+// launch left along, as in ArduPlane's NAV_TAKEOFF; held as cruise holds its
+// course, it needs the ground speed to lock one, else it circles in place.
 static void route_begin_leg(bool guided, bool underway) {
   nav_route_start_leg();
   route = guided ? ROUTE_GUIDED : ROUTE_FLYING;
+  if (route_takeoff()) {
+    if (cruise_lock()) {
+      route = ROUTE_TAKEOFF;
+    } else {
+      route = ROUTE_CLIMBING;
+      circle_place_ahead();
+    }
+    return;
+  }
   if (underway || !flags.altitude_valid || route_waypoint().altitude <= state.altitude + MISSION_CLIMB_MARGIN)
     return;
   route = guided ? ROUTE_GUIDED_CLIMBING : ROUTE_CLIMBING;
@@ -323,10 +348,15 @@ static float mission_lateral_accel() {
 
 // tan(turn / 2) for the turn onto the next leg: a turn of that radius started
 // this fraction of it before the waypoint rolls out on the next leg, as in
-// ArduPlane's turn_distance(). Turns of 90 degrees or more, and the last
-// waypoint, use the whole radius.
+// ArduPlane's turn_distance(). Turns of 90 degrees or more, and the last PASS
+// waypoint, use the whole radius. A STOP waypoint is flown over before the
+// turn.
 static float nav_mission_turn_scale() {
-  if (route_guided() || nav_route.index + 1 >= mission.count)
+  if (route_guided())
+    return 1.0f;
+  if (mission.waypoints[nav_route.index].type == MISSION_WAYPOINT_STOP)
+    return 0.0f;
+  if (nav_route.index + 1 >= mission.count)
     return 1.0f;
   // The turn is between where this leg arrives and where the next leaves,
   // which an arc on either changes.
@@ -359,8 +389,25 @@ static void nav_mission_advance(float max_bank, uint32_t now_ms) {
     // Without the barometer the climb cannot be checked; fly the leg.
     if (flags.altitude_valid && state.altitude < route_waypoint().altitude - MISSION_CLIMB_MARGIN)
       return;
+    if (route_takeoff()) {
+      // Climbed for the TAKEOFF waypoint: on to the next from here.
+      route = ROUTE_FLYING;
+      break;
+    }
     // The leg starts where the climb ends.
     route_begin_leg(route == ROUTE_GUIDED_CLIMBING, true);
+    return;
+  case ROUTE_TAKEOFF:
+    if (!flags.altitude_valid || state.altitude >= route_waypoint().altitude - MISSION_CLIMB_MARGIN) {
+      route = ROUTE_FLYING;
+      break;
+    }
+    // A climb too slow to finish within mission range of the waypoint
+    // circles where it got to instead.
+    if (!nav_within(route_waypoint().coord, MISSION_START_MAX_DISTANCE)) {
+      route = ROUTE_CLIMBING;
+      circle_place_ahead();
+    }
     return;
   case ROUTE_WAITING:
     if (now_ms - nav.waypoint_hold_ms < mission.waypoints[nav_route.index].hold * 1000U)
@@ -541,8 +588,11 @@ static wing_nav_state_t nav_next_state(nav_request_t request, uint32_t now_ms) {
     return WING_NAV_DESCEND;
   const bool returning = nav_returning(request);
   if (flags.gps_valid) {
-    if (request == NAV_REQUEST_MISSION)
+    if (request == NAV_REQUEST_MISSION) {
+      if (route == ROUTE_TAKEOFF)
+        return WING_NAV_MISSION_TAKEOFF;
       return route_holding() ? WING_NAV_MISSION_HOLD : WING_NAV_MISSION;
+    }
     if (returning) {
       if (previous == WING_NAV_RTH_HOME || state.home_distance <= profile.navigation.loiter_radius)
         return WING_NAV_RTH_HOME;
@@ -555,7 +605,7 @@ static wing_nav_state_t nav_next_state(nav_request_t request, uint32_t now_ms) {
   if (returning && state.heading_confidence >= NAV_MIN_HEADING_CONFIDENCE) {
     // GPS lost on a mission also heads home on the IMU heading.
     if (previous == WING_NAV_RTH_RETURN || previous == WING_NAV_RTH_HOME ||
-        previous == WING_NAV_MISSION || previous == WING_NAV_MISSION_HOLD) {
+        previous == WING_NAV_MISSION || previous == WING_NAV_MISSION_HOLD || previous == WING_NAV_MISSION_TAKEOFF) {
       nav.gps_lost_ms = now_ms;
       return WING_NAV_RTH_HEADING;
     }
@@ -598,6 +648,7 @@ static float nav_roll(wing_nav_state_t next) {
     // Wing control applies the pilot's bank; follow it so the lock takes over smoothly.
     return state.attitude.roll;
   case WING_NAV_CRUISE:
+  case WING_NAV_MISSION_TAKEOFF:
     return atan2approx_rad(cruise_lateral_accel(), GRAVITY);
   case WING_NAV_LOITER:
   case WING_NAV_RTH_HOME:

@@ -202,7 +202,8 @@ static const char *osd_no_mission_message() {
 #ifdef VEHICLE_WING
 // Messages fit LABEL_LEN so they read without scrolling.
 static const char *osd_wing_autolaunch_message(void) {
-  if (!rx_aux_on(AUX_AUTOLAUNCH) || !flags.arm_state) {
+  // The autolaunch switch, or a mission switch for a TAKEOFF waypoint.
+  if (!flags.arm_state || !(rx_aux_on(AUX_AUTOLAUNCH) || flags.wing_launch_available)) {
     return NULL;
   }
 
@@ -285,6 +286,8 @@ static const char *osd_wing_nav_message(void) {
     return state.nav_target == NAV_TARGET_GUIDED ? osd_guided_message("FLY") : osd_mission_message("FLY");
   case WING_NAV_MISSION_HOLD:
     return state.nav_target == NAV_TARGET_GUIDED ? osd_guided_message("CIRCLE") : osd_mission_message("CIRCLE");
+  case WING_NAV_MISSION_TAKEOFF:
+    return osd_mission_message("CLIMB");
   case WING_NAV_RTH_RETURN:
     return "RETURN HOME";
   case WING_NAV_RTH_HOME:
@@ -296,7 +299,16 @@ static const char *osd_wing_nav_message(void) {
   case WING_NAV_CRUISE_NO_GPS:
     return "CRUISE: NO GPS";
   case WING_NAV_INACTIVE:
-    // Starting needs a switch edge in flight, after any launch.
+    // A TAKEOFF launches at its waypoint, with GPS, from the mission switch
+    // set before arming; any other start needs a switch edge in flight,
+    // after any launch.
+    if (mission_unavailable && !flags.arm_state && !rx_aux_on(AUX_AUTOLAUNCH) &&
+        mission.count && mission.waypoints[0].type == MISSION_WAYPOINT_TAKEOFF) {
+      if (!flags.gps_valid)
+        return "TAKEOFF: NO GPS FIX";
+      if (!nav_within(mission.waypoints[0].coord, MISSION_TAKEOFF_MAX_DISTANCE))
+        return "TAKEOFF: MOVE TO WP 1";
+    }
     if (mission_unavailable && flags.arm_state)
       return mission.count ? "MISSION: TOGGLE IN AIR" : osd_no_mission_message();
     // With GPS, warn until home can latch on arming, and armed without one.
@@ -317,6 +329,7 @@ static bool osd_wing_nav_routine(void) {
   switch (state.wing_nav_state) {
   case WING_NAV_MISSION:
   case WING_NAV_MISSION_HOLD:
+  case WING_NAV_MISSION_TAKEOFF:
   case WING_NAV_RTH_RETURN:
   case WING_NAV_RTH_HOME:
     return true;

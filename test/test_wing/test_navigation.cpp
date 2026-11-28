@@ -1298,6 +1298,7 @@ static void test_mission_turns_early_onto_an_arc() {
       .lat = ORIGIN.lat + (int32_t)lrintf(600.0f / METERS_PER_DEGREE_LAT * 1e7f),
   };
   mission.waypoints[1].arc = 180;
+  mission.waypoints[0].type = MISSION_WAYPOINT_PASS;
   fly_mission();
   TEST_ASSERT_TRUE(mission_turn_radius() > 20.0f);
   fly_track(0.0f, 0.0f, 260.0f, 0.0f);
@@ -1579,6 +1580,123 @@ static void test_aborted_autolaunch_hands_back_from_mission() {
   state.aux_active |= 1U << AUX_MISSION;
   step();
   TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+}
+
+// A route taking off at the origin, then north to a second waypoint.
+static void mission_takeoff_route(float takeoff_north) {
+  mission_route(MISSION_END_HOLD);
+  const vec2_t takeoff = {{takeoff_north, 0.0f}};
+  mission.waypoints[0].coord = {.lon = ORIGIN.lon,
+                                .lat = ORIGIN.lat + (int32_t)lrintf(takeoff.north / METERS_PER_DEGREE_LAT * 1e7f)};
+  mission.waypoints[0].type = MISSION_WAYPOINT_TAKEOFF;
+  TEST_ASSERT_TRUE(mission_valid(&mission));
+}
+
+// Disarmed at the origin with only the mission switch, then armed and throttled up.
+static void arm_for_takeoff() {
+  nav_init();
+  scripted_altitude = NAN;
+  profile.serial.gps = SERIAL_PORT1;
+  profile.wing.autolaunch.idle_throttle = 0.0f;
+  set_gps(0.0f, 0.0f, 0.0f, 0.0f);
+  state.aux_active = (1U << AUX_PREARM) | (1U << AUX_MISSION);
+  step(100);
+  state.aux_active |= 1U << AUX_ARMING;
+  step();
+  TEST_ASSERT_TRUE(flags.arm_state);
+  state.rx_filtered.throttle = 0.5f;
+  step(100);
+}
+
+static void test_mission_takeoff_launches_and_climbs_on_its_track() {
+  mission_takeoff_route(0.0f);
+  arm_for_takeoff();
+  TEST_ASSERT_TRUE(flags.wing_launch_available);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_WAIT, state.wing_launch_state);
+  TEST_ASSERT_EQUAL(WING_NAV_INACTIVE, state.wing_nav_state);
+
+  // The throw spins the motor up as for the autolaunch switch.
+  state.accel_raw.pitch = -2.0f * ACC_1G;
+  step(100);
+  state.accel_raw.pitch = 0.0f;
+  step(300);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_ACTIVE, state.wing_launch_state);
+  TEST_ASSERT_TRUE(state.throttle > 0.0f);
+
+  scripted_altitude = 20.0f;
+  scripted_climb = 0.0f;
+  finish_autolaunch();
+  // Climbing on east along the launch track until the TAKEOFF altitude.
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION_TAKEOFF, state.wing_nav_state);
+  TEST_ASSERT_EQUAL(NAV_TARGET_MISSION, state.nav_target);
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+  step(1000);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION_TAKEOFF, state.wing_nav_state);
+  TEST_ASSERT_FLOAT_WITHIN(1.0f, 0.0f, roll_command_deg());
+  TEST_ASSERT_TRUE(wing_nav_command.pitch < 0.0f);
+
+  // Climbed: on to the next waypoint without flying to the first.
+  scripted_altitude = 50.0f;
+  step(100);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+}
+
+static void test_mission_takeoff_circles_beyond_mission_range() {
+  mission_takeoff_route(0.0f);
+  arm_for_takeoff();
+  scripted_altitude = 20.0f;
+  scripted_climb = 0.0f;
+  finish_autolaunch();
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION_TAKEOFF, state.wing_nav_state);
+
+  // Still short of the altitude past the mission range: circle there.
+  for (float east = 100.0f; east <= MISSION_START_MAX_DISTANCE + 100.0f; east += 100.0f) {
+    set_gps(0.0f, east, 0.0f, 15.0f);
+    step(100);
+  }
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION_HOLD, state.wing_nav_state);
+  TEST_ASSERT_EQUAL_UINT8(0, state.mission_index);
+  scripted_altitude = 50.0f;
+  step(100);
+  TEST_ASSERT_EQUAL(WING_NAV_MISSION, state.wing_nav_state);
+  TEST_ASSERT_EQUAL_UINT8(1, state.mission_index);
+}
+
+static void test_mission_takeoff_needs_its_waypoint() {
+  // Armed away from the TAKEOFF waypoint, the mission switch does not launch.
+  mission_takeoff_route(50.0f);
+  arm_for_takeoff();
+  TEST_ASSERT_FALSE(flags.wing_launch_available);
+  TEST_ASSERT_EQUAL(WING_LAUNCH_IDLE, state.wing_launch_state);
+}
+
+static void test_mission_switch_off_aborts_takeoff_launch() {
+  mission_takeoff_route(0.0f);
+  arm_for_takeoff();
+  TEST_ASSERT_EQUAL(WING_LAUNCH_WAIT, state.wing_launch_state);
+  state.aux_active &= ~(1U << AUX_MISSION);
+  step();
+  TEST_ASSERT_EQUAL(WING_LAUNCH_ABORTED, state.wing_launch_state);
+  TEST_ASSERT_FALSE(flags.wing_launch_available);
+}
+
+// Index of the waypoint flown after tracking to 20 m short of the first.
+static uint8_t index_short_of_first(mission_waypoint_type_t type) {
+  mission_route(MISSION_END_HOLD);
+  mission.waypoints[0].type = type;
+  fly(0);
+  set_gps(0.0f, 0.0f, 15.0f, 0.0f);
+  state.aux_active |= 1U << AUX_MISSION;
+  step();
+  fly_track(0.0f, 0.0f, 280.0f, 0.0f);
+  return state.mission_index;
+}
+
+static void test_mission_pass_turns_before_stop() {
+  // A PASS starts the right-angle turn early; a STOP is flown over first.
+  TEST_ASSERT_EQUAL_UINT8(1, index_short_of_first(MISSION_WAYPOINT_PASS));
+  TEST_ASSERT_EQUAL_UINT8(0, index_short_of_first(MISSION_WAYPOINT_STOP));
 }
 
 static void test_mission_starts_once_gps_recovers() {
@@ -1983,6 +2101,11 @@ void run_wing_navigation_tests() {
   RUN_TEST(test_mission_needs_switch_edge_after_arming);
   RUN_TEST(test_mission_follows_autolaunch);
   RUN_TEST(test_aborted_autolaunch_hands_back_from_mission);
+  RUN_TEST(test_mission_takeoff_launches_and_climbs_on_its_track);
+  RUN_TEST(test_mission_takeoff_circles_beyond_mission_range);
+  RUN_TEST(test_mission_takeoff_needs_its_waypoint);
+  RUN_TEST(test_mission_switch_off_aborts_takeoff_launch);
+  RUN_TEST(test_mission_pass_turns_before_stop);
   RUN_TEST(test_mission_starts_once_gps_recovers);
   RUN_TEST(test_mission_changes_altitude_evenly_along_the_leg);
   RUN_TEST(test_mission_gps_loss_returns_at_rth_altitude);

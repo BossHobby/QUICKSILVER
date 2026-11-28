@@ -137,6 +137,7 @@ typedef enum : uint8_t {
   WING_NAV_CRUISE_NO_GPS, // Cruise without valid GPS: the pilot banks and the course cannot lock.
   WING_NAV_MISSION,       // Flying the GPS ground track toward the active waypoint.
   WING_NAV_MISSION_HOLD,  // Circling the last waypoint after the mission, or a waypoint until its altitude is reached.
+  WING_NAV_MISSION_TAKEOFF, // Climbing along the launch track to the TAKEOFF waypoint's altitude.
 } wing_nav_state_t;
 
 // Shared control and status bits. Bitfields are written by Flight only; a

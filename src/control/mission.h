@@ -18,12 +18,12 @@ typedef enum {
   MISSION_END_MAX,
 } __attribute__((__packed__)) mission_end_action_t;
 
-// How a multirotor flies a waypoint. A wing flies through every waypoint and
-// accepts only STOP.
+// How a waypoint is flown. A wing flies over a STOP waypoint before turning,
+// turns early through a PASS one, launches for a TAKEOFF and accepts no LAND.
 typedef enum {
   MISSION_WAYPOINT_STOP,    // brake to a stop on the waypoint, then turn toward the next
   MISSION_WAYPOINT_PASS,    // fly through at a corner speed for the turn onto the next leg; the last flies as STOP
-  MISSION_WAYPOINT_TAKEOFF, // first waypoint only: lift off from the ground and climb in place to altitude
+  MISSION_WAYPOINT_TAKEOFF, // first waypoint only: lift off from the ground and climb in place to altitude; a wing launches from it and climbs along its launch track
   MISSION_WAYPOINT_LAND,    // last waypoint only: descend on the waypoint until touchdown, then disarm
   MISSION_WAYPOINT_TYPE_MAX,
 } __attribute__((__packed__)) mission_waypoint_type_t;
