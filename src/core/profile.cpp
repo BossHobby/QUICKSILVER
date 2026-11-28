@@ -717,11 +717,11 @@ FAST_RAM profile_t profile;
 
 // Derived configuration, rebuilt at boot and after profile decoding.
 // Hardware pin/timer allocation still follows the existing initialization path.
-static uint8_t output_protocol_slots[OUTPUT_PROTOCOL_PWM + 1];
+static uint16_t output_protocol_slots[OUTPUT_PROTOCOL_PWM + 1];
 static uint8_t output_protocols;
 // Outputs fed by a weighted throttle mixer rule, by output index.
-static uint8_t output_throttle_outputs;
-static_assert(MOTOR_PIN_MAX <= 8);
+static uint16_t output_throttle_outputs;
+static_assert(MOTOR_PIN_MAX <= 16);
 
 void profile_output_update() {
   memset(output_protocol_slots, 0, sizeof(output_protocol_slots));
@@ -759,7 +759,7 @@ bool profile_outputs_use_protocol(output_protocol_t protocol) {
   return protocol <= OUTPUT_PROTOCOL_PWM && (output_protocols & (1U << protocol)) != 0;
 }
 
-uint8_t profile_output_protocol_slots(output_protocol_t protocol) {
+uint16_t profile_output_protocol_slots(output_protocol_t protocol) {
   return protocol <= OUTPUT_PROTOCOL_PWM ? output_protocol_slots[protocol] : 0;
 }
 

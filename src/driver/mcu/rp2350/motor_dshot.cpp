@@ -16,16 +16,16 @@
 // Output slot n runs on state machine n % 4 of PIO0 (slots 0-3) or PIO1
 // (slots 4-7). PIO2 stays free for other PIO drivers.
 static constexpr uint32_t DSHOT_SM_PER_PIO = 4;
-static_assert(MOTOR_PIN_MAX <= 2 * DSHOT_SM_PER_PIO);
+static_assert(DSHOT_OUTPUT_MAX <= 2 * DSHOT_SM_PER_PIO);
 
 // Cycles per third of a DShot bit, as laid out in dshot.pio.
 static constexpr uint32_t DSHOT_SLOT_CYCLES = 5;
 
-static volatile DMA_RAM uint16_t dshot_reply[MOTOR_PIN_MAX][GCR_DMA_BUFFER_SIZE];
+static volatile DMA_RAM uint16_t dshot_reply[DSHOT_OUTPUT_MAX][GCR_DMA_BUFFER_SIZE];
 
 // Claimed on first init and kept: ESC passthrough re-runs motor_init().
 static int32_t dshot_program_offset[2] = {-1, -1};
-static dma_stream_t dshot_reply_dma[MOTOR_PIN_MAX];
+static dma_stream_t dshot_reply_dma[DSHOT_OUTPUT_MAX];
 static uint32_t dshot_claimed_mask = 0;
 
 static uint32_t dshot_frame_mask = 0;
@@ -42,7 +42,7 @@ static uint32_t dshot_sm(uint32_t slot) {
 static void dshot_set_gpio_base(PIO pio, uint32_t mask) {
   uint32_t lowest = NUM_BANK0_GPIOS;
   uint32_t highest = 0;
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+  for (uint32_t i = 0; i < DSHOT_OUTPUT_MAX; i++) {
     if (!(mask & (1U << i)) || dshot_pio(i) != pio)
       continue;
     const uint32_t index = gpio_pin_defs[target.outputs[i].pin].pin_index;
@@ -114,7 +114,7 @@ static void dshot_init_slot(uint32_t slot) {
 void dshot_init_outputs(uint32_t mask) {
   dshot_set_gpio_base(pio0, mask);
   dshot_set_gpio_base(pio1, mask);
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+  for (uint32_t i = 0; i < DSHOT_OUTPUT_MAX; i++) {
     if (mask & (1U << i))
       dshot_init_slot(i);
   }
@@ -123,7 +123,7 @@ void dshot_init_outputs(uint32_t mask) {
 
 // Replies of the previous frame; cold for the same reason as on the other MCUs.
 COLD_CODE static void dshot_read_telemetry(uint32_t active) {
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+  for (uint32_t i = 0; i < DSHOT_OUTPUT_MAX; i++) {
     if (active & dshot_frame_mask & (1U << i))
       state.dshot_rpm[i] = dshot_decode_gcr((uint16_t *)dshot_reply[i], 1);
   }
@@ -134,7 +134,7 @@ void dshot_send_frame(const uint16_t *packets, uint32_t active) {
   if (bidir)
     dshot_read_telemetry(active);
 
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+  for (uint32_t i = 0; i < DSHOT_OUTPUT_MAX; i++) {
     if (!(active & (1U << i)))
       continue;
     if (bidir) {
@@ -149,7 +149,7 @@ void dshot_send_frame(const uint16_t *packets, uint32_t active) {
 // Each state machine is back at its pull with nothing queued, and every
 // reply sample has reached memory.
 bool dshot_frame_done() {
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+  for (uint32_t i = 0; i < DSHOT_OUTPUT_MAX; i++) {
     if (!(dshot_frame_mask & (1U << i)))
       continue;
     PIO pio = dshot_pio(i);

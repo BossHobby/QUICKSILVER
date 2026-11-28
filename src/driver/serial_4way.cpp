@@ -113,6 +113,8 @@ uint8_t serial_4way_init() {
     esc_pins[i] = PIN_NONE;
   }
 
+  // Outputs up to the last one with an ESC pin, so tools do not probe unused ones.
+  uint8_t count = 0;
   for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
     const profile_output_t *output = &profile.outputs[i];
     const bool passthrough = output && output->target_output < MOTOR_PIN_MAX &&
@@ -121,10 +123,11 @@ uint8_t serial_4way_init() {
     esc_pins[i] = pin;
     if (pin != PIN_NONE) {
       avr_bl_init_pin(pin);
+      count = i + 1;
     }
   }
 
-  return MOTOR_PIN_MAX;
+  return count;
 }
 
 void serial_4way_release() {

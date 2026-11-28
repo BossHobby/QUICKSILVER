@@ -443,6 +443,9 @@ cbor_result_t cbor_decode_target_output_array(cbor_value_t *dec, target_output_t
   const uint32_t limit = MIN(MOTOR_PIN_MAX, array_size);
   for (uint32_t i = 0; i < limit; i++) {
     CBOR_CHECK_ERROR(res = cbor_decode_target_output_t(dec, &(*outputs)[i]));
+    if (i >= DSHOT_OUTPUT_MAX) {
+      (*outputs)[i].caps = (output_caps_t)((*outputs)[i].caps & ~OUTPUT_CAP_DSHOT);
+    }
   }
   for (uint32_t i = limit; i < array_size; i++) {
     CBOR_CHECK_ERROR(res = cbor_decode_skip(dec));

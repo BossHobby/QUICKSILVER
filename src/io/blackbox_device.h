@@ -11,7 +11,7 @@
 #define BLACKBOX_HEADER_MAGIC (0xdeadbeef ^ (sizeof(blackbox_t) << 24) ^ (sizeof(blackbox_device_header_t) << 12) ^ BLACKBOX_VERSION)
 
 // max size for a given entry
-#define BLACKBOX_MAX_SIZE 320
+#define BLACKBOX_MAX_SIZE 352
 
 #define BLACKBOX_WRITE_BUFFER_SIZE 512
 #define BLACKBOX_ENCODE_BUFFER_SIZE 8192

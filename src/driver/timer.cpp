@@ -20,7 +20,7 @@ void timer_alloc_init() {
   // DSHOT_CHn stream, whichever output slots the port serves.
   const gpio_port_t *dshot_ports[DMA_DEVICE_DSHOT_CH3 - DMA_DEVICE_DSHOT_CH1 + 1] = {};
   uint32_t dshot_port_count = 0;
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+  for (uint32_t i = 0; i < DSHOT_OUTPUT_MAX; i++) {
     const gpio_pins_t pin = target.outputs[i].pin;
     if (pin == PIN_NONE || (target.outputs[i].caps & OUTPUT_CAP_DSHOT) == 0 ||
         !profile_output_slot_uses_protocol(i, OUTPUT_PROTOCOL_DSHOT)) {

@@ -18,6 +18,7 @@
 //        satellites, accuracies, RF noise, AGC and CW interference, navigation GPS trust) fields
 //        after state; the GPS fix status carries the navigation GPS glitch.
 //        Frames may exceed 255 bytes.
+//        the output field carries 16 values (was 8).
 //        the altitude field records the fused estimate (was the filtered barometer) and
 //        navigation debug 2 the barometer height; accel_filter keeps its magnitude.
 //        the GPS fix field ends with the estimated position error, which navigation accepts the fix by.

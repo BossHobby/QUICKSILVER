@@ -24,6 +24,10 @@
 
 #define MSP_VTX_POWER_LABEL_LEN 3
 
+// MSP_MOTOR and MSP_SET_MOTOR carry eight values, whatever the output count.
+static constexpr uint8_t MSP_MOTOR_COUNT = 8;
+static_assert(MSP_MOTOR_COUNT <= MOTOR_PIN_MAX);
+
 enum {
   MSP_REBOOT_FIRMWARE = 0,
   MSP_REBOOT_BOOTLOADER_ROM,
@@ -597,10 +601,10 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
   case MSP_MOTOR: {
     // we always have 4 motors, but blheli expects 8
     // these are pwm values
-    uint16_t data[8];
-    memset(data, 0, 8 * sizeof(uint16_t));
+    uint16_t data[MSP_MOTOR_COUNT];
+    memset(data, 0, sizeof(data));
 
-    for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
+    for (uint8_t i = 0; i < MSP_MOTOR_COUNT; i++) {
       if (motor_test.value[i] <= 0.0f) {
         data[i] = 1000;
       } else {
@@ -608,7 +612,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
       }
     }
 
-    msp_send_reply(msp, magic, cmd, (uint8_t *)data, 8 * sizeof(uint16_t));
+    msp_send_reply(msp, magic, cmd, (uint8_t *)data, sizeof(data));
     break;
   }
   case MSP_STATUS_EX:
@@ -712,7 +716,7 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 
     motor_test.active = 0;
     for (uint8_t i = 0; i < MOTOR_PIN_MAX; i++) {
-      const uint16_t val = constrain(values[i], 1000, 2000);
+      const uint16_t val = i < MSP_MOTOR_COUNT ? constrain(values[i], 1000, 2000) : 1000;
       if (val == 1000) {
         motor_test.value[i] = MOTOR_OFF;
       } else {
@@ -773,14 +777,13 @@ static void msp_process_serial_cmd(msp_t *msp, msp_magic_t magic, uint16_t cmd, 
 #ifdef USE_SERIAL_4WAY
       motor_test.active = 0;
 
-      uint8_t count = MOTOR_PIN_MAX;
+      uint8_t count = serial_4way_init();
 #ifdef VEHICLE_ROVER
       count = 1;
 #endif
       uint8_t data[1] = {count};
       msp_send_reply(msp, magic, cmd, data, 1);
 
-      serial_4way_init();
       serial_4way_process();
 #else
       msp_send_passthrough_result(msp, magic, cmd, false);

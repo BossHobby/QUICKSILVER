@@ -15,7 +15,7 @@ typedef enum {
   DIR_CHANGE_STOP,
 } dir_change_state_t;
 
-static uint16_t dshot_packet[MOTOR_PIN_MAX];
+static uint16_t dshot_packet[DSHOT_OUTPUT_MAX];
 // Outputs whose pins motor_dshot_init() configured.
 static uint32_t dshot_motor_mask = 0;
 
@@ -23,7 +23,7 @@ static motor_direction_t motor_dir = MOTOR_FORWARD;
 static bool dir_change_done = true;
 
 static bool dshot_motor_slot_active(uint32_t slot) {
-  if (slot >= MOTOR_PIN_MAX) {
+  if (slot >= DSHOT_OUTPUT_MAX) {
     return false;
   }
   return target.outputs[slot].pin != PIN_NONE && (target.outputs[slot].caps & OUTPUT_CAP_DSHOT) != 0 &&
@@ -56,7 +56,7 @@ static void dshot_make_packet(uint8_t number, uint16_t value, bool telemetry) {
 
 static void dshot_make_packet_all(uint16_t value, bool telemetry) {
   const uint32_t active = dshot_active_mask();
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+  for (uint32_t i = 0; i < DSHOT_OUTPUT_MAX; i++) {
     if (active & (1U << i))
       dshot_make_packet(i, value, telemetry);
   }
@@ -77,7 +77,7 @@ static void dshot_send_packet(uint8_t index, uint16_t value, bool telemetry) {
   motor_dshot_wait_for_ready();
 
   const uint32_t active = dshot_active_mask();
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+  for (uint32_t i = 0; i < DSHOT_OUTPUT_MAX; i++) {
     if (active & (1U << i))
       dshot_make_packet(i, i == index ? value : DSHOT_CMD_MOTOR_STOP, telemetry && i == index);
   }
@@ -158,7 +158,7 @@ static uint16_t dshot_encode_motor_value(float value) {
 void motor_dshot_init() {
   dshot_motor_mask = 0;
   motor_dir = MOTOR_FORWARD;
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+  for (uint32_t i = 0; i < DSHOT_OUTPUT_MAX; i++) {
     if (dshot_motor_slot_active(i))
       dshot_motor_mask |= 1U << i;
   }
@@ -171,7 +171,7 @@ void motor_dshot_write(float *values) {
   }
 
   const uint32_t active = dshot_active_mask();
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+  for (uint32_t i = 0; i < DSHOT_OUTPUT_MAX; i++) {
     if (active & (1U << i))
       dshot_make_packet(i, dshot_encode_motor_value(values[i]), false);
   }
@@ -191,7 +191,7 @@ bool motor_dshot_direction_change_done() {
 }
 
 bool motor_dshot_configure_direction(uint8_t index, motor_direction_t dir) {
-  if (!dir_change_done || index >= MOTOR_PIN_MAX || !(dshot_active_mask() & (1U << index))) {
+  if (!dir_change_done || index >= DSHOT_OUTPUT_MAX || !(dshot_active_mask() & (1U << index))) {
     return false;
   }
 

@@ -25,7 +25,7 @@ dshot_gpio_port_t dshot_gpio_ports[DSHOT_MAX_PORT_COUNT] = {
 volatile DMA_RAM uint16_t dshot_input_buffer[DSHOT_MAX_PORT_COUNT][GCR_DMA_BUFFER_SIZE];
 volatile DMA_RAM uint32_t dshot_output_buffer[DSHOT_MAX_PORT_COUNT][DSHOT_DMA_BUFFER_SIZE];
 
-static dshot_pin_t dshot_pins[MOTOR_PIN_MAX];
+static dshot_pin_t dshot_pins[DSHOT_OUTPUT_MAX];
 
 const dshot_gpio_port_t *dshot_gpio_for_device(const dma_device_t dev) {
   return &dshot_gpio_ports[dev - DMA_DEVICE_DSHOT_CH1];
@@ -90,7 +90,7 @@ static void dshot_init_motor_pin(uint32_t index) {
 // the Configurator today, so it stays cold. Once eRPM drives flight control
 // (an RPM filter), this and dshot_decode_gcr() become hot and worth optimizing.
 COLD_CODE static void dshot_read_telemetry(uint32_t active) {
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+  for (uint32_t i = 0; i < DSHOT_OUTPUT_MAX; i++) {
     if (!(active & (1U << i)))
       continue;
     const uint32_t port = dshot_pins[i].dshot_port;
@@ -109,7 +109,7 @@ void dshot_send_frame(const uint16_t *packets, uint32_t active) {
       dshot_output_buffer[j][i * 3 + 1] = 0; // clear middle bit
     }
   }
-  for (uint32_t motor = 0; motor < MOTOR_PIN_MAX; motor++) {
+  for (uint32_t motor = 0; motor < DSHOT_OUTPUT_MAX; motor++) {
     if (!(active & (1U << motor)))
       continue;
     const dshot_pin_t &pin = dshot_pins[motor];
@@ -144,7 +144,7 @@ bool dshot_frame_done() {
 
 void dshot_init_outputs(uint32_t mask) {
   dshot_gpio_port_count = 0;
-  for (uint32_t i = 0; i < MOTOR_PIN_MAX; i++) {
+  for (uint32_t i = 0; i < DSHOT_OUTPUT_MAX; i++) {
     if (mask & (1U << i))
       dshot_init_motor_pin(i);
   }

@@ -353,7 +353,7 @@ typedef struct {
   float output[MOTOR_PIN_MAX];
   uint8_t output_active[MOTOR_PIN_MAX];
   float thrsum;                      // average of all 4 motor thrusts
-  uint32_t dshot_rpm[MOTOR_PIN_MAX]; // eRPM / 100 per target output slot, written by the DShot driver
+  uint32_t dshot_rpm[DSHOT_OUTPUT_MAX]; // eRPM / 100 per DShot target output slot, written by the DShot driver
 
   // Wing.
   wing_launch_state_t wing_launch_state;
@@ -458,7 +458,7 @@ typedef struct {
   ARRAY_MEMBER(output, MOTOR_PIN_MAX, float)           \
   ARRAY_MEMBER(output_active, MOTOR_PIN_MAX, uint8_t)  \
   MEMBER(thrsum, float)                                \
-  ARRAY_MEMBER(dshot_rpm, MOTOR_PIN_MAX, uint32_t)     \
+  ARRAY_MEMBER(dshot_rpm, DSHOT_OUTPUT_MAX, uint32_t)  \
   MEMBER(wing_launch_state, uint8_t)                   \
   MEMBER(wing_autotrim_state, uint8_t)                 \
   MEMBER(wing_nav_state, uint8_t)                      \

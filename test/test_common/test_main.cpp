@@ -124,6 +124,7 @@ extern void test_sdft_resets_history_on_sample_rate_change();
 extern void test_filter_init(void);
 extern void test_filter_coeff_applies_type_change(void);
 extern void test_output_protocol_snapshot_updates_explicitly(void);
+extern void test_target_decode_keeps_dshot_on_the_first_outputs(void);
 extern void test_atan2approx_accuracy(void);
 extern void test_filter_reconfigure_type(void);
 extern void test_notch_matches_reference_with_changing_frequency(void);
@@ -429,6 +430,7 @@ int main(int argc, char **argv) {
   RUN_TEST(test_filter_init);
   RUN_TEST(test_filter_coeff_applies_type_change);
   RUN_TEST(test_output_protocol_snapshot_updates_explicitly);
+  RUN_TEST(test_target_decode_keeps_dshot_on_the_first_outputs);
   RUN_TEST(test_atan2approx_accuracy);
   RUN_TEST(test_filter_reconfigure_type);
   RUN_TEST(test_notch_matches_reference_with_changing_frequency);

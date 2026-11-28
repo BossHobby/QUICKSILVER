@@ -14,6 +14,7 @@
 
 // PROFILE version changelog (schema compatibility):
 // 0.3.0 (1e5b55c3): feat: add full 16-bit aux channel resolution with range-based function mapping.
+//        outputs: up to 16 outputs and 64 mixer rules (were 8 and 32).
 //        osd: add CRSF TX power, vario and wing estimated airspeed.
 //        osd: add the wing wind estimate.
 //        osd: add RSSI in dBm and SNR.
@@ -829,7 +830,7 @@ void profile_output_update();
 bool profile_outputs_use_protocol(output_protocol_t protocol);
 bool profile_output_slot_uses_protocol(uint8_t target_output, output_protocol_t protocol);
 // Target output slots the profile assigns to the protocol, one bit per slot.
-uint8_t profile_output_protocol_slots(output_protocol_t protocol);
+uint16_t profile_output_protocol_slots(output_protocol_t protocol);
 bool profile_output_has_throttle(uint8_t output_index);
 
 uint32_t profile_output_count(const profile_output_t *outputs, uint32_t size);

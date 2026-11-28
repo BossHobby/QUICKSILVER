@@ -31,8 +31,20 @@ typedef enum {
   MOTOR_PIN5,
   MOTOR_PIN6,
   MOTOR_PIN7,
+  MOTOR_PIN8,
+  MOTOR_PIN9,
+  MOTOR_PIN10,
+  MOTOR_PIN11,
+  MOTOR_PIN12,
+  MOTOR_PIN13,
+  MOTOR_PIN14,
+  MOTOR_PIN15,
   MOTOR_PIN_MAX
 } __attribute__((__packed__)) motor_pin_t;
+
+// DShot is served on the first output slots only; the later ones carry PWM
+// or brushed outputs.
+static constexpr uint32_t DSHOT_OUTPUT_MAX = 8;
 
 typedef enum {
   VEHICLE_TYPE_MULTI = (1 << 0),
