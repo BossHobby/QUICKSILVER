@@ -30,6 +30,18 @@ float output_pwm_stop_value(uint8_t index) {
   return -1.0f;
 }
 
+// Constant share of an output's mix. A surface output keeps it while stopped.
+static float output_fixed_value(uint8_t index) {
+  float value = 0.0f;
+  for (uint32_t i = 0; i < MIXER_RULE_MAX; i++) {
+    const profile_mixer_rule_t *rule = &profile.mixer[i];
+    if (rule->source == OUTPUT_SOURCE_FIXED && rule->output_index == index) {
+      value += (float)rule->weight / 100.0f;
+    }
+  }
+  return value;
+}
+
 static void output_set_slot(uint8_t index, const profile_output_t *output, float value) {
   if (!output || output->target_output >= MOTOR_PIN_MAX) {
     return;
@@ -62,8 +74,8 @@ static void output_stop_slot(uint8_t index, const profile_output_t *output) {
   if (output->protocol == OUTPUT_PROTOCOL_PWM) {
     float value = output_pwm_stop_value(index);
     if (!profile_output_has_throttle(index)) {
-      // Surfaces stop at their trimmed center within the configured travel.
-      value = output_apply_config(output, value);
+      // Surfaces stop at their trimmed center, offset by any fixed mix, within the configured travel.
+      value = output_apply_config(output, value + output_fixed_value(index));
     }
     servo_set(output->target_output, value);
   } else {
@@ -91,6 +103,8 @@ void output_apply_mixer_rules(void) {
       }
       value = (float)state.rx_channels[rule->source_index] / (float)AUX_VALUE_MAX;
       value = value * 2.0f - 1.0f;
+    } else if (rule->source == OUTPUT_SOURCE_FIXED) {
+      value = 1.0f;
     }
 
     state.output[output_index] += value * ((float)rule->weight / 100.0f);

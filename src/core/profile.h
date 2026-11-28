@@ -40,6 +40,7 @@
 //            port or a CRSF receiver sharing the smart audio port.
 //        motor: drop torque_boost and throttle_boost.
 //        pid: drop stick_profile and stick_rates; multirotor kff is the setpoint feedforward.
+//        outputs: add the fixed mixer source.
 // 0.2.7 (20e42bd6): profile: bump version for watts osd element.
 // 0.2.6 (0101bd67): profile: bump version for throttle curve.
 // 0.2.5 (c9dec9f1): add osd profiles.
@@ -393,6 +394,7 @@ typedef enum {
   OUTPUT_SOURCE_PITCH,
   OUTPUT_SOURCE_YAW,
   OUTPUT_SOURCE_RX_CHANNEL,
+  OUTPUT_SOURCE_FIXED, // Constant full deflection; the rule weight sets the value.
   OUTPUT_SOURCE_MAX,
 } __attribute__((__packed__)) output_source_t;
 

@@ -90,6 +90,31 @@ static void test_pwm_motor_stops_but_disarmed_surfaces_work() {
   output_stop_all();
   TEST_ASSERT_EQUAL_FLOAT(-1.0f, pwm_values[0]);
 }
+static void test_fixed_mixer_source_holds_its_value() {
+  pwm_motor();
+  profile.mixer[6] = {.output_index = 3, .source = OUTPUT_SOURCE_FIXED, .weight = 25};
+  profile.mixer[7] = {.output_index = 0, .source = OUTPUT_SOURCE_FIXED, .weight = 25};
+  profile_output_update();
+
+  // Disarmed: the surface carries the constant, the throttle output stays stopped.
+  write_throttle(0.0f);
+  TEST_ASSERT_EQUAL_FLOAT(-1.0f, pwm_values[0]);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.25f, pwm_values[3]);
+
+  // It sums with the other sources of the output.
+  state.mixer_source[OUTPUT_SOURCE_YAW] = 0.5f;
+  write_throttle(0.0f);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.75f, pwm_values[3]);
+
+  // Blocked outputs drop the live sources and keep the constant.
+  flags.arm_state = 1;
+  flags.failsafe_outputs_blocked = 1;
+  write_throttle(0.0f);
+  TEST_ASSERT_EQUAL_FLOAT(-1.0f, pwm_values[0]);
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.25f, pwm_values[3]);
+  output_stop_all();
+  TEST_ASSERT_FLOAT_WITHIN(0.001f, 0.25f, pwm_values[3]);
+}
 
 static void test_level_tilt_moves_disarmed_surfaces_without_integral() {
   pwm_motor();
@@ -778,6 +803,7 @@ int main() {
   UNITY_BEGIN();
   RUN_TEST(test_pwm_throttle_range_and_limit);
   RUN_TEST(test_pwm_motor_stops_but_disarmed_surfaces_work);
+  RUN_TEST(test_fixed_mixer_source_holds_its_value);
   RUN_TEST(test_level_tilt_moves_disarmed_surfaces_without_integral);
   RUN_TEST(test_pid_gains_follow_airspeed);
   RUN_TEST(test_pid_integral_stays_on_its_surface_in_turns);
